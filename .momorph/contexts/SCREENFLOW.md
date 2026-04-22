@@ -13,18 +13,40 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Screens | 1 (known so far) |
-| Discovered | 1 |
-| Remaining | unknown |
-| Completion | partial |
+| Total Screens | 8 (from yêu cầu.csv) |
+| Discovered | 7 unique frames |
+| Remaining | Dashboard (TBD) |
+| Completion | ~85% |
 
 ---
 
 ## Screens
 
-| # | Screen Name | Frame ID | Figma Link | Status | Detail File | Predicted APIs | Navigations To |
-|---|-------------|----------|------------|--------|-------------|----------------|----------------|
-| 1 | Login | GzbNeVGJHz (Figma: 662:14387) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/GzbNeVGJHz | specs-ready | `.momorph/specs/GzbNeVGJHz-login/spec.md` | `supabase.auth.signInWithOAuth` | Dashboard |
+| # | Screen Name | Frame ID | Route | Figma Link | Status | Spec File | Navigations To |
+|---|-------------|----------|-------|------------|--------|-----------|----------------|
+| 1 | Countdown Prelaunch | 8PJQswPZmU | `/` (pre-launch) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/8PJQswPZmU | specs-ready | `.momorph/specs/8PJQswPZmU-countdown-prelaunch/spec.md` | — (holds until launch) |
+| 2 | Login | GzbNeVGJHz | `/login` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/GzbNeVGJHz | specs-ready | `.momorph/specs/GzbNeVGJHz-login/spec.md` | `/` (homepage, post-login) |
+| 3 | Homepage SAA | i87tDx10uM | `/` (post-launch) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/i87tDx10uM | specs-ready | `.momorph/specs/i87tDx10uM-homepage-saa/spec.md` | `/awards`, `/kudos` |
+| 4 | Award System | zFYDgyj_pD | `/awards` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/zFYDgyj_pD | specs-ready | `.momorph/specs/zFYDgyj_pD-he-thong-giai/spec.md` | `/`, `/kudos` |
+| 5 | Sun* Kudos | MaZUn5xHXZ | `/kudos` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/MaZUn5xHXZ | specs-ready | `.momorph/specs/MaZUn5xHXZ-sun-kudos/spec.md` | `/login` (unauth), Viet Kudos modal |
+| 6 | Viet Kudos (modal) | ihQ26W78P2 | `/kudos` (modal overlay) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/ihQ26W78P2 | specs-ready | `.momorph/specs/ihQ26W78P2-viet-kudos/spec.md` | `/kudos` (close modal) |
+| 7 | Language Selector (component) | hUyaaugye2 | N/A (shared component) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/hUyaaugye2 | specs-ready | `.momorph/specs/hUyaaugye2-da-ngon-ngu/spec.md` | No route change |
+| 8 | Dashboard | TBD | `/dashboard` | TBD | not-started | TBD | TBD |
+
+---
+
+## Registered Routes
+
+| Route | Screen | Auth Required | Notes |
+|-------|--------|---------------|-------|
+| `/` | Countdown Prelaunch OR Homepage SAA | No | Pre-launch: renders countdown; post-launch: renders homepage. Middleware checks `LAUNCH_DATETIME` env var. |
+| `/login` | Login | No (redirect away if authenticated) | Middleware redirects to `/` if valid session exists |
+| `/awards` | Award System | No (public) | Award info is public; no auth required to browse |
+| `/kudos` | Sun* Kudos | No (browse public; auth required to like or write) | Interactive actions (like, write) require auth → redirect to `/login` |
+| `/dashboard` | Dashboard | Yes | Middleware redirects to `/login` if no valid session |
+| `/auth/callback` | OAuth callback handler | No | Next.js route handler `app/auth/callback/route.ts`; exchanges OAuth code for session; redirects to `/` on success or `/login?error=auth_failed` on failure |
+
+> **Implementation note for `/` route**: The same Next.js page at `app/page.tsx` renders either `<CountdownPage />` or `<HomePage />` based on a server-side `isPrelaunch` check (compare `Date.now()` against `process.env.LAUNCH_DATETIME`). The middleware also enforces the global countdown gate — if `isPrelaunch=true`, ALL routes redirect to `/`.
 
 ---
 
@@ -32,136 +54,160 @@
 
 ```mermaid
 flowchart TD
-    subgraph Auth["Authentication Flow"]
-        Login["Login\n(GzbNeVGJHz)"]
-        Register["Register\n(frame TBD)"]
-        ForgotPassword["Forgot Password\n(frame TBD)"]
-        ResetPassword["Reset Password\n(frame TBD)"]
+    subgraph PreLaunch["Pre-Launch (isPrelaunch = true)"]
+        Countdown["Countdown Prelaunch\n(8PJQswPZmU)\nRoute: /"]
     end
 
-    subgraph Main["Main Application"]
-        Dashboard["Dashboard\n(frame TBD)"]
+    subgraph Auth["Authentication"]
+        Login["Login\n(GzbNeVGJHz)\nRoute: /login"]
+        OAuthCB["OAuth Callback\nRoute: /auth/callback"]
     end
 
-    %% Incoming to Login
-    AppLaunch([App Launch / Unauthenticated]):::entry --> Login
-    Logout([Logout Action]):::entry --> Login
-    Register -->|"Link: Already have an account?"| Login
-    ForgotPassword -->|"After password reset success"| Login
-    ResetPassword -->|"After password reset success"| Login
+    subgraph Main["Main Application (post-launch)"]
+        Home["Homepage SAA\n(i87tDx10uM)\nRoute: /"]
+        Awards["Award System\n(zFYDgyj_pD)\nRoute: /awards"]
+        Kudos["Sun* Kudos\n(MaZUn5xHXZ)\nRoute: /kudos"]
+        VietKudos["Viet Kudos Modal\n(ihQ26W78P2)\nOverlay on /kudos"]
+        Dashboard["Dashboard\n(TBD)\nRoute: /dashboard"]
+    end
 
-    %% Outgoing from Login
-    Login -->|"Button: LOGIN With Google (OAuth success)"| Dashboard
+    subgraph Shared["Shared Components"]
+        LangSelector["Language Selector\n(hUyaaugye2)\nIn-page dropdown"]
+    end
 
-    classDef entry fill:#f0f0f0,stroke:#999,stroke-dasharray:5 5
+    %% Pre-launch gate
+    AnyRoute([Any Route]) -->|"isPrelaunch=true, middleware"| Countdown
+
+    %% Auth flow
+    Countdown -->|"launch datetime passed"| Login
+    AnyRoute -->|"unauthenticated + protected route"| Login
+    Login -->|"LOGIN With Google (OAuth)"| OAuthCB
+    OAuthCB -->|"success → session created"| Home
+    OAuthCB -->|"failure → ?error=auth_failed"| Login
+    Login -->|"already authenticated"| Home
+
+    %% Main navigation
+    Home -->|"Header: Award Information OR Award card"| Awards
+    Home -->|"Header: Sun* Kudos OR CTA button"| Kudos
+    Awards -->|"Header: About SAA 2025"| Home
+    Awards -->|"Header: Sun* Kudos"| Kudos
+    Kudos -->|"Header: About SAA 2025"| Home
+    Kudos -->|"Header: Award Information"| Awards
+    Kudos -->|"Button: Ghi nhan (Write Kudos)"| VietKudos
+    VietKudos -->|"Submit success OR Cancel"| Kudos
+    Kudos -->|"Like/Write (unauthenticated)"| Login
+    Login -->|"Post-login redirect"| Home
+
+    %% Language selector (no route change)
+    LangSelector -.->|"in-page locale switch (all screens)"| LangSelector
+
+    classDef prelaunch fill:#ffefd5,stroke:#e89b00
+    classDef auth fill:#e8f4f8,stroke:#0077aa
+    classDef main fill:#e8f8e8,stroke:#007700
+    classDef shared fill:#f5f5f5,stroke:#999,stroke-dasharray:5 5
+    class Countdown prelaunch
+    class Login,OAuthCB auth
+    class Home,Awards,Kudos,VietKudos,Dashboard main
+    class LangSelector shared
 ```
 
 ---
 
-## Navigation Edges — Login Screen Detail
+## Navigation Edges — All Screens
 
-### Incoming to Login (what navigates TO Login)
+### Countdown Prelaunch (`/`)
 
-| Source | Trigger | Condition | Confidence |
-|--------|---------|-----------|------------|
-| App Launch | Automatic redirect | User is unauthenticated / no valid session | High |
-| Logout | Automatic redirect | User triggers logout action from any authenticated screen | High |
-| Register screen | Link "Already have an account? Sign in" | User already has an account | Medium |
-| Forgot Password screen | Automatic redirect or link | Password reset flow completed | Medium |
-| Reset Password screen | Automatic redirect | Token used / reset success | Medium |
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT | `/login` | Automatic (launch time passed or admin opens) | `isPrelaunch` flips to `false` |
+| IN | Any route | Middleware redirect | `isPrelaunch = true` |
 
-### Outgoing from Login (what Login navigates TO)
+### Login (`/login`)
 
-| Target Screen | Trigger Element | Condition | Confidence | Notes |
-|---------------|-----------------|-----------|------------|-------|
-| Dashboard | Button: "LOGIN With Google" | Supabase Auth Google OAuth returns valid session | High | Only exit path; confirmed in Figma design |
-| Forgot Password | — | — | None | NO link present in this design |
-| Register | — | — | None | NO link present in this design |
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT | `/auth/callback` → `/` | "LOGIN With Google" button | OAuth flow initiates |
+| OUT | `/` | Already-authenticated check | Valid session exists on page load |
+| IN | Countdown | Launch datetime passes | `isPrelaunch` flips |
+| IN | Any protected route | Middleware | No valid session |
+| IN | `/kudos` | Like/Write action (unauth) | Not logged in |
 
----
+### Homepage SAA (`/`)
 
-## Screen Groups
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT | `/awards` | Header "Award Information" nav OR Award section CTA | Click |
+| OUT | `/kudos` | Header "Sun* Kudos" nav OR "Sun* Kudos" CTA button | Click |
+| IN | `/auth/callback` | Post-OAuth redirect | Login success |
+| IN | Any screen | Header logo click | N/A |
 
-### Group: Authentication
-| Screen | Purpose | Entry Points |
-|--------|---------|--------------|
-| Login | Authenticate users exclusively via Google OAuth (Supabase Auth) — no email/password form | App launch (unauthenticated), Logout |
-| Register | New user sign-up | Login screen link |
-| Forgot Password | Initiate password reset flow | Login screen link |
-| Reset Password | Set new password via token link | Email deep link |
+### Award System (`/awards`)
 
-### Group: Main Application
-| Screen | Purpose | Entry Points |
-|--------|---------|--------------|
-| Dashboard | Primary hub after authentication | Successful Login |
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT | `/` | Header "About SAA 2025" nav | Click |
+| OUT | `/kudos` | Header "Sun* Kudos" nav OR Kudos promo CTA | Click |
+| IN | `/` | Award card or CTA | Click |
+| IN | `/kudos` | Header nav | Click |
+| DEEP LINK | `/awards#top-talent` etc. | Left nav category click | URL hash updates |
+
+### Sun* Kudos (`/kudos`)
+
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT | `/` | Header "About SAA 2025" nav | Click |
+| OUT | `/awards` | Header "Award Information" nav | Click |
+| OUT | `/login` | Like or Write action | User is unauthenticated |
+| OUT | Viet Kudos modal | "Ghi nhan" button | User is authenticated |
+| IN | `/` | CTA "Sun* Kudos" or nav | Click |
+| IN | `/awards` | Nav | Click |
+| IN | `/auth/callback` | Post-login redirect (if Kudos was the protected action) | Login success |
+
+### Viet Kudos Modal (overlay on `/kudos`)
+
+| Direction | Target/Source | Trigger | Condition |
+|-----------|--------------|---------|-----------|
+| OUT (close) | `/kudos` (modal closes) | Cancel button OR Escape | N/A |
+| OUT (submit) | `/kudos` (modal closes + feed updates) | "Gui" button | Submit success |
+| IN | `/kudos` | "Ghi nhan" button click | User is authenticated |
+
+### Language Selector (shared component)
+
+| Direction | Target | Trigger | Condition |
+|-----------|--------|---------|-----------|
+| — | No route change | Dropdown option click | Locale cookie updated |
 
 ---
 
 ## API Endpoints Summary
 
-| Endpoint | Method | Screens Using | Purpose |
-|----------|--------|---------------|---------|
-| /auth/login (Supabase) | POST | Login | Authenticate user, issue session (HttpOnly cookie) |
-| /auth/logout (Supabase) | POST | Any authenticated screen | Destroy session → redirect to Login |
-| /auth/reset-password | POST | Forgot Password | Send password reset email |
-| /auth/confirm | GET | Reset Password | Validate reset token |
-| /users/me | GET | Dashboard, Profile | Fetch authenticated user profile |
+| Endpoint | Method | Auth | Screens Using | Purpose |
+|----------|--------|------|---------------|---------|
+| `supabase.auth.signInWithOAuth` | — | No | Login | Initiate Google OAuth |
+| `supabase.auth.exchangeCodeForSession` | — | No | `/auth/callback` | Exchange code for session |
+| `supabase.auth.getSession()` | — | Yes | All authenticated | Check session on page load |
+| `GET /api/kudos` | GET | No (browse) | Sun* Kudos | Paginated kudos feed |
+| `GET /api/kudos/highlights` | GET | No | Sun* Kudos | Top 5 most-liked |
+| `GET /api/kudos/spotlight` | GET | No | Sun* Kudos | Spotlight boards |
+| `GET /api/kudos/stats` | GET | No | Sun* Kudos | General statistics |
+| `GET /api/kudos/top-sunners` | GET | No | Sun* Kudos | Top 10 recipients |
+| `POST /api/kudos/:id/like` | POST | Yes | Sun* Kudos | Like a kudos |
+| `DELETE /api/kudos/:id/like` | DELETE | Yes | Sun* Kudos | Unlike a kudos |
+| `GET /api/admin/special-days` | GET | No (cached) | Sun* Kudos | Check special day status |
+| `GET /api/awards` | GET | No | Awards, Homepage | Award category data |
+| `GET /api/users/search` | GET | Yes | Viet Kudos | Search sunner by name |
+| `GET /api/kudos/hashtags` | GET | Yes | Viet Kudos | Available hashtag list |
+| `POST /api/kudos` | POST | Yes | Viet Kudos | Submit new kudos |
+| `POST /api/upload` | POST | Yes | Viet Kudos | Upload image to Supabase Storage |
 
 ---
 
-## Data Flow
+## Authentication Flow
 
-```mermaid
-flowchart LR
-    subgraph Client["Frontend (Next.js App Router)"]
-        Login["Login Screen"]
-        Dashboard["Dashboard"]
-    end
-
-    subgraph Supabase["Supabase BaaS"]
-        SupaAuth["Supabase Auth"]
-        DB[("PostgreSQL\n(RLS enabled)")]
-    end
-
-    Login -->|"signInWithOAuth({ provider: 'google' })"| SupaAuth
-    SupaAuth -->|"Session (HttpOnly cookie)"| Login
-    Login -->|"Redirect on success"| Dashboard
-    Dashboard -->|"getUser() / getSession()"| SupaAuth
-    SupaAuth --> DB
-```
-
----
-
-## Technical Notes
-
-### Authentication Flow
-- Authentication implemented via **Supabase Auth** Google OAuth (`signInWithOAuth({ provider: 'google' })`)
-- OAuth callback handled at `app/auth/callback/route.ts` which exchanges code for session
-- Session tokens stored in **HttpOnly, Secure, SameSite=Strict cookies** (per Constitution Principle VI)
-- `localStorage` token storage is FORBIDDEN
-- Row-Level Security (RLS) enabled on all user-data tables
-
-### State Management
-- Global auth state: Supabase client session (`supabase.auth.getSession()`)
-- Server state: Next.js Server Components + Supabase server client
-- No separate auth store needed — Supabase session is the source of truth
-
-### Routing
-- Router: **Next.js App Router**
-- Protected routes use middleware to check session and redirect unauthenticated users to `/login`
-- Login route: `/login` (assumed; confirm against actual route definition)
-
-### URL Conventions
-- All `href` and navigation values MUST be sourced from this file per Constitution Principle II
-- Do not hard-code or guess any URL not listed here
-
-### Registered Routes
-
-| Route | Purpose | Notes |
-|-------|---------|-------|
-| `/login` | Login page | Unauthenticated entry point |
-| `/dashboard` | Main dashboard | Post-authentication redirect target |
-| `/auth/callback` | OAuth callback handler | Next.js route handler (`app/auth/callback/route.ts`); exchanges OAuth code for session; redirects to `/dashboard` on success or `/login?error=auth_failed` on failure |
+- Authentication: Supabase Auth Google OAuth only
+- Session: `HttpOnly`, `Secure`, `SameSite=Strict` cookie — `localStorage` is FORBIDDEN
+- Middleware: Next.js middleware checks session on every request; pre-launch gate runs before auth check
+- RLS: Enabled on all user-data tables (kudos, likes, users)
 
 ---
 
@@ -169,15 +215,16 @@ flowchart LR
 
 | Date | Action | Screens | Notes |
 |------|--------|---------|-------|
-| 2026-04-22 | Initial discovery | Login (662:14387) | MoMorph server returned no registered frames; documented from Figma URL + project constitution. Navigation edges inferred from Supabase Auth flow + standard patterns. |
+| 2026-04-22 | Initial discovery | Login (GzbNeVGJHz) | MoMorph returned no registered frames; documented from Figma + constitution |
+| 2026-04-22 | Expanded discovery | +6 screens from yêu cầu.csv | Frame IDs found via list_frames API; all specs created |
 
 ---
 
-## Next Steps
+## Open Questions / Next Steps
 
-- [ ] Sync remaining frames to MoMorph platform so `list_frames` returns results
-- [ ] Run `momorph.screenflow` again once frames are registered to discover Dashboard, Register, Forgot Password screens
-- [ ] Confirm actual route paths (`/login`, `/dashboard`, etc.) from Next.js app directory structure
-- [ ] Verify navigation edges against Figma prototype interactions once frame is accessible
-- [ ] Map all API endpoints for newly discovered screens
-- [ ] Review navigation graph with design team
+- [ ] Confirm actual route for Homepage after login: `/` or `/home`? (Currently specced as `/` with conditional render)
+- [ ] Confirm Dashboard frame ID and route from design team
+- [ ] Confirm "About SAA 2025" CTA on homepage: in-page scroll to awards section, OR navigate to `/awards`?
+- [ ] Confirm `/awards#category` hash behavior: does left nav click update URL hash?
+- [ ] Confirm Sun* Kudos feed auto-refresh interval (or polling vs WebSocket)
+- [ ] Run `momorph.screenflow` again once Dashboard frame is available

@@ -380,8 +380,8 @@ This screen is designed at **1440px desktop**. Responsive adaptations required p
 | Name | Min Width | Max Width |
 |------|-----------|-----------|
 | Mobile | 320px | 767px |
-| Tablet | 768px | 1023px |
-| Desktop | 1024px | ∞ |
+| Tablet | 768px | 1279px |
+| Desktop | 1280px | ∞ |
 
 ### Responsive Changes
 
@@ -408,7 +408,7 @@ This screen is designed at **1440px desktop**. Responsive adaptations required p
 | Footer padding | 40px 90px | 32px 48px |
 | Login button width | 305px | 260px |
 
-#### Desktop (≥ 1024px)
+#### Desktop (≥ 1280px)
 
 Default — matches Figma spec exactly.
 

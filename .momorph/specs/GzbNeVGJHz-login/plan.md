@@ -41,7 +41,7 @@ state (`isLoading`, `error`, `languageDropdownOpen`).
 |---|---|---|---|
 | I. Type Safety | TypeScript strict, Zod at boundaries | ✅ Planned | Zod validates `?error` query param on callback; `tsconfig.json` already strict |
 | II. Design Fidelity | CSS variables from design tokens; no hardcoded values | ✅ Planned | All tokens from `design-style.md` added to `globals.css`; Tailwind maps to tokens |
-| II. Responsive | Mobile ≥ 320px, tablet ≥ 768px, desktop ≥ 1024px; touch targets ≥ 44×44px | ✅ Planned | Responsive classes in Phase 2 |
+| II. Responsive | Mobile ≥ 320px, tablet ≥ 768px, desktop ≥ 1280px; touch targets ≥ 44×44px | ✅ Planned | Responsive classes in Phase 2 |
 | II. WCAG 2.1 AA | Contrast ≥ 4.5:1, ARIA labels, keyboard nav | ✅ Planned | Verified in design-style; ARIA attrs in Phase 4 |
 | III. TDD | Red–Green–Refactor; tests committed before implementation | ✅ Planned | Phase ordering enforces test-first |
 | IV. Layered Arch | Page → Component → Hook → Supabase client | ✅ Planned | No business logic in page or route handler |

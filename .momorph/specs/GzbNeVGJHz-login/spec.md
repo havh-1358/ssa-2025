@@ -190,7 +190,7 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 ### Visual Requirements
 
-- **Responsive breakpoints**: mobile ≥ 320px, tablet ≥ 768px, desktop ≥ 1024px
+- **Responsive breakpoints**: mobile ≥ 320px, tablet ≥ 768px, desktop ≥ 1280px (Constitution Principle II)
   (see `design-style.md > Responsive Specifications`)
 - **Touch targets**: Login button and language selector MUST be ≥ 44×44px on mobile
 - **Background fallback**: If image fails to load, `#00101A` background color ensures content remains readable
