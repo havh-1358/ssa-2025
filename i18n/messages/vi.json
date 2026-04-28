@@ -24,9 +24,19 @@
     "ctaKudos": "Sun* Kudos",
     "comingSoon": "Sự kiện sẽ bắt đầu sau",
     "tagline": "Sự kiện vinh danh nhân tài Sun* lớn nhất năm 2025",
+    "eventTimeLabel": "Thời gian:",
+    "eventDate": "26/12/2025",
+    "eventVenueLabel": "Địa điểm:",
+    "eventVenue": "Âu Cơ Art Center",
     "livestream": "Tường thuật trực tiếp qua sóng Livestream",
     "awardSectionTitle": "Hệ thống giải thưởng",
     "kudosSectionTitle": "Sun* Kudos",
+    "kudosPromoLabel": "Phong trào ghi nhận",
+    "kudosPromoBody": "ĐIỂM MỚI CỦA SAA 2025\nHoạt động ghi nhận và cảm ơn đồng nghiệp - lần đầu tiên được diễn ra dành cho tất cả Sunner. Hoạt động sẽ được triển khai vào tháng 11/2025, khuyến khích người Sun* chia sẻ những lời ghi nhận, cảm ơn đồng nghiệp trên hệ thống do BTC công bố. Đây sẽ là chất liệu để Hội đồng Heads tham khảo trong quá trình lựa chọn người đạt giải.",
+    "kudosCtaLabel": "Chi tiết",
+    "rootFurtherParagraph1": "Đứng trước bối cảnh thay đổi như vũ bão của thời đại AI và yêu cầu ngày càng cao từ khách hàng, Sun* lựa chọn chiến lược đa dạng hóa năng lực để không chỉ nỗ lực trở thành tinh anh trong lĩnh vực của mình, mà còn hướng đến một cái đích cao hơn, nơi mọi Sunner đều là \"problem-solver\" - chuyên gia trong việc giải quyết mọi vấn đề, tìm lời giải cho mọi bài toán của dự án, khách hàng và xã hội.\nLấy cảm hứng từ sự đa dạng năng lực, khả năng phát triển linh hoạt cùng tinh thần đào sâu để bứt phá trong kỷ nguyên AI, \"Root Further\" đã được chọn để trở thành chủ đề chính thức của Lễ trao giải Sun* Annual Awards 2025.\nVượt ra khỏi nét nghĩa bề mặt, \"Root Further\" chính là hành trình chúng ta không ngừng vươn xa hơn, cắm rễ mạnh hơn, chạm đến những tầng \"địa chất\" ẩn sâu để tiếp tục tồn tại, vươn lên và nuôi dưỡng đam mê kiến tạo giá trị luôn cháy bỏng của người Sun*.",
+    "rootFurtherQuote": "\"A tree with deep roots fears no storm\"\n(Cây sâu bén rễ, bão giông chẳng nề - Ngạn ngữ Anh)",
+    "rootFurtherParagraph2": "Trước giông bão, chỉ những tán cây có bộ rễ đủ mạnh mới có thể trụ vững. Một tổ chức với những cá nhân tự tin vào năng lực đa dạng, sẵn sàng kiến tạo và đón nhận thử thách, làm chủ sự thay đổi là tổ chức không chỉ vững vàng trước biến động, mà còn khai thác được mọi lợi thế, chinh phục các thách thức của thời cuộc. Không đơn thuần là tên gọi của chương mới trên hành trình phát triển tổ chức, \"Root Further\" còn như một lời cổ vũ, động viên mỗi chúng ta hãy dám tin vào bản thân, dám đào sâu, khai mở mọi tiềm năng, dám phá bỏ giới hạn, dám trở thành phiên bản đa nhiệm và xuất sắc nhất của mình.",
     "awardsError": "Không tải được dữ liệu giải thưởng.",
     "awardsRetry": "Thử lại",
     "nav": {
@@ -38,20 +48,42 @@
       "logoLabel": "SSA 2025 — về trang chủ"
     }
   },
+  "userMenu": {
+    "profile": "Profile",
+    "logout": "Đăng xuất"
+  },
+  "footer": {
+    "copyright": "Bản quyền thuộc về Sun* © 2025",
+    "nav": {
+      "aboutSaa": "Về SAA 2025",
+      "awardInfo": "Thông tin giải thưởng",
+      "kudos": "Sun* Kudos",
+      "generalStandards": "Tiêu chuẩn chung"
+    }
+  },
   "awards": {
     "sectionTitle": "Sun* Annual Awards 2025",
     "navAriaLabel": "Danh mục giải thưởng",
     "loadingLabel": "Đang tải thông tin giải thưởng",
     "errorMessage": "Không thể tải thông tin giải thưởng.",
     "retryLabel": "Thử lại",
+    "ctaLabel": "Chi tiết",
     "recipients": "người",
     "categories": {
       "top-talent": "Top Talent",
       "top-project": "Top Project",
       "top-project-leader": "Top Project Leader",
       "best-manager": "Best Manager",
-      "signature-2025": "Signature 2025",
-      "mvp": "MVP"
+      "signature-2025": "Signature 2025 - Creator",
+      "mvp": "MVP (Most Valuable Person)"
+    },
+    "descriptions": {
+      "top-talent": "Vinh danh top cá nhân xuất sắc trên mọi phương diện",
+      "top-project": "Vinh danh dự án xuất sắc trên mọi phương diện, dự án có doanh thu nổi bật",
+      "top-project-leader": "Vinh danh người quản lý truyền cảm hứng và dẫn dắt dự án bứt phá",
+      "best-manager": "Vinh danh người quản lý có năng lực quản lý tốt, dẫn dắt đội nhóm",
+      "signature-2025": "Vinh danh người quản lý có năng lực quản lý tốt, dẫn dắt đội nhóm",
+      "mvp": "Vinh danh người quản lý có năng lực quản lý tốt, dẫn dắt đội nhóm"
     },
     "prizes": {
       "first": "Giải nhất",

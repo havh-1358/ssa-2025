@@ -21,6 +21,7 @@ type KudosPageProps = {
   topSunners: TopSunner[];
   spotlightError: string | null;
   currentUserId: string | null;
+  userEmail?: string | null;
 };
 
 export function KudosPage({
@@ -30,6 +31,7 @@ export function KudosPage({
   topSunners,
   spotlightError,
   currentUserId,
+  userEmail,
 }: KudosPageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const prependFnRef = useRef<((k: Kudos) => void) | null>(null);
@@ -44,7 +46,7 @@ export function KudosPage({
 
   return (
     <>
-      <Header activeNav="kudos" />
+      <Header activeNav="kudos" user={userEmail ? { email: userEmail } : null} />
 
       <main className="bg-[var(--color-bg-base)] min-h-screen">
         {/* Keyvisual */}

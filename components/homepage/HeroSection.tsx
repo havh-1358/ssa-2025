@@ -10,6 +10,7 @@ type HeroSectionProps = {
 export function HeroSection({ launchAtISO }: HeroSectionProps) {
   const t = useTranslations("homepage");
   const tc = useTranslations("countdown");
+  const isLaunched = new Date(launchAtISO) <= new Date();
 
   return (
     <section
@@ -30,21 +31,25 @@ export function HeroSection({ launchAtISO }: HeroSectionProps) {
         className="w-[200px] h-auto md:w-[300px] xl:w-[451px] object-contain"
       />
 
-      {/* Coming soon label */}
-      <p
-        className="font-[family-name:var(--font-montserrat)] font-bold
-          text-[20px] md:text-[24px] leading-8 text-[var(--color-text-primary)] text-center md:text-left"
-      >
-        {t("comingSoon")}
-      </p>
+      {/* Coming soon label — only shown before launch */}
+      {!isLaunched && (
+        <p
+          className="font-[family-name:var(--font-montserrat)] font-bold
+            text-[20px] md:text-[24px] leading-8 text-[var(--color-text-primary)] text-center md:text-left"
+        >
+          {t("comingSoon")}
+        </p>
+      )}
 
-      {/* Countdown timer */}
-      <CountdownTimer
-        launchAtISO={launchAtISO}
-        dayUnit={tc("days")}
-        hourUnit={tc("hours")}
-        minuteUnit={tc("minutes")}
-      />
+      {/* Countdown timer — only shown before launch to avoid expired-redirect loop */}
+      {!isLaunched && (
+        <CountdownTimer
+          launchAtISO={launchAtISO}
+          dayUnit={tc("days")}
+          hourUnit={tc("hours")}
+          minuteUnit={tc("minutes")}
+        />
+      )}
 
       {/* Event info */}
       <div className="flex flex-col gap-2 text-center md:text-left">

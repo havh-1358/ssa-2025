@@ -73,10 +73,15 @@
   /* Buttons */
   --color-btn-secondary-bg: rgba(255, 234, 158, 0.1);
   --color-btn-secondary-border: #998c5f;
+  --color-btn-secondary-hover: rgba(255, 234, 158, 0.2);
   --radius-btn: 8px;
   --btn-padding-x: 24px;
   --btn-padding-y: 16px;
   --btn-gap: 40px;
+
+  /* Profile dropdown */
+  --color-profile-dropdown-bg: #00070c;
+  --color-profile-dropdown-border: #998c5f;
 
   /* Content spacing */
   --content-padding-x: 144px;

@@ -411,7 +411,7 @@ This screen is designed at **1440px desktop**. Responsive adaptations required p
 | Login button width | 305px | 100% |
 | Login button font-size | 22px | 18px |
 | Key Visual logo | 451×200px | 240×106px |
-| Left gradient | 90deg, 25% solid | 90deg, 60% solid |
+| Left gradient | 90deg, 25.41% solid → `rgba(0,16,26,0)` (desktop ≥ 1280px via `xl:` override) | 90deg, 60% solid → `rgba(0,16,26,0)` (default mobile/tablet) |
 
 #### Tablet (768px–1279px)
 
@@ -485,8 +485,9 @@ All icons MUST be implemented as Icon Components (not `<img>` tags or raw SVG fi
 |----------------|---------------|-----------------|-----------------|
 | Screen wrapper | `662:14387` | `relative w-full h-screen bg-[#00101A] overflow-hidden` | `<LoginPage />` |
 | Background image | `662:14389` | `absolute inset-0 w-full h-full object-cover` | `<Image />` (Next.js) |
-| Left gradient overlay | `662:14392` | `absolute inset-0 bg-gradient-to-r from-[#00101A] via-[#00101A]/[0.25] to-transparent` | `<div>` |
-| Bottom gradient overlay | `662:14390` | `absolute bottom-0 left-0 right-0 h-[55%] bg-gradient-to-t from-[#00101A] to-transparent` | `<div>` |
+| Left gradient overlay (mobile) | `662:14392` | `absolute inset-0` + inline style: `linear-gradient(90deg, #00101A 0%, #00101A 60%, rgba(0,16,26,0) 100%)` | `<div>` — **end stop MUST be `rgba(0,16,26,0)` not CSS `transparent` to avoid grey banding** |
+| Left gradient overlay (desktop ≥ 1280px) | `662:14392` | `absolute inset-0 hidden xl:block` + inline style: `linear-gradient(90deg, #00101A 0%, #00101A 25.41%, rgba(0,16,26,0) 100%)` | `<div>` — desktop-only overlay that overrides the mobile one |
+| Bottom gradient overlay | `662:14390` | `absolute bottom-0 left-0 right-0 h-[55%]` + inline style: `linear-gradient(0deg, #00101A 22.48%, rgba(0,19,32,0) 51.74%)` | `<div>` |
 | Header | `662:14391` | `absolute top-0 left-0 right-0 h-20 flex items-center justify-between px-36 py-3 bg-[#0B0F12]/80` | `<Header />` |
 | Logo area | `I662:14391;186:2166` | `flex items-center w-[52px] h-14` | `<Logo />` |
 | Language selector | `I662:14391;186:1601` | `flex items-center gap-4` | `<LanguageSelector />` |

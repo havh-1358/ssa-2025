@@ -1,45 +1,82 @@
 # Implementation Plan: Homepage SAA
 
 **Frame**: `i87tDx10uM-homepage-saa`
-**Date**: 2026-04-22
+**Date**: 2026-04-28
 **Spec**: `specs/i87tDx10uM-homepage-saa/spec.md`
+
+---
+
+## Already Implemented (this session — 2026-04-28)
+
+The following items from Phase 3 and Phase 6 were completed before tasks breakdown:
+
+| File | Status | Notes |
+|------|--------|-------|
+| `components/shared/UserProfileButton.tsx` | ✅ DONE | Person-icon button, `aria-haspopup="menu"`, closes on outside click |
+| `components/shared/ProfileDropdown.tsx` | ✅ DONE | Profile → `/dashboard`, Logout → `supabase.auth.signOut()` + HOME redirect; `userMenu.*` i18n |
+| `components/shared/Header.tsx` | ✅ DONE | Added `user?: { email: string } \| null` prop; renders `<UserProfileButton>` when authenticated |
+| `app/page.tsx` | ✅ DONE | Fetches Supabase session server-side; passes `user` to `<HomePage>` |
+| `app/awards/page.tsx` | ✅ DONE | Fetches Supabase session server-side; passes `user` to `<AwardsPage>` |
+| `app/kudos/page.tsx` | ✅ DONE | Passes `userEmail` to `<KudosPage>` |
+| `components/homepage/HomePage.tsx` | ✅ PARTIAL | Added `user` prop and passes to Header; still needs `<RootFurtherSection />` + `<FloatingWidget />` |
+| `components/awards/AwardsPage.tsx` | ✅ PARTIAL | Added `user` prop and passes to Header; card design unchanged |
+| `components/kudos/KudosPage.tsx` | ✅ PARTIAL | Added `userEmail` prop and passes to Header |
+| `app/globals.css` | ✅ PARTIAL | Added `--color-btn-secondary-hover`, `--color-profile-dropdown-bg`, `--color-profile-dropdown-border` |
 
 ---
 
 ## Summary
 
-The Homepage is rendered at `/` after the pre-launch countdown ends (`isPrelaunch = false`). It is a public, server-side rendered marketing page comprising four sections: (1) key visual + countdown + CTA buttons, (2) award system summary grid, (3) Sun* Kudos promo block, and (4) footer. Award categories are loaded from a shared static JSON file. The countdown section reuses `<CountdownTimer />` from the Countdown Prelaunch screen. CTA "About SAA 2025" smooth-scrolls to the `#award-system` section; "Sun* Kudos" navigates to `/kudos`.
+Refactor and complete the Homepage SAA to match the final Figma design. Most infrastructure already exists (`HomePage`, `HeroSection`, `AwardSummarySection`, `KudosPromoSection`, `CTAButtons`, `Header`), but several components are incorrect or missing:
+
+- `CTAButtons` navigates with scroll instead of `router.push('/awards')`, uses wrong font size (16px → 22px), and has hardcoded `rgba` hover/active states
+- `HeroSection` uses a plain `t("tagline")` paragraph where the design has a structured **EventInfoBlock** (time/venue/livestream)
+- `HomePage` is missing the **Root Further Theme** section (RF) between hero and awards, and the **Floating Widget** (F)
+- `AwardSummarySection` is missing the C1 section header (supertitle + divider + 57px gold title)
+- `AwardCategoryCard` needs a full redesign — wrong dimensions, missing award image, uses hardcoded descriptions instead of i18n
+- `KudosPromoSection` needs a full redesign to match D1/D2/D2.1 spec (dark `#0F0F0F` bg, two-column layout)
+- `Footer` uses wrong i18n namespace (`auth` → `footer`) and is missing all 4 nav links (E.2)
+- `Header` still needs **NotificationBell** (A.4)
+- Award card images need to be copied from `.momorph/specs/assets/` to `public/assets/awards/`
+- RF logo assets and D2 illustration/logo need Figma download
 
 ---
 
 ## Technical Context
 
-**Language/Framework**: TypeScript 5 / Next.js App Router
-**Primary Dependencies**: React 19, Tailwind CSS 4, next-intl
-**Database**: N/A (award data: static JSON)
-**Testing**: Vitest + React Testing Library; Playwright E2E
-**State Management**: `useState` for countdown; `useEffect` for scroll CTA; static props for awards
-**API Style**: REST (optional `GET /api/awards/categories`); static JSON preferred for MVP
+**Language/Framework**: TypeScript / Next.js 15 App Router
+**Primary Dependencies**: React, TailwindCSS, next-intl, @supabase/ssr, next/image
+**Database**: Supabase (PostgreSQL) — read-only for this page
+**Testing**: Vitest (unit), Playwright (e2e)
+**State Management**: React local state + Supabase Auth global session (server-side fetch)
+**API Style**: Next.js Server Components + static data (`data/awards.ts`)
 
 ---
 
 ## Constitution Compliance Check
 
-*GATE: Must pass before implementation can begin*
-
 | Requirement | Constitution Rule | Status |
 |-------------|-------------------|--------|
-| I. Type Safety | Strict TS; `AwardCategory` type from shared `types/awards.ts` | ✅ Planned |
-| II. Design Fidelity | All hex tokens → CSS vars in `globals.css`; no raw hex in components; all tokens listed in Modified Files table | ✅ Planned |
-| II. Responsive | 320/768/1280 breakpoints; hamburger nav on mobile (FR-010); logo scales | ✅ Planned |
-| II. WCAG 2.1 AA | Skip-to-content link; countdown `aria-live` + per-block `aria-label`; hamburger `aria-label` + `aria-expanded`; focus trap in mobile drawer; Escape-to-close; header logo `aria-label` | ✅ Planned |
-| III. Test-First | Tests before components | ✅ Planned |
-| IV. Layered Arch | Page (Server) → Section components → `<CountdownTimer />` (Client island) | ✅ Planned |
-| IV. Clean Code | Award data from `data/awards.ts` not hardcoded per component; `MobileNavDrawer` extracted to own file | ✅ Planned |
-| V. Doc-Driven | spec.md + plan.md exist | ✅ Met |
-| VI. Security | Public page; no user data; no auth required | ✅ Compliant |
+| TypeScript strict mode, no `any` | Principle I | ✅ Existing code is strict |
+| CSS variables only (no hardcoded hex) | Principle II | ⚠️ Multiple violations — see below |
+| Immutable data patterns | Principle I | ✅ Compliant |
+| i18n for all strings | Principle II | ⚠️ Multiple violations — see below |
+| WCAG 2.1 AA accessibility | Principle II | 📋 Planned for new components |
+| Test-first (TDD) | Principle III | 📋 Unit tests planned |
+| Clean function / file size ≤ 400 lines | Principle IV | 📋 Enforce in new files |
+| OWASP security | Principle VI | ✅ Read-only page, Supabase Auth used correctly |
 
-**Violations**: None.
+**Violations to fix:**
+
+| Violation | File | Fix |
+|-----------|------|-----|
+| Hardcoded `rgba(255,234,158,0.2)` in hover | `CTAButtons.tsx:36` | Use `hover:bg-[var(--color-btn-secondary-hover)]` |
+| Hardcoded `rgba(255,234,158,0.15)` in active | `CTAButtons.tsx:38` | Use `active:bg-[var(--color-btn-secondary-active)]` |
+| Hardcoded Vietnamese string | `KudosPromoSection.tsx:27` | Replace with `t("kudosPromoBody")` |
+| Wrong i18n namespace `"auth"` | `Footer.tsx:6` | Change to `useTranslations("footer")` |
+| Hardcoded `rgba(255,234,158,0.03/0.06)` | `AwardCategoryCard.tsx` | Add `--color-award-card-bg` + `--color-award-card-hover` CSS vars |
+| `category.name` and `category.description` not from i18n | `AwardCategoryCard.tsx` | Use `t("categories.${slug}")` and `t("descriptions.${slug}")` |
+| Font size `text-[16px]` hardcoded in button | `CTAButtons.tsx` | Use `text-[var(--text-btn-size)] leading-[var(--text-btn-line)]` |
 
 ---
 
@@ -47,31 +84,24 @@ The Homepage is rendered at `/` after the pre-launch countdown ends (`isPrelaunc
 
 ### Frontend Approach
 
-- **Component Structure** (Server Components unless noted):
-  - `app/page.tsx` — Reads `isPrelaunch`; renders `<CountdownPage />` or `<HomePage />`
-  - `<HomePage />` — Server Component; loads award data; composes all sections
-  - `<Header />` — Server Component with `<LanguageSelector />` Client island
-  - `<KeyvisualSection />` — Server Component; background image + gradient overlay
-  - `<HeroSection />` — Server Component shell + `<CountdownTimer />` Client island + CTA buttons
-  - `<CTAButtons />` — Client Component (smooth-scroll behavior requires `onClick`)
-  - `<AwardSummarySection />` — Server Component; renders award grid from static data
-  - `<AwardCategoryCard />` — Presentational card; shared with `/awards` page
-  - `<KudosPromoSection />` — Server Component; static promo block
-  - `<Footer />` — Shared Server Component
-- **Styling Strategy**: Tailwind CSS 4 + CSS custom properties. Background gradient applied via inline style only for the LCP image overlay (exception to no-inline-styles rule, justified by dynamic gradient values).
-- **Data Fetching**: Award categories from `data/awards.ts` (static import at build time). No `useEffect` / client fetch. If API is chosen later, switch to `fetch()` in Server Component with `revalidate`.
-
-### Backend Approach
-
-- **No backend changes required for MVP** — award data is static JSON.
-- **Optional future**: `GET /api/awards/categories` — returns same JSON via API route if CMS integration is needed.
+- **Component Structure**: Feature-based — `components/homepage/` for page sections, `components/shared/` for cross-page elements
+- **Styling Strategy**: Tailwind utilities + CSS variables; all colors via `var(--token)`, no raw hex in components
+- **Data Fetching**: Static data (`data/awards.ts`); award images from `public/assets/awards/`; all text via `next-intl`
+- **Auth propagation**: Server components read session → pass `isAuthenticated: boolean` as prop to client components (already implemented for Header → UserProfileButton)
 
 ### Integration Points
 
-- **`<CountdownTimer />`**: Imported from `components/countdown/CountdownTimer.tsx` (Countdown Prelaunch plan). Must be built first.
-- **`<LanguageSelector />`**: Imported from `components/shared/LanguageSelector.tsx` (Language Selector plan).
-- **`data/awards.ts`**: Shared with Award System page (`/awards`). Define once, import in both.
-- **`<AwardCategoryCard />`**: Shared with `/awards` page — build as reusable component.
+| Existing Component | Action |
+|-------------------|--------|
+| `<Header />` | Modify — add `<NotificationBell />` to right group (UserProfileButton ✅ DONE) |
+| `<HeroSection />` | Modify — replace tagline div with `<EventInfoBlock />` |
+| `<CTAButtons />` | Modify — fix navigation + font size + CSS vars |
+| `<AwardSummarySection />` | Modify — add C1 header (supertitle + divider + 57px title); fix card grid layout |
+| `<AwardCategoryCard />` | Full redesign — 336×504px card with award image, i18n name/description, CTA label |
+| `<KudosPromoSection />` | Full redesign per D1/D2/D2.1 spec |
+| `<HomePage />` | Modify — insert `<RootFurtherSection />` + `<FloatingWidget />` (user prop ✅ DONE) |
+| `<Footer />` | Modify — fix namespace, add logo + 4 nav links, add `activeNav` prop |
+| `<CountdownTimer />` | No change — `isLaunched` guard already fixed ✓ |
 
 ---
 
@@ -81,82 +111,53 @@ The Homepage is rendered at `/` after the pre-launch countdown ends (`isPrelaunc
 
 ```text
 .momorph/specs/i87tDx10uM-homepage-saa/
-├── spec.md
-├── design-style.md
-└── plan.md   ← this file
+├── spec.md           ✅ Ready
+├── design-style.md   ✅ Ready
+├── plan.md           ← This file
+├── tasks.md          ← Next step
+└── assets/           ✅ Award images + header.png
 ```
 
-### Source Code
+### New Files to Create
 
-```text
-app/
-├── page.tsx                              # Server Component: isPrelaunch → CountdownPage | HomePage
-
-components/
-├── homepage/
-│   ├── HomePage.tsx                      # Page root: header + keyvisual + hero + awards + kudos + footer
-│   ├── KeyvisualSection.tsx              # Full-bleed background image + gradient overlay (BG node 2167:9027)
-│   ├── HeroSection.tsx                   # Brand logo + countdown + event tagline + CTA buttons
-│   ├── CTAButtons.tsx                    # Client Component: smooth-scroll to #award-system + /kudos navigation
-│   ├── AwardSummarySection.tsx           # Award category cards grid (section with id="award-system"); handles awardsLoading skeleton + awardsError retry
-│   ├── AwardCategoryCard.tsx             # Shared presentational card (homepage + awards page)
-│   └── KudosPromoSection.tsx             # Sun* Kudos promo block with CTA to /kudos
-├── shared/
-│   ├── Header.tsx                        # Shared sticky header (Client Component: manages isMenuOpen state)
-│   ├── MobileNavDrawer.tsx               # Mobile nav drawer (focus trap, Escape-to-close, 100vw full-width)
-│   ├── Footer.tsx                        # Shared footer
-│   └── LanguageSelector.tsx             # (from Language Selector plan)
-└── countdown/
-    └── CountdownTimer.tsx                # (from Countdown Prelaunch plan — reused here)
-
-hooks/
-└── useFocusTrap.ts                       # Focus trap hook for mobile nav drawer (or use focus-trap-react)
-
-data/
-└── awards.ts                             # Static award category data (shared with /awards page)
-
-types/
-└── awards.ts                             # AwardCategory, AwardPrize TypeScript types
-
-public/
-└── assets/
-    └── homepage/
-        ├── saa-2025-logo.png             # SAA 2025 brand logo (451×200px)
-        └── keyvisual.jpg                 # Homepage background key visual
-```
-
-### New Files
-
-| File | Description |
-|------|-------------|
-| `components/homepage/HomePage.tsx` | Page root: header + keyvisual + hero + awards + kudos + footer |
-| `components/homepage/KeyvisualSection.tsx` | Full-bleed background image + gradient overlay (BG node 2167:9027) |
-| `components/homepage/HeroSection.tsx` | Brand logo + countdown + event tagline + CTA buttons |
-| `components/homepage/CTAButtons.tsx` | Client Component: smooth-scroll to `#award-system` + `/kudos` navigation |
-| `components/homepage/AwardSummarySection.tsx` | Award category cards grid; handles `awardsLoading` skeleton + `awardsError` retry |
-| `components/homepage/AwardCategoryCard.tsx` | Shared presentational card (homepage + awards page) |
-| `components/homepage/KudosPromoSection.tsx` | Sun* Kudos promo block with CTA to `/kudos` |
-| `components/shared/Header.tsx` | Shared sticky header (Client Component: manages `isMenuOpen` state) |
-| `components/shared/MobileNavDrawer.tsx` | Mobile nav drawer (focus trap, Escape-to-close, 100vw full-width) |
-| `components/shared/Footer.tsx` | Shared footer |
-| `hooks/useFocusTrap.ts` | Focus trap hook for mobile nav drawer (or use `focus-trap-react`) |
-| `data/awards.ts` | Static award category data (shared with `/awards` page) |
-| `types/awards.ts` | `AwardCategory`, `AwardPrize` TypeScript types |
+| File | Purpose | Status |
+|------|---------|--------|
+| `components/homepage/EventInfoBlock.tsx` | B.3 — structured event info (time/venue/livestream) | 📋 TODO |
+| `components/homepage/RootFurtherSection.tsx` | RF — Root Further theme story section | 📋 TODO |
+| `components/shared/FloatingWidget.tsx` | F — fixed floating Write Kudos + SAA Rules widget | 📋 TODO |
+| `components/shared/NotificationBell.tsx` | A.4 — bell icon with badge dot (click action TBD) | 📋 TODO |
+| `components/shared/UserProfileButton.tsx` | A.5 — profile icon button + dropdown trigger | ✅ DONE |
+| `components/shared/ProfileDropdown.tsx` | A.5 dropdown — Profile link + Logout | ✅ DONE |
+| `components/homepage/TheLeModal.tsx` | Thể lệ SAA rules modal (F widget SAA Rules) | 📋 TODO |
+| `public/assets/awards/award-top-talent.png` | Award card image (copy from spec assets) | 📋 TODO |
+| `public/assets/awards/award-top-project.png` | — | 📋 TODO |
+| `public/assets/awards/award-top-project-leader.png` | — | 📋 TODO |
+| `public/assets/awards/award-best-manager.png` | — | 📋 TODO |
+| `public/assets/awards/award-signature-2025.png` | — | 📋 TODO |
+| `public/assets/awards/award-mvp.png` | — | 📋 TODO |
+| `public/assets/homepage/root-text.png` | RF.1 — `MM_MEDIA_Root Text` logo | 📋 TODO (Figma export needed) |
+| `public/assets/homepage/further-text.png` | RF.1 — `MM_MEDIA_Further Text` logo | 📋 TODO (Figma export needed) |
+| `public/assets/homepage/kudos-illustration.png` | D2 — 264×219px decorative illustration (Node `I3390:10349;313:8417`) | 📋 TODO (Figma export needed) |
+| `public/assets/homepage/kudos-logo.png` | D2 — 364×72px "KUDOS" logo (Node `I3390:10349;329:2948`) | 📋 TODO (Figma export needed) |
 
 ### Modified Files
 
-| File | Change |
-|------|--------|
-| `app/globals.css` | Add homepage-specific tokens: `--color-header-bg`, `--color-btn-secondary-bg`, `--color-btn-secondary-border`, `--header-height`, `--header-padding-x`, `--header-padding-y`, `--content-padding-x`, `--content-padding-y`, `--section-gap`, `--countdown-gap`, `--digit-gap`, `--btn-padding`, `--btn-gap`, `--radius-btn`, `--color-nav-active`, `--color-nav-default`, `--color-divider`, `--border-nav-active` |
-| `app/page.tsx` | Add `<HomePage />` branch to the existing `isPrelaunch` conditional |
-
-### Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `focus-trap-react` | `^10.x` (optional) | Focus trap for mobile nav drawer; alternatively implement `useFocusTrap` hook natively |
-
-`next/image` is built-in to Next.js. All other dependencies already in project.
+| File | Changes | Status |
+|------|---------|--------|
+| `components/homepage/CTAButtons.tsx` | Fix: `handleAboutSAA` scroll → `router.push(ROUTES.AWARDS)`; font `text-[var(--text-btn-size)]`; CSS vars for hover/active | 📋 TODO |
+| `components/homepage/HeroSection.tsx` | Replace tagline + livestream div with `<EventInfoBlock />` | 📋 TODO |
+| `components/homepage/HomePage.tsx` | Add `<RootFurtherSection />` + `<FloatingWidget isAuthenticated={!!user} />`; user prop ✅ DONE | 📋 TODO |
+| `components/homepage/AwardSummarySection.tsx` | Add C1 header (supertitle + divider + 57px gold title); update grid layout to match Figma (col-gap 80px, card 336×504px) | 📋 TODO |
+| `components/homepage/AwardCategoryCard.tsx` | Full redesign: 336×504px, award image 336×336px, i18n name/description, CTA "Chi tiết", `router.push(ROUTES.AWARDS)` on click | 📋 TODO |
+| `components/homepage/KudosPromoSection.tsx` | Full redesign — D1/D2/D2.1 layout (`#0F0F0F` bg, two-column, gold CTA) | 📋 TODO |
+| `components/shared/Header.tsx` | Add `<NotificationBell unreadCount={0} />`; user prop ✅ DONE | 📋 TODO |
+| `components/shared/Footer.tsx` | Change namespace `"auth"` → `"footer"`; add logo + 4 nav links (E.2) + `activeNav` prop; copyright font Montserrat Alternates 700 | 📋 TODO |
+| `data/awards.ts` | Add `imageSrc: "/assets/awards/award-{slug}.png"` per category | 📋 TODO |
+| `types/awards.ts` | Add `imageSrc: string` to `AwardCategory` interface | 📋 TODO |
+| `app/globals.css` | Add CSS vars (see Phase 1); profile dropdown vars ✅ DONE | 📋 TODO |
+| `app/page.tsx` | Fetch Supabase session, pass `user` to `<HomePage>` | ✅ DONE |
+| `app/awards/page.tsx` | Fetch Supabase session, pass `user` to `<AwardsPage>` | ✅ DONE |
+| `app/kudos/page.tsx` | Pass `userEmail` to `<KudosPage>` | ✅ DONE |
 
 ---
 
@@ -164,135 +165,210 @@ public/
 
 ### Phase 0: Asset Preparation
 
-- Export SAA 2025 brand logo → `public/assets/homepage/saa-2025-logo.png` (451×200px)
-- Export homepage keyvisual → `public/assets/homepage/keyvisual.jpg`
-- Add homepage CSS tokens to `app/globals.css`
-- Create `data/awards.ts` with all 6 categories and prize amounts (static, matches spec data table)
+```bash
+mkdir -p public/assets/awards
+cp .momorph/specs/i87tDx10uM-homepage-saa/assets/award-*.png public/assets/awards/
+```
 
-### Phase 1: Foundation (TDD)
+Also download from Figma (use `mcp__momorph__get_media_files`):
+- `MM_MEDIA_Root Text` → `public/assets/homepage/root-text.png`
+- `MM_MEDIA_Further Text` → `public/assets/homepage/further-text.png`
+- Node `I3390:10349;313:8417` (D2 illustration, 264×219px) → `public/assets/homepage/kudos-illustration.png`
+- Node `I3390:10349;329:2948` (D2 Kudos logo, 364×72px) → `public/assets/homepage/kudos-logo.png`
 
-1. Define `types/awards.ts` (AwardCategory, AwardPrize interfaces)
-2. Populate `data/awards.ts` with static data — write type-check tests
-3. Write tests for `<AwardCategoryCard />` (renders name, prize, recipient count)
-4. Implement `<AwardCategoryCard />`
-5. Write tests for `<CTAButtons />` (scroll to `#award-system`; navigate to `/kudos`)
-6. Implement `<CTAButtons />`
+Verify existing: `public/assets/homepage/saa-2025-logo.png` and `keyvisual.jpg` ✓
 
-### Phase 2: Core Layout (US1 — View Event Info)
+### Phase 1: Foundation — Types + Tokens
 
-1. Write E2E test: navigate to `/` (post-launch) → verify key visual, countdown, CTA buttons render
-2. Implement `<KeyvisualSection />` (LCP background image with `<Image priority fill />`)
-3. Implement `<HeroSection />` (brand logo + `<CountdownTimer />` + event tagline + `<CTAButtons />`)
-4. Implement `<HomePage />` shell composing all sections
-5. Wire into `app/page.tsx` — verify both branches (pre-launch and post-launch) work
+1. Add `imageSrc: string` to `AwardCategory` (`types/awards.ts`)
+2. Update `data/awards.ts` with `imageSrc: "/assets/awards/award-{slug}.png"` for all 6 categories
+3. Add CSS variables to `app/globals.css` (in Homepage SAA tokens section):
+   ```css
+   /* CTA button typography */
+   --text-btn-size: 22px;
+   --text-btn-line: 28px;
+   /* Button states */
+   --color-btn-secondary-active: rgba(255, 234, 158, 0.15);
+   /* Kudos promo section */
+   --color-kudos-promo-bg: #0f0f0f;
+   /* Award card */
+   --color-award-card-bg: rgba(255, 234, 158, 0.03);
+   --color-award-card-hover: rgba(255, 234, 158, 0.06);
+   ```
+   (CSS vars already added this session: `--color-btn-secondary-hover`, `--color-profile-dropdown-bg`, `--color-profile-dropdown-border`)
+4. Verify all i18n keys exist — all keys verified present in `vi.json` + `en.json` ✓
 
-### Phase 3: Navigation & Header (US2 — including Hamburger Menu)
+### Phase 2: Fix Existing Components [US1 + US2 — P1]
 
-1. Write tests for `<Header />`: sticky behavior, active nav link highlighting, hamburger open/close on mobile viewport
-2. Implement shared `<Header />` with `activeNav` prop:
-   - `position: fixed; top: 0; z-index: 100` (spec US2 Scenario 4: sticky on scroll)
-   - Active link: gold color (`var(--color-accent-gold)`) + `border-bottom` underline
-   - Nav routes sourced from `lib/constants/routes.ts` (SCREENFLOW.md as source of truth — Constitution Principle II)
-3. Verify "About SAA 2025" is active on homepage; "Award Information" navigates to `/awards`; "Sun* Kudos" navigates to `/kudos`
-4. **FR-010 — Hamburger menu (US2 S5 + S6, viewports < 768px)**:
-   - Add `isMenuOpen: boolean` state to `<Header />` (Client Component or Client island within header).
-   - Render hamburger icon (☰) when `!isMenuOpen`; render close icon (×) when `isMenuOpen`. The button MUST carry `aria-label="Open navigation menu"` when closed and `aria-label="Close navigation menu"` when open, plus `aria-expanded={isMenuOpen}`.
-   - On open: render a full-width (`100vw`) drawer with the nav links stacked vertically, same `rgba(16,20,23,0.8)` background, `16px` padding; language selector also appears in the drawer.
-   - **Focus trap**: When the drawer opens, trap focus inside it (use a `useFocusTrap` hook or a library like `focus-trap-react`). When the drawer closes, return focus to the hamburger button.
-   - **Close triggers**: (a) click the × close button, (b) click/tap outside the drawer, (c) press `Escape`. All three MUST close the drawer and return focus to the hamburger button.
-   - **Resize behavior**: If the viewport is resized from mobile (< 768px) to desktop (≥ 768px) while the drawer is open, the drawer MUST close and the desktop nav MUST render in its place. Implement via a `useEffect` listening to `window.resize` (or a `useMediaQuery('(min-width: 768px)')` hook) that resets `isMenuOpen = false` when the breakpoint crosses above 768px.
-   - Write unit tests: drawer opens on hamburger click; closes on Escape; aria attributes toggle correctly. Write E2E test at 375px viewport: hamburger visible, desktop nav hidden; click hamburger → drawer opens; press Escape → drawer closes.
+**CTAButtons.tsx** (4 changes):
+- Remove `handleAboutSAA` scroll logic → `router.push(ROUTES.AWARDS)`
+- Change `text-[16px] leading-6` → `text-[var(--text-btn-size)] leading-[var(--text-btn-line)]`
+- Replace hardcoded `hover:bg-[rgba(255,234,158,0.2)]` → `hover:bg-[var(--color-btn-secondary-hover)]`
+- Replace hardcoded `active:bg-[rgba(255,234,158,0.15)]` → `active:bg-[var(--color-btn-secondary-active)]`
 
-### Phase 4: Award Section + Kudos Promo (US3 + US4)
+**HeroSection.tsx** (1 change):
+- Remove `<div className="flex flex-col gap-2">` containing tagline + livestream paragraphs
+- Replace with `<EventInfoBlock />` (new component, Phase 3)
 
-1. Implement `<AwardSummarySection />` (grid of `<AwardCategoryCard />`, `id="award-system"`)
-   - **`awardsLoading` state**: On the client-fetch path, while `awardsLoading = true`, render skeleton cards in place of real `<AwardCategoryCard />` components (e.g., shimmer placeholder divs with the same grid dimensions). SSR path (static JSON import) renders data synchronously and skips this state.
-   - **`awardsError` state with retry**: When `awardsError = true`, render an empty-state block in the award grid with a user-facing retry prompt (e.g., a "Retry" button that re-fetches the data). Do NOT crash or leave the grid blank without explanation.
-2. Verify CTA smooth-scroll lands at `#award-system`
-3. Implement `<KudosPromoSection />` with CTA to `/kudos`
-4. Implement `<Footer />`
+### Phase 3: New Components
 
-### Phase 5: Polish
+**3.1 EventInfoBlock** (`components/homepage/EventInfoBlock.tsx`)
+- Server Component — no "use client" needed (pure render, no interactivity)
+- Props: none (reads from `useTranslations("homepage")`)
+- Layout: `flex flex-col gap-2` (width 637px on desktop)
+- Row 1: `flex flex-row gap-[60px]` — Time group + Venue group
+  - Group: `flex flex-row gap-2 items-baseline`
+  - Label: `font-bold text-[16px] leading-[24px] tracking-[0.15px] text-[var(--color-text-primary)]`
+  - Value: `font-bold text-[24px] leading-[32px] text-[var(--color-accent-gold)]`
+- Row 2: Livestream note — `font-bold text-[16px] leading-[24px] tracking-[0.5px] text-[var(--color-text-primary)]`
+- i18n keys used: `eventTimeLabel`, `eventDate`, `eventVenueLabel`, `eventVenue`, `livestream`
 
-- Responsive: logo scales proportionally on tablet/mobile; digit blocks scale; hamburger menu fully implemented in Phase 3
-- `awardsError` fallback and `awardsLoading` skeleton: covered in Phase 4
-- **Logo asset fallback**: The `<Image src="saa-2025-logo.png" alt="SAA 2025" />` component MUST always have a meaningful `alt` attribute (`"SAA 2025"`). If the PNG fails to load, the `alt` text provides branding context. Do NOT use `alt=""` for the brand logo.
-- `aria-live` on countdown; skip-to-content `<a href="#main-content">` link before header
-- Header logo `<a>` MUST have `aria-label="SSA 2025 — go to homepage"` (image-only anchor)
-- LCP optimization: verify keyvisual image scores in Lighthouse ≥ 90
-- `prefers-reduced-motion`: disable all transition animations (countdown tick, button hover, header nav hover)
+**3.2 NotificationBell** (`components/shared/NotificationBell.tsx`)
+- Client Component (`"use client"`)
+- Props: `unreadCount?: number` (default `0`)
+- Renders: `<button>` (40×40px) containing bell SVG icon; badge dot when `unreadCount > 0`
+- States: default/hover (`bg-white/10`)/focus (`outline-2 solid gold`)/active (`bg-white/15`)
+- **Click action: TBD — renders as non-interactive bell icon for now** (`onClick` omitted or no-op)
+- `aria-label="Notifications"`, `aria-disabled` when no action
 
-### Risk Assessment
+**3.3 UserProfileButton + ProfileDropdown** — ✅ **ALREADY DONE**
+See "Already Implemented" section above.
 
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| LCP too slow (large keyvisual image) | Medium | Medium | Use `<Image priority fill />` + WebP format + proper sizing |
-| `<CountdownTimer />` not yet built | High (dependency) | High | Plan Countdown Prelaunch first; this plan depends on it |
-| `isPrelaunch` check timing race | Low | Low | Server-side check; no client race condition |
-| Mobile hamburger nav scope | Medium | Medium | Full implementation required per FR-010; covered in Phase 3 step 4 (focus trap, Escape, resize behavior) |
+**3.4 RootFurtherSection** (`components/homepage/RootFurtherSection.tsx`)
+- Server Component — no "use client" (no state/events)
+- Container: `w-full px-[104px] py-[120px]`, flex column, gap `32px`, max-width 1152px centered
+- RF.1 Logos: `<Image src="/assets/homepage/root-text.png" />` + `<Image src="/assets/homepage/further-text.png" />` side by side
+- RF.2 Opening paragraph (`homepage.rootFurtherParagraph1`): `font-bold text-[24px] leading-[32px] text-[var(--color-text-primary)] text-justify`
+- RF.3 Quote (`homepage.rootFurtherQuote`): `font-bold text-[20px] leading-[32px] text-[var(--color-text-primary)] text-center`
+- RF.4 Closing paragraph (`homepage.rootFurtherParagraph2`): `font-bold text-[24px] leading-[32px] text-[var(--color-text-primary)] text-justify`
+- All text via `useTranslations("homepage")`
 
-### Estimated Complexity
+**3.5 FloatingWidget** (`components/shared/FloatingWidget.tsx`)
+- Client Component (`"use client"`)
+- Props: `isAuthenticated: boolean`
+- Position: `position: fixed; right: 19px; bottom: 120px` — `bottom` chosen over Figma's `top: 830px` (safer for varying viewport heights; see Risk)
+- `z-[90]` (below header at 100)
+- Box shadow: `0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287` (inline style — no CSS variable needed for one-off)
+- Layout: `flex flex-row items-center` (106×64px, 2 buttons + divider)
+- Write Kudos button (pen icon `MM_MEDIA_Pen`, or inline SVG pen):
+  - If `isAuthenticated` → `router.push(ROUTES.KUDOS)` (Write Kudos is an in-page modal on `/kudos`)
+  - If not → `router.push(ROUTES.LOGIN)`
+  - **`ROUTES.WRITE_KUDOS` does not exist** — Write Kudos is a modal triggered by `WriteKudosButton` on the `/kudos` page, not a separate route. Correct action: `router.push(ROUTES.KUDOS)`.
+- SAA Rules button (kudos logo icon `MM_MEDIA_Kudos Logo`):
+  - Opens `<TheLeModal isOpen onClose />` — no auth required
+  - Local state: `const [theLeOpen, setTheLeOpen] = useState(false)`
+- Hover state on each button: `hover:bg-white/10`, `focus-visible:outline-2 outline-gold`
 
-- **Frontend**: Medium (multiple sections; SSR + Client island mixing; LCP optimization)
-- **Backend**: Low (static data only)
-- **Testing**: Medium (LCP; scroll behavior; section rendering)
+**3.6 TheLeModal** (`components/homepage/TheLeModal.tsx`)
+- Client Component (`"use client"`)
+- Props: `isOpen: boolean`, `onClose: () => void`, `isAuthenticated: boolean`
+- Backdrop: `fixed inset-0 z-[150] bg-[var(--color-overlay)]` — closes on backdrop click
+- Modal: centered, `max-h-[90vh] overflow-y-auto`, `max-w-[680px]`
+- Title: "Thể lệ" — Montserrat 700, 45px, `text-[var(--color-accent-gold)]`
+- 3 sections: (A) Người nhận — Hero badge rules; (B) Người gửi — 6 icons; (C) Kudos Quốc Dân
+- Footer buttons:
+  - "Đóng" → `onClose()` — Montserrat 700, 16px, `#FFFFFF`, ls 0.5px
+  - "Viết KUDOS" → if `isAuthenticated`: `router.push(ROUTES.KUDOS)`; else: `router.push(ROUTES.LOGIN)` — Montserrat 700, 16px, `#00101A` on gold bg
+- **i18n**: Modal text is Vietnamese-only content per Figma design. Add `theLeModal.*` keys to `vi.json` + `en.json` in Phase 1 for: `title`, `closeBtn`, `writeKudosBtn`, section headers and content descriptions (see spec `design-style.md` F section)
+
+### Phase 4: KudosPromoSection Redesign [US4 — P3]
+
+Full rewrite of `KudosPromoSection.tsx`:
+- Outer: `w-full px-4 md:px-[var(--content-padding-x)]`
+- Inner `div`: `relative w-full max-w-[1120px] h-[500px]` rounded-[16px] `bg-[var(--color-kudos-promo-bg)]`
+- D2 left column: `w-[457px] flex flex-col gap-8 pl-[64px] justify-center`
+  - Section label: `t("kudosPromoLabel")` — 24px white bold
+  - Feature name: `t("kudosSectionTitle")` — 57px gold, ls `-0.25px`
+  - Body copy: `t("kudosPromoBody")` — 16px white bold, ls 0.5px, justified
+- D2.1 CTA: `w-[127px] h-[56px]` gold bg `#FFEA9E`, text `t("kudosCtaLabel")` (16px dark, ls 0.15px) + `MM_MEDIA_Up` icon → `router.push(ROUTES.KUDOS)`
+- D2 right: illustration `<Image src="/assets/homepage/kudos-illustration.png" width={264} height={219} />` + Kudos logo `<Image src="/assets/homepage/kudos-logo.png" width={364} height={72} />`
+- Both right elements: `absolute` positioned within inner div
+
+### Phase 5: AwardCategoryCard + AwardSummarySection Update [US3 — P2]
+
+**5.1 AwardCategoryCard full redesign** (`AwardCategoryCard.tsx`):
+- Remove `<Link>` wrapper → use `<button type="button" onClick={() => router.push(ROUTES.AWARDS)}>`
+- Card size: `w-[336px]` — flex column
+- Image area (C2.x.1_Picture-Award): `<Image src={category.imageSrc} width={336} height={336} alt={t("categories.${category.slug}")} />`
+  - Style: `mix-blend-mode: screen`, `box-shadow: 0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287` (inline style)
+- Content area (336×144px, gap 24px from image):
+  - Category name: `t("categories.${category.slug}")` — Montserrat 400, 24px, `text-[var(--color-accent-gold)]`, lh 32px
+  - Description: `t("descriptions.${category.slug}")` — Montserrat 400, 16px, `text-[var(--color-text-primary)]`, lh 24px, ls 0.5px
+  - CTA label: `t("ctaLabel")` — Montserrat 500, 16px, `text-[var(--color-text-primary)]`, lh 24px, ls 0.15px
+- Remove `topPrize` display (not in Figma design)
+- Remove hardcoded rgba values → use CSS vars `--color-award-card-bg`, `--color-award-card-hover`
+- `useTranslations("awards")` inside component
+
+**5.2 AwardSummarySection C1 header**:
+- Add above grid: supertitle `t("awardSectionTitle", { ns: "awards" })` (`awards.sectionTitle`) — Montserrat 700, 24px, white
+- Add `<hr>` divider — 1px `bg-[var(--color-divider)]`
+- Update main title to use `t("awardSectionTitle")` — Montserrat 700, **57px**, gold, lh 64px, ls `-0.25px`
+- Grid: `grid-cols-3` fixed (not responsive 1→2→3); gap `80px` per Figma
+- Remove `gap-6` — use `gap-[80px]`
+
+### Phase 6: Header Update [US2 — P1]
+
+In `Header.tsx` right group:
+1. Add `<NotificationBell unreadCount={0} />` — renders between LanguageSelector and UserProfileButton
+2. `<UserProfileButton>` — ✅ DONE (renders only when `user` prop is provided)
+3. Right group order: LanguageSelector → NotificationBell → UserProfileButton
+4. Pass `session` from server components — ✅ DONE
+
+### Phase 6b: Footer Update
+
+Full fix of `Footer.tsx`:
+- Add `activeNav?: string` prop (same convention as Header)
+- Change `useTranslations("auth")` → `useTranslations("footer")`
+- Layout: `flex flex-row justify-between items-center`
+- Add logo `<Image src="/assets/auth/logos/mm-media-logo.png" width={52} height={48} />`
+- Add `<nav>` with 4 links (from `footer.nav.*` i18n keys):
+  - `footer.nav.aboutSaa` → `/`
+  - `footer.nav.awardInfo` → `/awards`
+  - `footer.nav.kudos` → `/kudos`
+  - `footer.nav.generalStandards` → `#` (TBD route)
+- Footer nav link active state: gold text-shadow when `activeNav` matches
+- Update copyright: `t("copyright")`, `font-[family-name:var(--font-montserrat-alt)] font-bold text-[16px]`, center
+- Pass `activeNav` from `HomePage`, `AwardsPage`, `KudosPage` to `<Footer>`
+
+### Phase 7: Polish
+
+- Responsive overrides for all new sections (mobile ≥ 320px, tablet ≥ 768px)
+- Add `aria-*` labels to modal, dropdown, floating widget
+- Run `pnpm tsc --noEmit` — zero errors
+- Run `pnpm vitest run` — all existing tests pass
 
 ---
 
-## Integration Testing Strategy
+## Testing Strategy
 
-### Test Scope
+| Type | Focus | Coverage Goal |
+|------|-------|---------------|
+| Unit (Vitest) | `EventInfoBlock` render, `FloatingWidget` auth logic, `CTAButtons` navigation | 80% |
+| Integration | `ProfileDropdown` logout flow (✅ component exists), `TheLeModal` open/close | Key flows |
+| E2E (Playwright) | Homepage render, nav links, B4.1 → /awards, F widget | Critical paths |
 
-- [x] **Section rendering**: All 4 sections visible on desktop and mobile
-- [x] **CTA scroll**: "About SAA 2025" → smooth-scroll to `#award-system`
-- [x] **Navigation**: Header nav links route correctly
-- [x] **Countdown reuse**: `<CountdownTimer />` ticks correctly on homepage
-- [ ] **Data layer**: Static JSON — no integration test needed
+### Key Test Scenarios
 
-### Test Categories
+1. `CTAButtons`: click "About SAA" → URL becomes `/awards`
+2. `FloatingWidget` unauthenticated → click Write Kudos → redirect to `/login`
+3. `FloatingWidget` → click SAA Rules → `TheLeModal` visible
+4. `UserProfile` dropdown → click Logout → session cleared → URL becomes `/` (✅ implemented)
+5. `EventInfoBlock` locale switch VN/EN → labels update
+6. `RootFurtherSection` → 3 text blocks visible in DOM
 
-| Category | Applicable? | Key Scenarios |
-|----------|-------------|---------------|
-| UI ↔ Logic | Yes | CTA scroll; countdown tick |
-| App ↔ Data Layer | No | Static JSON (no async) |
-| Cross-platform | Yes | Responsive layout at 320/768/1280 |
+---
 
-### Mocking Strategy
+## Risk Assessment
 
-| Dependency | Strategy | Rationale |
-|------------|----------|-----------|
-| `Date.now()` | Mock | Control countdown value |
-| `NEXT_PUBLIC_LAUNCH_DATETIME` | Env override | Test post-launch state |
-| `next/image` | Real | Verify LCP image renders |
-
-### Test Scenarios Outline
-
-1. **Happy Path**
-   - [ ] `/` renders Homepage (not Countdown) when `LAUNCH_DATETIME` is in the past
-   - [ ] All 4 sections visible without scrolling limitation
-   - [ ] CTA "About SAA 2025" smooth-scrolls to `#award-system`
-   - [ ] CTA "Sun* Kudos" navigates to `/kudos`
-
-2. **Error Handling**
-   - [ ] Award data missing → empty state with retry prompt shown, no crash
-   - [ ] Award data loading → skeleton cards visible while `awardsLoading = true`
-   - [ ] Keyvisual image fails → `#00101A` background visible; content readable
-   - [ ] Logo image fails → `alt="SAA 2025"` text fallback visible
-
-3. **Edge Cases**
-   - [ ] Countdown expires while on homepage → shows `00 00 00`, no negative values, no redirect (user is already on homepage)
-   - [ ] `isPrelaunch` flips to true mid-session → middleware redirects on next navigation
-   - [ ] Hamburger menu open → resize to ≥ 768px → drawer closes, desktop nav shows
-   - [ ] Mobile 375px: hamburger opens, Escape closes, focus returns to hamburger button
-
-### Coverage Goals
-
-| Area | Target | Priority |
-|------|--------|----------|
-| `data/awards.ts` types | 100% | High |
-| `<AwardCategoryCard />` | 90%+ | High |
-| `<CTAButtons />` scroll behavior | 85%+ | High |
-| E2E homepage render | Key flow | High |
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| KudosPromoSection redesign breaks mobile layout | Med | Med | Test all 3 breakpoints; wrap with `overflow-x-hidden` |
+| `TheLeModal` content overflow on short mobile screens | Med | Low | `max-h-[90vh] overflow-y-auto` |
+| `FloatingWidget` `top: 830px` wrong on short viewports | Med | Low | Use `bottom: 120px` — plan decision; closed (see Open Questions) |
+| Award card `mix-blend-mode: screen` on non-dark bg | Low | Low | Only on `#00101A` bg — expected |
+| `--text-btn-size: 22px` oversized on mobile | Low | Low | Responsive: `sm:text-[18px]` override |
+| D2/RF assets not exported from Figma yet | High | High | Phase 0 explicitly includes Figma export step; block Phase 4/RF until assets available |
+| AwardCategoryCard redesign breaks Awards page (reused component) | Med | Med | `AwardCategoryCard` is only used in `AwardSummarySection` (homepage) — not shared with `AwardDetailPanel` on `/awards` page |
 
 ---
 
@@ -300,29 +376,37 @@ public/
 
 ### Required Before Start
 
-- [x] `constitution.md` reviewed
-- [x] `spec.md` approved
-- [ ] Language Selector component built (`hUyaaugye2` plan)
-- [ ] `<CountdownTimer />` component built (`8PJQswPZmU` plan)
-- [ ] SAA 2025 logo exported to `public/assets/homepage/`
-- [ ] Homepage keyvisual image available
+- [x] `spec.md` Ready ✓
+- [x] `design-style.md` Ready ✓
+- [x] Award card images in `.momorph/specs/i87tDx10uM-homepage-saa/assets/` ✓
+- [x] i18n keys added (vi.json + en.json) ✓
+- [x] `ROUTES.AWARDS`, `ROUTES.KUDOS`, `ROUTES.LOGIN`, `ROUTES.HOME` exist ✓
+- [x] `ROUTES.WRITE_KUDOS` — **NOT needed**: Write Kudos uses `ROUTES.KUDOS` (in-page modal on /kudos) ✓ RESOLVED
+- [ ] RF logo assets downloaded from Figma to `public/assets/homepage/`
+- [ ] D2 illustration + logo downloaded from Figma to `public/assets/homepage/`
+- [ ] `theLeModal.*` i18n keys added for modal title/sections/buttons
 
 ### External Dependencies
 
-- None (static data; no third-party APIs)
+- No new npm packages required
+- All Figma assets need export (Phase 0)
+
+---
+
+## Open Questions
+
+- [x] `ROUTES.WRITE_KUDOS` — **RESOLVED**: Write Kudos is an in-page modal on `/kudos`; FloatingWidget → `router.push(ROUTES.KUDOS)`
+- [x] `FloatingWidget` position — **RESOLVED**: Use `bottom: 120px` (not Figma `top: 830px`) — safer for viewports < 830px tall
+- [x] Award card click: `/awards` general vs `/awards#top-talent` anchor — **RESOLVED**: Use `router.push(ROUTES.AWARDS)` without anchor (spec US3 Scenario 2; existing card uses anchor which conflicts with plan)
+- [ ] **TheLeModal i18n**: Modal content ("Thể lệ", sections A/B/C, button labels) — should these be i18n keys or accepted as VN-only content? Constitution requires locale support for all UI text.
+- [ ] **RF logos asset path**: Are `MM_MEDIA_Root Text` / `MM_MEDIA_Further Text` assets already in `public/` anywhere, or must they be exported from Figma?
+- [ ] **NotificationBell click action**: Deferred by user — render as visible but non-interactive until notification system is designed.
 
 ---
 
 ## Next Steps
 
-1. Ensure `hUyaaugye2` (Language Selector) and `8PJQswPZmU` (Countdown) plans are executed first
-2. Run `/momorph.tasks` to generate the task breakdown
-3. Create `data/awards.ts` (Phase 0) — shared with Award System page
-
----
-
-## Notes
-
-- `data/awards.ts` is a **shared data file** — create it as part of this plan and import it in the Award System page as well. Do not duplicate data.
-- The `<Header />` component must support an `activeNav` prop so each page can highlight the correct nav link. Design this interface during Phase 3 so it works for Homepage, Awards, and Kudos pages.
-- "About SAA 2025" nav link = active on this page; "Award Information" = navigates to `/awards`. These are different nav items with different labels.
+1. Answer open questions (TheLeModal i18n, RF logos) before Phase 3.4 and 3.6
+2. **Run Phase 0**: Copy award images + export Figma assets (RF logos, D2 assets)
+3. **Run Phase 1**: Add CSS vars to globals.css + imageSrc to data/types
+4. **Run `/momorph.tasks`** to generate task breakdown from this plan

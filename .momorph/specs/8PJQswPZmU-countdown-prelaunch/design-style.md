@@ -75,7 +75,7 @@
 | z-index (image layer) | 0 |
 
 **Implementation notes**:
-- Use `<Image priority fill objectFit="cover" />` for the background photo
+- Use `<Image priority fill style={{ objectFit: 'cover' }} alt="" />` for the background photo (`objectFit` prop was removed in Next.js 13+; use inline style or Tailwind `object-cover` class)
 - Layer gradient overlay as an absolute `<div>` on top
 
 ---
@@ -155,18 +155,18 @@ Each digit block is a vertical stack: digit card(s) above, unit label below.
 │       NGÀY               GIỜ               PHÚT              │
 │                                                               │
 └──────────────────────────────────────────────────────────────┘
-                 [centered vertically ~60% from top]
+         [content center ~60% from top — ⚠️ CONFIRM EXACT VALUE WITH DESIGN TEAM]
 ```
 
 ---
 
 ## Responsive Specifications
 
-| Breakpoint | Digit size | Card width | Card height | Title size |
-|------------|-----------|------------|-------------|------------|
-| Desktop ≥ 1280px | 73.73px | 77px | 123px | 36px |
-| Tablet 768–1279px | 52px | 60px | 96px | 28px |
-| Mobile 320–767px | 36px | 44px | 72px | 20px |
+| Breakpoint | Digit size | Card width | Card height | Title size | Unit label size |
+|------------|-----------|------------|-------------|------------|-----------------|
+| Desktop ≥ 1280px | 73.73px | 77px | 123px | 36px | 36px |
+| Tablet 768–1279px | 52px | 60px | 96px | 28px | 28px |
+| Mobile 320–767px | 36px | 44px | 72px | 20px | 20px |
 
 - Digit blocks row wraps or scales via CSS `transform: scale()` on smaller viewports
 - Unit label font size scales proportionally with digit size
@@ -185,8 +185,8 @@ The digit block is non-interactive (read-only display). No hover, focus, active,
 |-------|----------|
 | Loading (SSR hydrating) | SSR-rendered static values shown; no visual loading spinner |
 | Active (counting down) | Values update every 60s via `setInterval` |
-| Expired (`isExpired = true`) | Immediately redirect to `/login`; never display negative values |
-| Misconfigured (no `LAUNCH_DATETIME`) | Each digit block shows `--` (double dash) instead of a number; server logs error |
+| Expired (`isExpired = true`) | Immediately redirect to `/` (authenticated) or `/login` (unauthenticated); never display negative values |
+| Misconfigured (`GET /api/campaigns/active` returns `null` or invalid `start_date`) | Each digit block shows `--` (double dash) instead of a number; server logs structured error |
 
 ---
 
@@ -204,11 +204,12 @@ The digit block is non-interactive (read-only display). No hover, focus, active,
 | Figma Node | Component | CSS / Tailwind |
 |------------|-----------|----------------|
 | `2268:35127` (BG) | `<CountdownBackground />` | `relative w-full h-screen bg-[#00101A]` |
+| *(content wrapper)* | `<CountdownContent />` | `absolute inset-0 flex flex-col items-center justify-center` — **⚠️ vertical offset TBD** (design shows content center ~60% from top; confirm exact value with design team before hardcoding `pt-*` offset) |
 | `2268:35131` (Title) | `<CountdownTitle />` | `font-montserrat font-bold text-[36px] text-white text-center mb-[48px]` |
 | `2268:35139` (Days) | `<DigitBlock unit="days" />` | `flex flex-col items-center gap-[12px]` |
 | `2268:35144` (Hours) | `<DigitBlock unit="hours" />` | `flex flex-col items-center gap-[12px]` |
 | `2268:35149` (Minutes) | `<DigitBlock unit="minutes" />` | `flex flex-col items-center gap-[12px]` |
-| Digit card | `<DigitCard digit="0" />` | `w-[77px] h-[123px] rounded-[12px] border border-[#FFEA9E] backdrop-blur-[25px] bg-[rgba(255,234,158,0.05)] flex items-center justify-center` |
+| Digit card | `<DigitCard digit="0" />` | `w-[77px] h-[123px] rounded-[12px] border border-[#FFEA9E] backdrop-blur-[24.96px] bg-[rgba(255,234,158,0.05)] flex items-center justify-center` |
 | Digit numeral | `<span>` inside card | `font-["Digital_Numbers"] text-[73.73px] text-white leading-none` |
 | Unit label | `<CountdownLabel />` | `font-montserrat font-bold text-[36px] leading-[1.2] text-white mt-[12px]` |
 

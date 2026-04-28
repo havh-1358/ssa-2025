@@ -72,6 +72,7 @@ The Language Selector is a **shared dropdown component** that appears in the hea
 
 ### Edge Cases
 
+- **Flag SVG fails to load**: Next.js `<Image>` renders an empty box; no alt text shown (flags are `aria-hidden`). The locale label text ("VN"/"EN") remains visible — the component remains functional. No error state needed.
 - **Cookie unavailable** (private browsing / blocked): Fall back to `localStorage`, then to default locale (VN). Log warning; do not crash.
 - **Cookie save failure**: If `document.cookie` write fails silently, locale change still takes effect for the current session (in-memory); user is NOT notified (non-critical failure).
 - **Unsupported locale in cookie**: If cookie value is not `"vi"` or `"en"`, reset to `"vi"` (default). Validated via Zod at read time.
@@ -114,11 +115,12 @@ The Language Selector is a **shared dropdown component** that appears in the hea
   - `aria-haspopup="listbox"`
   - `aria-controls="language-dropdown"`
 - **ARIA on dropdown**:
-  - `role="listbox"` on container
-  - `id="language-dropdown"`
+  - `role="listbox"` on the `<ul>` element
+  - The wrapping `<div>` dropdown container MUST have `id="language-dropdown"` to satisfy the trigger's `aria-controls` reference
   - Each option: `role="option"` + `aria-selected="true|false"`
 - **Focus management**: When dropdown opens, focus moves to the first (or currently selected) option; when it closes (Escape or selection), focus returns to the trigger button
 - **Keyboard**: Arrow Up/Down navigates; Enter/Space selects; Escape closes
+- **Reduced motion**: When `prefers-reduced-motion: reduce` is set, all scale/fade animations on the dropdown MUST be disabled (see `design-style.md` Animation section)
 
 ---
 
@@ -160,6 +162,7 @@ No API calls required. Locale is managed client-side via cookie / localStorage w
 |-------|------|---------|-------------|
 | `isOpen` | `boolean` | `false` | Controls dropdown visibility |
 | `locale` | `"vi" \| "en"` | From cookie/default | Currently selected locale |
+| `isChangingLocale` | `boolean` | `false` | True while `router.refresh()` is in flight after locale cookie write; prevents double-selection |
 
 ### Global State
 
@@ -183,7 +186,7 @@ No API calls required. Locale is managed client-side via cookie / localStorage w
 ### Technical Requirements
 
 - **TR-001**: Implement with next-intl locale switching using **cookie-based locale without route prefix** (preferred — avoids URL structure change). Cookie is read server-side in middleware to set the `next-intl` locale for SSR. Client-side locale changes use `useRouter().refresh()` after cookie write.
-- **TR-002**: Locale cookie name: `locale`; value: `"vi"` or `"en"`; `path=/`; `max-age=31536000` (1 year); `SameSite=Lax` (not sensitive data — `Strict` is not required). **Cross-reference conflict**: `GzbNeVGJHz-login/plan.md` uses cookie name `NEXT_LOCALE` (next-intl default). Implementation MUST use `locale` (this spec is authoritative). Update `login/plan.md` accordingly before implementation starts.
+- **TR-002**: Client-side locale persistence writes cookie name `locale`; value: `"vi"` or `"en"`; `path=/`; `max-age=31536000` (1 year); `SameSite=Lax`. The middleware (`proxy.ts`) reads both `locale` (first priority) and `NEXT_LOCALE` (fallback) for backwards compatibility, then persists the resolved value as `NEXT_LOCALE` for next-intl client detection. This dual read is intentional and does NOT constitute a conflict — `locale` is the canonical user-set cookie; `NEXT_LOCALE` is the next-intl system cookie. `GzbNeVGJHz-login/plan.md` references to `NEXT_LOCALE` are correct for the middleware layer; the client-side selector MUST write `locale`.
 - **TR-003**: Component MUST be reusable across all screens (extract as `<LanguageSelector />`).
 - **TR-004**: Dropdown overlay MUST trap focus while open (focus trap pattern).
 - **TR-005**: SSR default locale: if no `locale` cookie is present, default to `"vi"` both server-side and client-side.
@@ -222,5 +225,5 @@ No API calls required. Locale is managed client-side via cookie / localStorage w
 - This frame (`hUyaaugye2`) documents only the **dropdown popup**. The trigger button (flag + locale text + chevron) is part of the Header component (`<Header />`).
 - The dropdown is a **shared component** — it must be reused across Login, Countdown, Homepage, and all other screens with a header. Do NOT re-implement per screen.
 - Default locale is VN (`vi`). If no cookie is present, render in Vietnamese.
-- **Cookie name conflict**: `GzbNeVGJHz-login/plan.md` uses `NEXT_LOCALE` as the cookie name (next-intl default), while this spec (TR-002) defines `locale`. The spec is authoritative. The `login/plan.md` i18n section must be updated to use `locale` as the cookie name when configuring next-intl middleware. The i18n config should use `defineRouting({ ... })` and the middleware must read the `locale` cookie (not `NEXT_LOCALE`) to determine the active locale.
+- **Cookie architecture**: The middleware (`proxy.ts`) reads `locale` (user-set, first priority) then `NEXT_LOCALE` (next-intl system cookie, fallback), and persists the resolved locale as `NEXT_LOCALE` for next-intl's client detection. The `<LanguageSelector />` MUST write only the `locale` cookie on selection. No changes needed to `login/plan.md` — the dual-cookie approach is intentional and already implemented.
 - **Trigger button typography**: The trigger button locale label on the Login screen is **16px** (Montserrat 700, per Login design-style `--text-language` token). Do not apply a 14px override for Login. See open question OQ-1 in `design-style.md` for other screens.

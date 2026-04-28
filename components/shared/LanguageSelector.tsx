@@ -65,7 +65,7 @@ function LocaleOption({
       role="option"
       aria-selected={isSelected}
       aria-label={ariaLabel}
-      tabIndex={-1}
+      tabIndex={isSelected ? 0 : -1}
       ref={optionRef}
       className={`flex items-center gap-3 px-4 py-4 rounded-[4px] cursor-pointer
         ${selectedBg}

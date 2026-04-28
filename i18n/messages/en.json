@@ -24,9 +24,19 @@
     "ctaKudos": "Sun* Kudos",
     "comingSoon": "Event starts in",
     "tagline": "The biggest Sun* talent recognition event of the year",
+    "eventTimeLabel": "Time:",
+    "eventDate": "26/12/2025",
+    "eventVenueLabel": "Venue:",
+    "eventVenue": "Au Co Art Center",
     "livestream": "Live-streamed online",
     "awardSectionTitle": "Award System",
     "kudosSectionTitle": "Sun* Kudos",
+    "kudosPromoLabel": "Recognition Movement",
+    "kudosPromoBody": "NEW IN SAA 2025\nA peer recognition and appreciation activity — happening for the first time for all Sunners. Launching in November 2025, encouraging Sun* members to share recognition and appreciation on the official platform. These will be used as reference material by the Heads Council when selecting award recipients.",
+    "kudosCtaLabel": "Details",
+    "rootFurtherParagraph1": "Faced with the rapidly changing landscape of the AI era and increasingly high demands from clients, Sun* has chosen a strategy of capability diversification — not only striving to become elite in its field, but aiming even higher: a place where every Sunner is a \"problem-solver\", an expert at resolving every challenge, finding solutions to every project, client, and societal problem.\nDrawing inspiration from diverse capabilities, flexible growth, and the spirit of going deeper to break through in the AI era, \"Root Further\" was chosen as the official theme of the Sun* Annual Awards 2025.\nBeyond its surface meaning, \"Root Further\" is the journey of continuously reaching farther, rooting deeper, touching the hidden \"geological layers\" to sustain existence, rise up, and nurture the ever-burning passion for creating value that defines Sun* people.",
+    "rootFurtherQuote": "\"A tree with deep roots fears no storm\"\n(English Proverb)",
+    "rootFurtherParagraph2": "Before the storm, only trees with strong enough roots can stand firm. An organization of individuals confident in diverse capabilities, ready to create and embrace challenges, and in command of change — is an organization that not only stands firm amid turbulence, but also harnesses every advantage to conquer the challenges of the times. More than just the name of a new chapter in the organization's development journey, \"Root Further\" is also an encouragement for each of us to dare to believe in ourselves, dare to go deep, unlock all potential, dare to break limits, and become the most versatile and excellent version of ourselves.",
     "awardsError": "Failed to load awards.",
     "awardsRetry": "Retry",
     "nav": {
@@ -38,20 +48,42 @@
       "logoLabel": "SSA 2025 — go to homepage"
     }
   },
+  "userMenu": {
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "footer": {
+    "copyright": "Copyright belongs to Sun* © 2025",
+    "nav": {
+      "aboutSaa": "About SAA 2025",
+      "awardInfo": "Award Information",
+      "kudos": "Sun* Kudos",
+      "generalStandards": "General Standards"
+    }
+  },
   "awards": {
     "sectionTitle": "Sun* Annual Awards 2025",
     "navAriaLabel": "Award categories",
     "loadingLabel": "Loading award information",
     "errorMessage": "Unable to load award information.",
     "retryLabel": "Retry",
+    "ctaLabel": "Details",
     "recipients": "recipients",
     "categories": {
       "top-talent": "Top Talent",
       "top-project": "Top Project",
       "top-project-leader": "Top Project Leader",
       "best-manager": "Best Manager",
-      "signature-2025": "Signature 2025",
-      "mvp": "MVP"
+      "signature-2025": "Signature 2025 - Creator",
+      "mvp": "MVP (Most Valuable Person)"
+    },
+    "descriptions": {
+      "top-talent": "Recognizing the top individual who excels across all dimensions",
+      "top-project": "Recognizing the outstanding project across all dimensions with remarkable revenue",
+      "top-project-leader": "Recognizing the inspiring manager who leads projects to breakthrough results",
+      "best-manager": "Recognizing the manager with strong management skills who leads their team effectively",
+      "signature-2025": "Recognizing the manager with strong management skills who leads their team effectively",
+      "mvp": "Recognizing the manager with strong management skills who leads their team effectively"
     },
     "prizes": {
       "first": "1st Place",

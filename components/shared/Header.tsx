@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { ROUTES } from "@/lib/constants/routes";
 import { LanguageSelector } from "./LanguageSelector";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { UserProfileButton } from "./UserProfileButton";
 
 type NavItem = {
   key: string;
@@ -22,9 +23,10 @@ const NAV_ITEMS: NavItem[] = [
 
 export type HeaderProps = {
   activeNav?: string;
+  user?: { email: string } | null;
 };
 
-export function Header({ activeNav = "" }: HeaderProps) {
+export function Header({ activeNav = "", user }: HeaderProps) {
   const t = useTranslations("homepage");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -115,8 +117,9 @@ export function Header({ activeNav = "" }: HeaderProps) {
           })}
         </nav>
 
-        {/* Right side: language selector + hamburger (mobile only) */}
+        {/* Right side: profile, language selector + hamburger (mobile only) */}
         <div className="flex items-center gap-3">
+          {user && <UserProfileButton email={user.email} />}
           <LanguageSelector />
 
           {/* Hamburger button — visible only on mobile (T016, T039) */}

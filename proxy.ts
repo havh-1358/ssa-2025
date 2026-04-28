@@ -1,11 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { parseLocale } from "@/lib/locale";
 import { parseAndValidateLaunchDatetime, isPrelaunch } from "@/lib/launch";
-
-const intlMiddleware = createIntlMiddleware(routing);
 
 async function updateSupabaseSession(
   request: NextRequest
@@ -43,7 +40,7 @@ async function updateSupabaseSession(
   return response;
 }
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Pre-launch gate: redirect all non-root routes to / while platform is pre-launch.
@@ -57,7 +54,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         const url = request.nextUrl.clone();
         url.pathname = "/";
         url.search = "";
-        // Locale cookie is browser-stored and preserved naturally through redirects
         return NextResponse.redirect(url);
       }
     } catch {
@@ -65,7 +61,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 1. Refresh Supabase session (must run first to keep cookies fresh)
+  // Refresh Supabase session
   const supabaseResponse = await updateSupabaseSession(request);
 
   // Auth guard: /kudos requires authentication
@@ -89,20 +85,38 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // 2. Forward locale from cookie so next-intl can pick it up
-  const raw = request.cookies.get("locale")?.value;
-  const locale = parseLocale(raw);
-  supabaseResponse.headers.set("x-next-intl-locale", locale);
+  // Resolve locale (from custom cookie, NEXT_LOCALE cookie, or default)
+  const raw =
+    request.cookies.get("locale")?.value ??
+    request.cookies.get("NEXT_LOCALE")?.value;
+  const localeCode = parseLocale(raw);
 
-  // 3. Run next-intl middleware for locale routing
-  const intlResponse = intlMiddleware(request);
+  // Validate against supported locales; fall back to default
+  const locale = routing.locales.includes(localeCode as "vi" | "en")
+    ? localeCode
+    : routing.defaultLocale;
 
-  // Merge cookies from Supabase response into intl response
-  supabaseResponse.cookies.getAll().forEach((cookie) => {
-    intlResponse.cookies.set(cookie.name, cookie.value);
+  // Forward locale to Server Components via request header (no URL rewrite)
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-next-intl-locale", locale);
+
+  const finalResponse = NextResponse.next({
+    request: { headers: requestHeaders },
   });
 
-  return intlResponse;
+  // Persist locale in NEXT_LOCALE cookie for next-intl client detection
+  finalResponse.cookies.set("NEXT_LOCALE", locale, {
+    sameSite: "lax",
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60,
+  });
+
+  // Merge Supabase session cookies
+  supabaseResponse.cookies.getAll().forEach((cookie) => {
+    finalResponse.cookies.set(cookie.name, cookie.value);
+  });
+
+  return finalResponse;
 }
 
 export const config = {

@@ -81,7 +81,7 @@ The trigger button is rendered inside the Header component. These styles are der
 | Active (open) | `rgba(255,255,255,0.1)` background; chevron rotated 180° |
 | Focus (keyboard) | outline `2px solid #FFEA9E` |
 
-> **Note**: The Login screen's own `design-style.md` (extracted directly from Figma) specifies the language label at **16px** (`--text-language`, Montserrat 700 16px). The note about "14px for Login/Homepage" above is unverified and conflicts with the Login Figma data. Until confirmed by Figma inspection on the Homepage frame, treat the Login locale text as **16px**. Awards and Kudos screens define their own nav font size — confirm per screen's design-style. `TODO(value needed)`: Verify Homepage header locale text size from Figma.
+> **Note**: Login locale text is confirmed as **16px** (Montserrat 700, letter-spacing 0.15px) from Login design-style `--text-language` token extracted from Figma. Font-size for Homepage, Awards, and Kudos screens is pending Figma verification — use 16px as default until confirmed per screen. See OQ-1.
 
 ---
 
@@ -206,17 +206,31 @@ The trigger button is rendered inside the Header component. These styles are der
 
 | Figma Node | Component | CSS / Tailwind |
 |------------|-----------|----------------|
-| `525:11713` | `<LanguageDropdown />` | `absolute z-[999] w-[215px] rounded-[8px] border border-[#998C5F] bg-[#00070C] py-3 shadow-[0_8px_32px_rgba(0,0,0,0.48)]` |
-| VN option | `<LocaleOption locale="vi" />` | `flex items-center gap-3 px-4 py-4 rounded-[4px] bg-[rgba(255,234,158,0.2)] cursor-pointer` |
-| EN option | `<LocaleOption locale="en" />` | `flex items-center gap-3 px-4 py-4 rounded-[4px] hover:bg-[rgba(255,234,158,0.1)] cursor-pointer` |
+| `525:11713` | `<LanguageDropdown />` | `absolute z-[999] w-[215px] min-h-[304px] rounded-[8px] border border-[var(--color-dropdown-border)] bg-[var(--color-dropdown-bg)] py-3 shadow-[0_8px_32px_rgba(0,0,0,0.48)]` |
+| VN option | `<LocaleOption locale="vi" />` | `flex items-center gap-3 px-4 py-4 rounded-[4px] bg-[var(--color-option-selected-bg)] cursor-pointer` |
+| EN option | `<LocaleOption locale="en" />` | `flex items-center gap-3 px-4 py-4 rounded-[4px] hover:bg-[var(--color-option-hover-bg)] cursor-pointer` |
 | Flag icon | `<Image src="/assets/flags/vn.svg" />` | `w-6 h-4 object-cover` |
 | Locale label | `<span>` | `font-montserrat font-bold text-[16px] text-white` |
 
 ---
 
+## Responsive Behavior
+
+Per Constitution Principle II, responsive design is mandatory across all breakpoints.
+
+| Breakpoint | Dropdown behavior |
+|------------|------------------|
+| Mobile (< 768px) | `right: 0` anchoring may cause viewport overflow; apply `max-w-[calc(100vw-16px)]` on the dropdown to prevent clipping |
+| Tablet (768px–1279px) | Same as desktop — 215px fixed width, anchored below-right |
+| Desktop (≥ 1280px) | 215px fixed width, `absolute right-0 top-full mt-1` |
+
+Trigger button MUST be ≥ 44×44px on all viewports (already enforced via `min-w-[44px] min-h-[44px]`).
+
+---
+
 ## Design Notes
 
-- **CSS variable mapping (Constitution Principle II)**: All hex values in this document MUST be declared as CSS variables in `app/globals.css`. Component files MUST reference `var(--token-name)` — never raw hex values.
+- **CSS variable mapping (Constitution Principle II)**: All hex values in this document MUST be declared as CSS variables in `app/globals.css`. Component files MUST reference `var(--token-name)` — never raw hex values. The following tokens are already declared in `app/globals.css`: `--color-dropdown-bg`, `--color-dropdown-border`, `--color-option-selected-bg`, `--color-option-hover-bg`, `--color-accent-gold`. Add any missing tokens (`--color-text-option`) in the same file.
 
 - **Fixed vs auto height**: Figma shows 304px. In implementation, prefer `min-height: 304px; height: auto` to gracefully support future locale additions.
 - **Dropdown position**: Float below-right of the trigger button in the header. Use absolute positioning relative to the trigger's parent container.
@@ -231,4 +245,4 @@ The trigger button is rendered inside the Header component. These styles are der
 | OQ-1 | What is the correct locale text font-size in the trigger button for Homepage and other non-Login/non-Awards screens? Login design-style confirms 16px for Login. Awards/Kudos need verification from their respective Figma frames. | No (use 16px for Login until confirmed for others) | Contradiction between this doc's note (14px for some screens) and Login design-style (16px) |
 | OQ-2 | Trigger button padding: is it `8px` (this doc) or `16px` (Login design-style inner button)? Figma verification required for the Language Selector trigger. | No (use Login design-style `16px` for Login screen) | Conflict between trigger button table in this doc vs. `[A.2]` table in Login design-style |
 | OQ-3 | Trigger button gap between elements: is it `8px` (this doc) or `16px` (Login design-style `[A.2]`)? | No (use `16px` for Login screen) | Same source conflict as OQ-2 |
-| OQ-4 | VN flag actual rendered size: 24×24px (Login design-style icon table) or 24×16px (this doc and hUyaaugye2 implementation mapping)? Flags are typically 3:2 ratio (24×16px). | No (use 24×16px — realistic flag ratio; Login's 24×24px likely a bounding box) | Login design-style icon table vs. hUyaaugye2 implementation mapping |
+| ~~OQ-4~~ | ~~VN flag actual rendered size~~ | **Resolved**: 24×16px. Login design-style 24×24px is the Figma bounding box container. Implementation confirmed at `width={24} height={16}`. Standard 3:2 flag aspect ratio. | — |

@@ -67,6 +67,7 @@ export default async function KudosRoute() {
           topSunners={topSunners}
           spotlightError={spotlightError}
           currentUserId={user.id}
+          userEmail={user.email ?? null}
         />
       </LikeStateProvider>
     </SpecialDayProvider>

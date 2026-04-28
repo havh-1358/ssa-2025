@@ -17,10 +17,26 @@ export function KeyVisual() {
         sizes="100vw"
       />
 
-      {/* Left gradient overlay */}
+      {/* Left gradient overlay
+          Desktop (≥ 1280px): solid 25.41%, then fade — matches Figma spec exactly
+          Mobile/Tablet (< 1280px): solid 60%, then fade — wider coverage for narrow viewports
+          End stop: rgba(0,16,26,0) keeps base hue at 0% alpha to avoid grey banding */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 sm:bg-gradient-to-r sm:from-[#00101A] sm:from-[60%] sm:to-transparent bg-gradient-to-r from-[#00101A] from-[25.41%] to-transparent"
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, #00101A 0%, #00101A 60%, rgba(0,16,26,0) 100%)",
+        }}
+      />
+      {/* Desktop override — narrower solid band */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 hidden xl:block"
+        style={{
+          background:
+            "linear-gradient(90deg, #00101A 0%, #00101A 25.41%, rgba(0,16,26,0) 100%)",
+        }}
       />
 
       {/* Bottom gradient overlay */}

@@ -1,9 +1,9 @@
 import { parseAndValidateLaunchDatetime, isPrelaunch } from "@/lib/launch";
+import { createClient } from "@/lib/supabase/server";
 import { CountdownPage } from "@/components/countdown/CountdownPage";
 import { HomePage } from "@/components/homepage/HomePage";
 
 export default async function RootPage() {
-  // Resolve launch state outside JSX to avoid JSX-in-try/catch lint error
   let launchAt: Date | null = null;
   try {
     launchAt = parseAndValidateLaunchDatetime(process.env.LAUNCH_DATETIME);
@@ -15,5 +15,13 @@ export default async function RootPage() {
     return <CountdownPage launchAt={launchAt} />;
   }
 
-  return <HomePage launchAtISO={(launchAt ?? new Date()).toISOString()} />;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  return (
+    <HomePage
+      launchAtISO={(launchAt ?? new Date()).toISOString()}
+      user={user ? { email: user.email ?? "" } : null}
+    />
+  );
 }

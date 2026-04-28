@@ -14,9 +14,10 @@ import { AwardDetailPanel } from "./AwardDetailPanel";
 
 type AwardsPageProps = {
   categories: AwardCategory[];
+  user?: { email: string } | null;
 };
 
-export function AwardsPage({ categories }: AwardsPageProps) {
+export function AwardsPage({ categories, user }: AwardsPageProps) {
   const t = useTranslations("awards");
   const [activeSlug, setActiveSlug] = useState<string>(categories[0]?.slug ?? "top-talent");
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -44,7 +45,7 @@ export function AwardsPage({ categories }: AwardsPageProps) {
 
   return (
     <>
-      <Header activeNav="awards" />
+      <Header activeNav="awards" user={user} />
 
       <main className="bg-[var(--color-bg-base)] min-h-screen">
         {/* Keyvisual banner */}

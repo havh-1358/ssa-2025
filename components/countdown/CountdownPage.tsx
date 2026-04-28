@@ -35,9 +35,9 @@ export function CountdownPage({ launchAt }: CountdownPageProps) {
         }}
       />
 
-      {/* Content (z:2) */}
+      {/* Content (z:2) — top-aligned at ~27vh to match design vertical positioning */}
       <div
-        className="relative flex flex-col items-center justify-center min-h-screen px-4"
+        className="relative flex flex-col items-center justify-start min-h-screen px-4 pt-[27vh]"
         style={{ zIndex: 2 }}
       >
         <h1

@@ -7,9 +7,10 @@ import { KudosPromoSection } from "./KudosPromoSection";
 
 type HomePageProps = {
   launchAtISO: string;
+  user?: { email: string } | null;
 };
 
-export function HomePage({ launchAtISO }: HomePageProps) {
+export function HomePage({ launchAtISO, user }: HomePageProps) {
   return (
     <>
       {/* Skip-to-content link — visually hidden, keyboard accessible (T012) */}
@@ -23,7 +24,7 @@ export function HomePage({ launchAtISO }: HomePageProps) {
         Skip to content
       </a>
 
-      <Header activeNav="home" />
+      <Header activeNav="home" user={user} />
 
       <main
         className="relative overflow-x-hidden bg-[var(--color-bg-base)]"

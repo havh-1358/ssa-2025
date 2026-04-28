@@ -1,7 +1,8 @@
-# Tasks: Countdown Prelaunch
+# Tasks: Countdown Prelaunch — Campaign Table Migration
 
 **Frame**: `8PJQswPZmU-countdown-prelaunch`
-**Prerequisites**: plan.md (required), spec.md (required)
+**Prerequisites**: plan.md ✅ spec.md ✅ design-style.md ✅
+**Scope**: Migrate `LAUNCH_DATETIME` env-var to `campaigns` database table. UI already implemented and visually correct. All previous tasks (T001–T024) are complete.
 
 ---
 
@@ -12,109 +13,117 @@
 ```
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this belongs to (US1, US2)
-- **|**: File path affected by this task
+- **[Story]**: Maps to spec.md user story ([US1] = View Countdown Timer)
+- **|**: File path affected
 
 ---
 
-## Phase 0: Asset Preparation
+## Phase 1: Database Migration
 
-**Purpose**: Download and place all static assets before any code is written
+**Purpose**: Create `campaigns` table — foundation for all subsequent phases
 
-- [x] T001 Download "Digital Numbers" `.woff2` font file and place at `public/fonts/DigitalNumbers.woff2` | public/fonts/DigitalNumbers.woff2
-- [x] T002 [P] Download countdown keyvisual image and place at `public/assets/countdown/keyvisual.jpg` | public/assets/countdown/keyvisual.jpg
-- [x] T003 [P] Define `NEXT_PUBLIC_LAUNCH_DATETIME` and `LAUNCH_DATETIME` env vars in `.env.local` | .env.local
+**⚠️ CRITICAL**: Phases 3, 4, 5 cannot begin until this migration is applied locally
 
----
+- [ ] T025 Create Supabase migrations directory if absent and write `campaigns` table DDL: `id uuid PK`, `campaign_name text NOT NULL`, `start_date timestamptz NOT NULL`, `end_date timestamptz NOT NULL`, `created_at`, `updated_at`, `CHECK (end_date > start_date)` | supabase/migrations/YYYYMMDD_create_campaigns.sql
+- [ ] T026 Add RLS to migration: `ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY` + public SELECT policy `USING (TRUE)` (no INSERT/UPDATE/DELETE policies — service_role only) | supabase/migrations/YYYYMMDD_create_campaigns.sql
+- [ ] T027 Add dev seed record to migration: `INSERT INTO campaigns (campaign_name, start_date, end_date) VALUES ('SSA 2025', '2025-12-26T18:00:00+07:00', '2025-12-27T23:00:00+07:00')` | supabase/migrations/YYYYMMDD_create_campaigns.sql
+- [ ] T028 Apply migration to local Supabase dev instance (`supabase db reset`) and verify seed record is visible in Supabase Studio | supabase/migrations/YYYYMMDD_create_campaigns.sql
+- [ ] T029 Update `.momorph/contexts/database-schema.sql` to include `campaigns` table DDL and update the screen comment from `(no DB entities)` to `(campaigns table)` | .momorph/contexts/database-schema.sql
 
-## Phase 1: Foundation (Blocking Prerequisites)
-
-**Purpose**: Core utilities required by ALL components — middleware and UI cannot proceed until complete
-
-**CRITICAL**: No user story implementation can begin until this phase is complete
-
-- [x] T004 Implement `parseAndValidateLaunchDatetime(env)` using Zod (valid ISO8601 → Date; invalid/missing → throws ZodError) and `isPrelaunch(now: Date): boolean` | lib/launch.ts
-- [x] T005 [P] Add `@font-face` declaration for "Digital Numbers" with `font-display: swap` and `monospace` fallback | app/globals.css
-- [x] T006 [P] Add all countdown CSS custom property tokens: `--color-bg-base`, `--color-text-primary`, `--color-accent-gold`, `--color-card-bg`, `--border-card`, `--radius-card`, `--blur-card`, `--gap-digit-blocks`, `--gap-digit-cards`, `--gap-digit-label`, `--gap-title-blocks` | app/globals.css
-- [x] T007 Implement `useCountdown(launchAt: Date)` hook returning `{ days, hours, minutes, isExpired }`: on mount check `Date.now() >= launchAt.getTime()` and set `isExpired = true` synchronously if already past (FR-005a); otherwise start 60-second `setInterval` recalculating from `launchAt` each tick; clamp all values to `Math.max(0, value)`; clear interval on unmount | hooks/useCountdown.ts
-
-**Checkpoint**: Foundation ready — user story implementation can now begin
+**Checkpoint**: `campaigns` table exists in local Supabase with seed record
 
 ---
 
-## Phase 2: Middleware — US1 (Redirect All Routes While Pre-launch)
+## Phase 2: Foundation — Constants & Types
 
-**Goal**: Every route other than `/` is rewritten to `/` while `isPrelaunch = true`; fail-open if env var is missing or invalid
+**Purpose**: Shared primitives consumed by repository, route handler, and middleware
 
-**Independent Test**: Navigate to `/kudos` with `LAUNCH_DATETIME` in the future → browser lands on `/`; navigate with `LAUNCH_DATETIME` in the past → no redirect
+- [ ] T030 [P] Create `lib/constants/campaign.ts` exporting `CAMPAIGN_CACHE_REVALIDATE_SECONDS = 60` as a named const (importable in both Edge and Node.js runtimes) | lib/constants/campaign.ts
+- [ ] T031 [P] Create `types/campaign.ts` exporting `ActiveCampaign` TypeScript type — will be inferred from `ActiveCampaignSchema` once T033 is done; placeholder with manual type first, then update after T033 | types/campaign.ts
 
-- [x] T008 [US1] Add pre-launch redirect logic to `middleware.ts`: read `process.env.LAUNCH_DATETIME`, call `parseAndValidateLaunchDatetime` inside try/catch (fail-open on error — log and skip redirect), call `isPrelaunch(new Date())`, if true rewrite all non-`/` pathnames to `/`; preserve existing locale cookie handling | middleware.ts
-- [x] T009 [US1] Verify middleware preserves locale cookie during redirect (do not clobber `NEXT_LOCALE` or equivalent cookie on rewrite) | middleware.ts
-
-**Checkpoint**: Middleware redirect complete and independently verifiable
+**Checkpoint**: Constants and types files exist; no import errors
 
 ---
 
-## Phase 3: UI Components — US1 + US2
+## Phase 3: Backend — Repository & API Route (US1)
 
-**Goal**: Full countdown page rendered with live ticking timer (US1) and branded key-visual background (US2)
+**Goal**: `GET /api/campaigns/active` returns `{ data: ActiveCampaign | null }` from DB
 
-**Independent Test**: Load `/` with future `LAUNCH_DATETIME` → countdown digits display; wait for tick → minutes decrement; `LAUNCH_DATETIME` already past → immediate redirect to `/login`
+**Independent Test**: `curl http://localhost:3000/api/campaigns/active` → `{ "data": { "id": "...", "campaignName": "SSA 2025", "startDate": "...", "endDate": "..." } }`
 
-### DigitCard Component (US1 + US2)
+### Repository (US1)
 
-- [x] T010 [P] [US1] Implement `<DigitCard />` presentational component: renders a single digit character inside a glassmorphism card using CSS vars (`--color-card-bg`, `--border-card`, `--radius-card`, `--blur-card`); add `aria-hidden="true"` on the card wrapper (block-level aria-label on `<DigitBlock />` provides the accessible name); add `@supports (backdrop-filter: blur())` check with opaque fallback | components/countdown/DigitCard.tsx
+- [ ] T032 [US1] Write failing Vitest unit tests for `lib/campaign-repository.ts`: test `getActiveCampaign()` returns `ActiveCampaign` when seed row exists; returns `null` when table empty; returns `null` and logs error when DB call fails; Zod schema rejects row with null `start_date` | lib/campaign-repository.test.ts
+- [ ] T033 [US1] Implement `lib/campaign-repository.ts`: define `ActiveCampaignSchema` with Zod (`id: uuid, campaignName: string, startDate: datetime, endDate: datetime`); implement `getActiveCampaign(): Promise<ActiveCampaign | null>` — query `SELECT id, campaign_name, start_date, end_date FROM campaigns ORDER BY created_at DESC LIMIT 1` via `createClient()`, validate with Zod, map snake_case → camelCase, return `null` on empty result or validation error | lib/campaign-repository.ts
+- [ ] T034 [US1] Implement `getActiveCampaignCached()` inside `lib/campaign-repository.ts`: wrap `getActiveCampaign()` with `unstable_cache` from `next/cache`, `revalidate: CAMPAIGN_CACHE_REVALIDATE_SECONDS`, tag `['campaigns']` — Node.js runtime only (page Server Component use) | lib/campaign-repository.ts
+- [ ] T035 [US1] Update `types/campaign.ts` to infer `ActiveCampaign` from `ActiveCampaignSchema` via `z.infer<typeof ActiveCampaignSchema>` (replace placeholder type from T031) | types/campaign.ts
 
-### DigitBlock Component (US1)
+### API Route (US1)
 
-- [x] T011 [US1] Implement `<DigitBlock />` presentational component: accepts `value: number` and `unit: string` props; zero-pads single-digit values (`05`); renders a row of `<DigitCard />` instances (supports 2-digit and 3-digit values for days > 99); renders the unit label below the cards; add `aria-label={\`${value} ${unit}\`}` on the block wrapper | components/countdown/DigitBlock.tsx
+- [ ] T036 [P] [US1] Write failing Vitest tests for `GET /api/campaigns/active`: `200 { data: {...} }` when campaign exists; `200 { data: null }` when campaigns table empty | app/api/campaigns/active/route.test.ts
+- [ ] T037 [US1] Implement `app/api/campaigns/active/route.ts`: `export const revalidate = CAMPAIGN_CACHE_REVALIDATE_SECONDS`; `GET` handler calls `getActiveCampaign()` (not cached version — route-level revalidation handles caching) and returns `Response.json({ data: campaign })` | app/api/campaigns/active/route.ts
 
-### CountdownTimer Client Component (US1)
-
-- [x] T012 [US1] Implement `<CountdownTimer />` Client Component (`"use client"`): accepts `launchAt: Date` prop; calls `useCountdown(launchAt)` to get `{ days, hours, minutes, isExpired }`; add `useEffect` watching `isExpired` — when `true` call `router.push('/login')` immediately (no additional delay); render `<DigitBlock />` for days, hours, minutes; add `aria-label="Countdown timer"` on the outer container `<div>`; wrap digit group in `<div aria-live="polite">` | components/countdown/CountdownTimer.tsx
-
-### CountdownPage Server Component (US1 + US2)
-
-- [x] T013 [US1] [US2] Implement `<CountdownPage />` Server Component shell: renders full-screen keyvisual background image (`public/assets/countdown/keyvisual.jpg`) with gradient overlay and `#00101A` fallback background color; centers content vertically and horizontally; accepts `launchAt: Date` prop and renders `<CountdownTimer launchAt={launchAt} />` | components/countdown/CountdownPage.tsx
-
-### Root Page (US1)
-
-- [x] T014 [US1] Update `app/page.tsx` Server Component: call `parseAndValidateLaunchDatetime(process.env.LAUNCH_DATETIME)` inside try/catch; call `isPrelaunch(new Date())`; if `true` render `<CountdownPage launchAt={launchAt} />`; otherwise render existing `<HomePage />` | app/page.tsx
-
-**Checkpoint**: Full countdown page renders and live timer works end-to-end
+**Checkpoint**: `GET /api/campaigns/active` responds correctly with and without seed record
 
 ---
 
-## Phase 4: Polish and Cross-Cutting Concerns
+## Phase 4: Middleware Integration (US1)
 
-**Purpose**: i18n, accessibility, motion safety, responsive scaling, and background fallback — affecting both US1 and US2
+**Goal**: `proxy.ts` uses cached Supabase REST fetch instead of `LAUNCH_DATETIME` env var
 
-### i18n (US1 + US2)
+**Independent Test**: With seed `start_date` in future — navigate to `/kudos` → redirects to `/`; remove seed record → navigate to `/kudos` → no redirect
 
-- [x] T015 [P] [US1] Add `countdown` namespace keys to Vietnamese locale file: `"title"` → `"Sự kiện sẽ bắt đầu sau"`, `"days"` → `"NGÀY"`, `"hours"` → `"GIỜ"`, `"minutes"` → `"PHÚT"`, `"ariaLabel"` → `"Đếm ngược"` | i18n/messages/vi.json
-- [x] T016 [P] [US1] Add `countdown` namespace keys to English locale file: `"title"` → `"Event starts in"`, `"days"` → `"DAYS"`, `"hours"` → `"HOURS"`, `"minutes"` → `"MINUTES"`, `"ariaLabel"` → `"Countdown timer"` | i18n/messages/en.json
-- [x] T017 [US1] Wire `useTranslations('countdown')` in `<CountdownPage />`: render `t('title')` as the countdown headline; pass `t('days')`, `t('hours')`, `t('minutes')` as `unit` props to each `<DigitBlock />` | components/countdown/CountdownPage.tsx
-- [x] T018 [US1] Wire `useTranslations('countdown')` in `<CountdownTimer />`: use `t('ariaLabel')` for the container `aria-label` attribute | components/countdown/CountdownTimer.tsx
+- [ ] T038 [US1] Write failing Vitest tests for middleware campaign check (mock global `fetch`): future `start_date` + non-root path → `302` redirect to `/`; empty campaigns response → no redirect; `fetch` throws → no redirect (fail-open); root path `/` → never redirects | proxy.test.ts
+- [ ] T039 [US1] Update `proxy.ts`: replace `parseAndValidateLaunchDatetime(process.env.LAUNCH_DATETIME)` block with async Supabase REST fetch (`${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/campaigns?select=start_date&order=created_at.desc&limit=1`, headers with `apikey` + `Authorization`, `next: { revalidate: CAMPAIGN_CACHE_REVALIDATE_SECONDS }`); parse `rows[0]?.start_date`; call `isPrelaunch(new Date(), startDate)`; wrap entire block in try/catch (fail-open on any error) | proxy.ts
 
-### Accessibility (US1)
+**Checkpoint**: Middleware redirects on future campaign `start_date`; fails-open on empty table or error
 
-- [x] T019 [P] [US1] Confirm `aria-label="Countdown timer"` (or translated equivalent) is on the outer container `<div>` in `<CountdownTimer />`; confirm `<div aria-live="polite">` wraps the digit group; confirm no `tabIndex` is set on `<DigitCard />` or `<DigitBlock />` elements (no artificial tab stops) | components/countdown/CountdownTimer.tsx
-- [x] T020 [P] [US1] Confirm each `<DigitBlock />` wrapper has `aria-label` combining numeric value and translated unit (e.g., `"5 days"`); confirm `<DigitCard />` wrappers have `aria-hidden="true"` | components/countdown/DigitBlock.tsx
+---
 
-### Motion Safety (US1 + US2)
+## Phase 5: Page Integration (US1)
 
-- [x] T021 [P] Add `@media (prefers-reduced-motion: reduce)` rule suppressing `<DigitCard />` CSS transition/animation; ensure digit values still update but without animated transitions | app/globals.css
+**Goal**: `app/page.tsx` reads launch time from Campaign table instead of env var
 
-### Responsive Scaling (US1 + US2)
+**Independent Test**: Remove `LAUNCH_DATETIME` from `.env.local`; start dev server; navigate to `/` → countdown still renders (using Campaign DB record)
 
-- [x] T022 [P] [US1] Add responsive digit card scaling breakpoints at 768px (tablet) and 320px (mobile) — adjust font-size and card dimensions via Tailwind responsive variants or CSS custom properties | components/countdown/DigitCard.tsx
-- [x] T023 [P] [US2] Confirm `#00101A` background-color is set as CSS fallback on the keyvisual container in `<CountdownPage />` so the screen is branded even if `keyvisual.jpg` fails to load | components/countdown/CountdownPage.tsx
+- [ ] T040 [US1] Update `app/page.tsx`: replace `parseAndValidateLaunchDatetime(process.env.LAUNCH_DATETIME)` call with `getActiveCampaignCached()` from `lib/campaign-repository`; derive `launchAt = campaign ? new Date(campaign.startDate) : null`; pass to `<CountdownPage launchAt={launchAt} />` — fail-open (null campaign → render `<HomePage />`) | app/page.tsx
+- [ ] T041 [US1] Delete `parseAndValidateLaunchDatetime()` function from `lib/launch.ts` (keep `isPrelaunch()`); verify no remaining imports of `parseAndValidateLaunchDatetime` across the codebase | lib/launch.ts
 
-### Edge Cases (US1)
+**Checkpoint**: Page reads campaign from DB; countdown renders without `LAUNCH_DATETIME` env var
 
-- [x] T024 [US1] Verify 3-digit day rendering in `<DigitBlock />`: when `days > 99`, render three `<DigitCard />` instances without overflow; confirm layout does not break at 320px viewport | components/countdown/DigitBlock.tsx
+---
 
-**Checkpoint**: All user stories complete with polish
+## Phase 6: Client-Side Fixes (US1)
+
+**Goal**: Hook corrects drift on tab re-focus; timer redirects auth-aware on expiry
+
+**Independent Test (visibilitychange)**: Open countdown in browser tab, background it for > 1 minute, re-focus → timer shows recalculated value immediately.  
+**Independent Test (auth redirect)**: Set `start_date` to 1 second in the future; when it expires while logged in → lands on `/`; when not logged in → lands on `/login`
+
+### useCountdown visibilitychange (US1)
+
+- [ ] T042 [US1] Write failing Vitest tests for `visibilitychange` behavior: mock `document.visibilityState`; simulate tab hidden 5 minutes (advance `vi.setSystemTime()`); fire `visibilitychange` visible → `timeRemaining` recalculates immediately from `Date.now()` vs `launchAt` | hooks/useCountdown.test.ts
+- [ ] T043 [US1] Add `visibilitychange` listener to `hooks/useCountdown.ts`: register `document.addEventListener('visibilitychange', onVisible)` inside a `useEffect([launchAt])`; `onVisible` calls `setState(computeRemaining(launchAt))` when `document.visibilityState === 'visible'`; clean up listener on unmount | hooks/useCountdown.ts
+
+### CountdownTimer auth-aware redirect (US1)
+
+- [ ] T044 [P] [US1] Write failing Vitest tests for `CountdownTimer` expiry redirect: `vi.mock('@/lib/supabase/client')` and mock `supabase.auth.getUser()`; when `isExpired=true` + user authenticated → `router.push(ROUTES.HOME)` called; when `isExpired=true` + no user → `router.push(ROUTES.LOGIN)` called; when `getUser()` throws → `router.push(ROUTES.LOGIN)` called (safe fallback) | components/countdown/CountdownTimer.test.tsx
+- [ ] T045 [US1] Update `components/countdown/CountdownTimer.tsx`: replace existing `useEffect` redirect (currently always pushes `ROUTES.LOGIN`) with auth-aware check — `import { createClient } from '@/lib/supabase/client'`; call `supabase.auth.getUser()` inside try/catch; redirect to `ROUTES.HOME` if user exists, `ROUTES.LOGIN` otherwise (including on error) | components/countdown/CountdownTimer.tsx
+
+**Checkpoint**: Hook corrects drift; timer redirects to correct destination based on auth state
+
+---
+
+## Phase 7: Cleanup & Documentation
+
+**Purpose**: Remove all env-var references; keep codebase clean and documentation current
+
+- [ ] T046 [P] Update `.env.example` (or `.env.local.example`): remove `LAUNCH_DATETIME` variable; add comment `# Launch datetime is now managed via the 'campaigns' table in Supabase` | .env.example
+- [ ] T047 [P] Verify `LAUNCH_DATETIME` is fully unused: run `grep -r "LAUNCH_DATETIME" . --include="*.ts" --include="*.tsx" --include="*.env*"` — must return 0 results (excluding this tasks.md and any `.env.local` backup) | (verify step)
+- [ ] T048 [P] Add `GET /api/campaigns/active` test cases to `BACKEND_API_TESTCASES.md`: positive (campaign exists), null (empty table), schema validation, caching header presence | .momorph/contexts/BACKEND_API_TESTCASES.md
+- [ ] T049 Run full Vitest suite (`npm run test`) — all tests green; run `npm run lint` — zero lint errors | (verify step)
+
+**Checkpoint**: No `LAUNCH_DATETIME` references; all tests pass; documentation updated
 
 ---
 
@@ -122,27 +131,39 @@
 
 ### Phase Dependencies
 
-- **Phase 0 (Assets)**: No dependencies — can start immediately; T001, T002, T003 are parallel
-- **Phase 1 (Foundation)**: Requires Phase 0 complete; T005 and T006 are parallel with each other; T004 must precede T007 (hook depends on `lib/launch.ts` types)
-- **Phase 2 (Middleware)**: Requires T004 (`lib/launch.ts`) — cannot import `parseAndValidateLaunchDatetime` or `isPrelaunch` until T004 is done
-- **Phase 3 (UI Components)**: Requires T007 (`useCountdown`) and T005/T006 (CSS tokens and font); execute T010 → T011 → T012 → T013 → T014 in order (each builds on the previous)
-- **Phase 4 (Polish)**: Requires Phase 3 complete; most tasks are independent and marked [P]
+```
+Phase 1 (DB)           → Phase 3 (Backend needs campaigns table)
+Phase 2 (Constants)    → Phase 3 (Repository uses CAMPAIGN_CACHE_REVALIDATE_SECONDS)
+                       → Phase 4 (Middleware uses CAMPAIGN_CACHE_REVALIDATE_SECONDS)
+Phase 3 (Repository)   → Phase 5 (Page uses getActiveCampaignCached)
+Phase 4 (Middleware)   → Phase 7 (Cleanup verifies LAUNCH_DATETIME removed from proxy.ts)
+Phase 5 (Page)         → Phase 7 (Cleanup verifies LAUNCH_DATETIME removed from page.tsx)
+Phase 6 (Client fixes) → Phase 7 (Cleanup verifies all changes green)
+```
 
 ### Critical Path
 
 ```
-T001 (font) → T005 (@font-face)
-T003 (env)  → T004 (lib/launch.ts) → T007 (useCountdown) → T012 (CountdownTimer) → T014 (page.tsx)
-T006 (CSS vars)                     → T010 (DigitCard)    → T011 (DigitBlock)    → T012
-T004        → T008 (middleware)
+T025-T028 (migration apply)
+    → T030 (constants)
+    → T032 (repo tests) → T033 (repo impl) → T034 (cached) → T035 (types update)
+        → T036 (route tests) → T037 (route impl)
+        → T040 (page.tsx) → T041 (delete parse fn)
+    → T038 (middleware tests) → T039 (middleware impl)
+T042 (hook tests) → T043 (visibilitychange impl)    ← independent of migration
+T044 (timer tests) → T045 (auth redirect impl)      ← independent of migration
+T046-T049 (cleanup) ← all phases complete
 ```
 
 ### Parallel Opportunities
 
-- T001, T002, T003 (Phase 0) — all parallel
-- T005, T006 (CSS globals) — parallel with each other, after Phase 0
-- T015, T016 (i18n files) — parallel with each other
-- T019, T020, T021, T022, T023 (polish) — all parallel once Phase 3 is complete
+| Group | Tasks | Can run in parallel |
+|-------|-------|-------------------|
+| Phase 1 | T025, T026, T027 are sequential (same file); T029 is independent | T028 + T029 |
+| Phase 2 | T030, T031 | Both parallel — different files |
+| Phase 3 | Tests before impl | T032 and T036 parallel (different test files) |
+| Phase 6 | Hook fix and timer fix | T042→T043 and T044→T045 parallel (different files) |
+| Phase 7 | T046, T047, T048, T049 | All parallel |
 
 ---
 
@@ -150,26 +171,33 @@ T004        → T008 (middleware)
 
 ### MVP First (Recommended)
 
-1. Complete Phase 0 + Phase 1
-2. Complete Phase 2 (middleware redirect)
-3. Complete Phase 3 (full countdown UI)
-4. **STOP and VALIDATE**: test in browser with future and past `LAUNCH_DATETIME`
-5. Complete Phase 4 (polish)
+1. **Phase 1** → apply DB migration (T025–T028)
+2. **Phase 2** → constants + types (T030–T031)
+3. **Phase 3** → repository + API route (T032–T037)
+4. **STOP AND TEST**: `curl /api/campaigns/active` returns campaign data
+5. **Phase 5** → update `app/page.tsx` (T040–T041)
+6. **STOP AND TEST**: dev server shows countdown without `LAUNCH_DATETIME` env var
+7. **Phase 4** → middleware update (T038–T039)
+8. **STOP AND TEST**: navigate to `/kudos` → redirects to `/`
+9. **Phase 6** → client fixes (T042–T045)
+10. **Phase 7** → cleanup (T046–T049)
 
 ### Key Implementation Details
 
-- **FR-005a**: `useCountdown` MUST check `Date.now() >= launchAt.getTime()` synchronously on mount and set `isExpired = true` before the first `setInterval` fires — prevents any flash of `00/00/00`
-- **Expiry redirect**: `<CountdownTimer />` `useEffect` watching `isExpired` calls `router.push('/login')` with no delay — do NOT wait for the next tick
-- **Fail-open middleware**: If `LAUNCH_DATETIME` is missing or Zod validation throws, log the error and skip the redirect so the site remains accessible
-- **Timer drift prevention**: Each `setInterval` tick recalculates from `launchAt` (not cumulative decrement) to avoid drift over long sessions
-- **Font safety**: `font-display: swap` + `monospace` fallback ensures digits are readable even if Digital Numbers font fails to load
+- **Edge runtime constraint**: `proxy.ts` middleware cannot use `unstable_cache` (Node.js API). Use `fetch()` with `next: { revalidate: 60 }` directly to Supabase REST API — this is the recommended Edge-compatible cache pattern.
+- **Fail-open everywhere**: Both middleware AND `app/page.tsx` must not throw when `getActiveCampaign()` returns `null`. No campaign = skip redirect / render homepage.
+- **Do NOT make internal fetch from middleware**: Calling `/api/campaigns/active` from `proxy.ts` creates a circular dependency. Always fetch Supabase REST directly.
+- **`isPrelaunch()` stays in `lib/launch.ts`**: Only `parseAndValidateLaunchDatetime()` is deleted. The `isPrelaunch(now, launchAt)` utility is still used by both `proxy.ts` and `app/page.tsx`.
+- **Auth-aware redirect order**: `router.push()` must fire inside `useEffect` (not during render); the Supabase browser client is created once per expiry event via dynamic import to avoid loading it on every render.
+- **Cache tag `'campaigns'`**: If admin updates `start_date` in future, they can call `revalidateTag('campaigns')` from a server action or API route to invalidate instantly without waiting 60s.
 
 ---
 
 ## Notes
 
 - Mark tasks complete as you go: `[x]`
-- Commit after each phase or logical group
-- `app/page.tsx` serves BOTH Countdown and Homepage — the `isPrelaunch` check is server-side only
-- The countdown shows only DAYS / HOURS / MINUTES — no SECONDS (intentional per design)
-- Middleware must not clobber the locale cookie during pre-launch rewrites
+- Commit after each phase: `git commit -m "feat(countdown): <phase description>"`
+- T028 (apply migration) is a one-time destructive-ish action on local dev — verify migration SQL before running `supabase db reset`
+- The old `LAUNCH_DATETIME` env var can remain in `.env.local` during migration for safety; T046–T047 handle the final cleanup verification
+- US2 (View Branded Background) is already complete — no tasks required in this migration
+- Total new tasks this migration: **25** (T025–T049)

@@ -25,7 +25,7 @@ export function DigitBlock({ value, unit }: DigitBlockProps) {
       </div>
       <span
         className="font-[family-name:var(--font-montserrat)] font-bold
-          text-[18px] md:text-[25px] xl:text-[36px]
+          text-[20px] md:text-[28px] xl:text-[36px]
           leading-[1.2] text-[var(--color-text-primary)]"
       >
         {unit}
