@@ -83,7 +83,7 @@ No shadows defined for this screen.
 │  Screen (1440×1024px, bg: #00101A)                                  │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  [C] Background Image (1441×1022px, absolute, z=1)          │    │
+│  │  [C] Background Image (1441×1022px, absolute, z=0)          │    │
 │  │  Full-bleed key visual photo                                 │    │
 │  └─────────────────────────────────────────────────────────────┘    │
 │                                                                     │
@@ -135,6 +135,20 @@ No shadows defined for this screen.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### Z-Index Stacking Order
+
+All positioned children are `position: absolute` within the `Login` screen container (`position: relative`):
+
+| Layer | Element | z-index | Notes |
+|-------|---------|---------|-------|
+| 0 | `[C]` Background Key Visual image | `0` | Base layer; sits behind everything |
+| 1 | Gradient overlays (left + bottom) | `auto` (document order above z:0) | Rendered in HTML after [C]; appear above background |
+| 2 | `[A]` Header | `1` | Floats above overlays and content |
+| 3 | `[B]` Content area (Key Visual logo + tagline + button) | `auto` (document order) | Layered above gradients but below header |
+| 4 | `[D]` Footer | `auto` (document order) | Layered above gradients; below header |
+
+> The Language Selector dropdown (when open) MUST use `z-index: 999` (see `hUyaaugye2` design-style) so it appears above all other elements.
+
 ---
 
 ## Component Style Details
@@ -162,7 +176,7 @@ No shadows defined for this screen.
 |----------|-------|-----|
 | **Node ID** | `I662:14391;186:2166` | — |
 | width | 52px | `width: 52px` |
-| height | 56px | `height: 56px` |
+| height | 56px | `height: 56px` (container height; the logo image inside is 52×48px with vertical centering) |
 | display | flex | `display: flex` |
 | flex-direction | row | `flex-direction: row` |
 | align-items | center | `align-items: center` |
@@ -316,7 +330,7 @@ double-submission. The button text changes to "Đang đăng nhập..." or equiva
 | **Node ID** | `662:14388` → `662:14389` | — |
 | width | 1441px | `width: 100%` |
 | height | 1022px | `height: 100%` |
-| position | absolute, z-index: 1 | `position: absolute; inset: 0` |
+| position | absolute, z-index: 0 | `position: absolute; inset: 0; z-index: 0` |
 | background | full-bleed cover image | `background-size: cover; background-position: center` |
 
 **Left gradient overlay (662:14392):**
@@ -335,7 +349,7 @@ background: linear-gradient(0deg, #00101A 22.48%, rgba(0,19,32,0) 51.74%);
 
 ```
 Login (1440×1024px, bg: #00101A)
-├── [C] mms_C_Keyvisual (absolute, full-bleed, z:1)
+├── [C] mms_C_Keyvisual (absolute, full-bleed, z:0)
 │   └── image 1 (background cover photo)
 │
 ├── [overlay] Rectangle 57 — left gradient (90deg, #00101A → transparent)
@@ -399,7 +413,7 @@ This screen is designed at **1440px desktop**. Responsive adaptations required p
 | Key Visual logo | 451×200px | 240×106px |
 | Left gradient | 90deg, 25% solid | 90deg, 60% solid |
 
-#### Tablet (768px–1023px)
+#### Tablet (768px–1279px)
 
 | Component | Desktop Value | Tablet Value |
 |-----------|--------------|--------------|
@@ -419,7 +433,7 @@ Default — matches Figma spec exactly.
 | Icon Name | Node ID | Size | Color | Usage |
 |-----------|---------|------|-------|-------|
 | MM_MEDIA_Logo | `I662:14391;178:1033;178:1030` | 52×48px | — | Site logo in header |
-| MM_MEDIA_VN (flag) | `I662:14391;186:1696;186:1821;186:1709` | 24×24px | — | Vietnam flag in language selector |
+| MM_MEDIA_VN (flag) | `I662:14391;186:1696;186:1821;186:1709` | 24×24px (Figma bounding box) / actual flag image 24×16px — `TODO(value needed)`: confirm whether 24×24px is a bounding box container or the rendered flag size | — | Vietnam flag in language selector |
 | MM_MEDIA_Down | `I662:14391;186:1696;186:1821;186:1441` | 24×24px | #FFFFFF | Dropdown chevron in language selector |
 | MM_MEDIA_Google | `I662:14426;186:1766` | 24×24px | — | Google brand icon in login button |
 | MM_MEDIA_Root Further Logo | `2939:9548` | 451×200px | — | SAA 2025 brand logo in main content |

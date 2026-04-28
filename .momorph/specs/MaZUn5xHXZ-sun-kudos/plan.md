@@ -91,9 +91,11 @@ The Sun* Kudos page (`/kudos`) is an authenticated, live recognition board with 
   - `GET /api/kudos/spotlight` — spotlight boards
   - `GET /api/kudos/stats` — total counts
   - `GET /api/kudos/top-sunners` — top 10 recipients
+  - `GET /api/kudos/hashtags` — list of all available hashtag tags (used by feed filter chips AND Viet Kudos modal)
   - `POST /api/kudos/:id/like` — add like; validates: auth, not own kudos, not already liked
   - `DELETE /api/kudos/:id/like` — remove like; validates: auth, like exists
   - `GET /api/admin/special-days` — check if today is a special day
+- **Service layer** (Constitution Principle IV): Route handlers MUST delegate to a service layer — do NOT call Supabase directly from `route.ts`. Add `lib/kudos-service.ts` for business logic (like validation, hearts-given calculation) and `lib/kudos-repository.ts` for Supabase queries. Route handlers remain thin (parse → call service → return response).
 - **Middleware**: Auth check via Supabase session cookie; unauthenticated → 401
 - **Supabase RLS**: `kudos` table — public SELECT; INSERT requires auth; `likes` table — SELECT requires auth (own rows only visible for like state); INSERT/DELETE requires auth + ownership check
 
@@ -124,11 +126,12 @@ app/
 │   └── page.tsx                          # Server Component: auth check + SSR data fetch + SpecialDayContext
 └── api/
     └── kudos/
-        ├── route.ts                       # GET /api/kudos (feed)
+        ├── route.ts                       # GET /api/kudos (feed); POST /api/kudos added by Viet Kudos plan
         ├── highlights/route.ts            # GET /api/kudos/highlights
         ├── spotlight/route.ts             # GET /api/kudos/spotlight
         ├── stats/route.ts                 # GET /api/kudos/stats
         ├── top-sunners/route.ts           # GET /api/kudos/top-sunners
+        ├── hashtags/route.ts              # GET /api/kudos/hashtags (shared: feed filter + Viet Kudos modal)
         └── [id]/
             └── like/route.ts             # POST + DELETE /api/kudos/:id/like
 
@@ -148,14 +151,16 @@ components/
 │   ├── SearchSunnerInput.tsx             # Client: search bar UI
 │   └── StatsPanel.tsx                    # Client: stats + Top 10 Sunners
 └── shared/
-    └── SpecialDayContext.tsx             # React Context: isSpecialDay boolean
+    ├── SpecialDayContext.tsx             # React Context: isSpecialDay boolean
+    └── LikeStateContext.tsx             # React Context: Map<kudosId, KudosLocalState>; shared between HighlightKudos + KudosFeed so a like in one section reflects in the other
 
 hooks/
 ├── useKudosFeed.ts                       # Feed pagination + 60s polling + visibilitychange
-└── useLike.ts                            # Optimistic like/unlike; per-kudos Map state
+└── useLike.ts                            # Optimistic like/unlike; reads/writes LikeStateContext
 
 lib/
-└── kudos.ts                              # Supabase queries; Zod schemas for API responses
+├── kudos-service.ts                      # Business logic: like validation, hearts-given calc, anon redaction
+└── kudos-repository.ts                   # Supabase queries + Zod schemas for DB responses
 
 types/
 └── kudos.ts                              # Kudos, Like, User TypeScript interfaces
@@ -192,61 +197,79 @@ public/
 - Add kudos CSS tokens to `app/globals.css`
 - Verify Supabase is configured; create `.env.local` vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - Create Supabase tables + RLS policies (migration):
-  - `kudos` (id, senderId, recipientId, title, message, hashtags, imageUrl, heartCount, isAnonymous, createdAt)
+  - `kudos` (id, senderId, recipientId, title, message, hashtags, imageUrls text[], heartCount, isAnonymous, createdAt) — note: `imageUrls` is a text array (up to 5 URLs), not a single nullable string; spec field is `imageUrls: string[]`
   - `likes` (kudosId, userId, heartsGiven, createdAt) — unique constraint on `(kudosId, userId)`
   - RLS: `kudos` public SELECT; `likes` SELECT own rows + INSERT/DELETE auth required
 
 ### Phase 1: Foundation (TDD) — Types + Hooks
 
-1. Define `types/kudos.ts` (Kudos, Like, User interfaces)
-2. Write Zod schemas in `lib/kudos.ts` for API response validation
-3. Write failing tests for `useLike` hook:
+1. Define `types/kudos.ts` (Kudos, Like, User, KudosLocalState interfaces) — ensure `Kudos.imageUrls` is typed as `string[]` (not `string | null`); ensure `Kudos.isAnonymous` is `boolean`; these MUST match the spec's Data Requirements table exactly
+2. Write Zod schemas in `lib/kudos-repository.ts` for DB response validation
+3. Implement `lib/kudos-service.ts` (like validation: auth check, not-own-kudos, not-already-liked; hearts-given: 1 or 2 based on `isSpecialDay`; anonymous redaction: omit `senderId`/`senderName`/`senderAvatar` when `isAnonymous=true`; `imageUrls` MUST be returned as `string[]` — empty array when no images, never `null`)
+4. Write failing tests for `useLike` hook:
    - Optimistic increment on click
    - Roll back on API failure
    - Prevents double-click while `isLiking`
    - Own kudos: `likedByMe` unchanged, no API call
-4. Implement `useLike.ts`
-5. Write failing tests for `useKudosFeed` hook:
+   - State reads from / writes to `LikeStateContext` (shared with HighlightKudos)
+5. Implement `useLike.ts` using `LikeStateContext`
+6. Write failing tests for `useKudosFeed` hook:
    - Returns first page of kudos
    - `loadMore` appends next page
    - 60s interval fires refresh
    - Polling pauses on hidden tab; resumes on focus
-6. Implement `useKudosFeed.ts`
+7. Implement `useKudosFeed.ts`
+8. Implement `LikeStateContext.tsx` (provides `Map<kudosId, KudosLocalState>` + dispatch to update it)
 
 ### Phase 2: API Routes (US3 + US4 foundation)
 
-1. Implement `GET /api/kudos` (feed with pagination + filters) — Zod input validation
-2. Implement `POST /api/kudos/:id/like` — auth check + not-own-kudos check + unique constraint
-3. Implement `DELETE /api/kudos/:id/like` — auth check + ownership check
-4. Implement `GET /api/kudos/highlights` (top 5)
-5. Implement `GET /api/kudos/stats` + `GET /api/kudos/top-sunners`
-6. Implement `GET /api/admin/special-days`
-7. Write API tests for each route (auth, validation, RLS enforcement)
+1. Implement `GET /api/kudos` (feed with pagination + `hashtag` + `department` filters) — Zod input validation; delegates to `kudos-service.ts`
+2. Implement `GET /api/kudos/hashtags` — returns full hashtag list from `hashtags` table (or static list for MVP)
+3. Implement `POST /api/kudos/:id/like` — delegates like validation + hearts-given to `kudos-service.ts`; route handler is thin
+4. Implement `DELETE /api/kudos/:id/like` — delegates unlike validation to `kudos-service.ts`
+5. Implement `GET /api/kudos/highlights` (top 5)
+6. Implement `GET /api/kudos/stats` + `GET /api/kudos/top-sunners`
+7. Implement `GET /api/admin/special-days`
+8. Write API tests for each route (auth, validation, RLS enforcement)
 
 ### Phase 3: Core UI — Feed + Like (US3 + US4)
 
-1. Write component tests for `<KudosCard />` (renders sender, recipient, message, hashtags)
-2. Implement `<KudosCard />` with cream bg, gold dividers, `<KudosMessage />` (DOMPurify)
-3. Write component tests for `<LikeButton />` (optimistic UI, `aria-pressed`, `min-height: 44px`)
-4. Implement `<LikeButton />` using `useLike` hook
-5. Implement `<KudosFeed />` using `useKudosFeed` hook (polling, pagination, load more)
+1. Write component tests for `<KudosCard />`:
+   - Renders sender name, recipient name, message, hashtags, heart count
+   - Message truncated to 3 lines with "Xem thêm" / "Read more" link when text > ~180 chars / 3 lines (US3 Scenario 4a); clicking "Xem thêm" expands full message in-place
+   - **Anonymous kudos** (US3 Scenario 4b): when `isAnonymous=true`, sender name and avatar are replaced with "Ẩn danh" placeholder text; actual sender name MUST NOT appear in the DOM; `senderId` MUST NOT appear in the DOM or be passed to child components
+   - When `imageUrls` is non-empty, renders up to 5 thumbnails (88×88px); when `imageUrls` is empty array, no image area is rendered (US3 Scenario 3)
+2. Implement `<KudosCard />` with cream bg, gold dividers, `<KudosMessage />` (DOMPurify):
+   - Message truncation at ~180 chars / 3 lines via CSS `line-clamp: 3` + expandable toggle ("Xem thêm" / "Thu gon")
+   - Anonymous display: `if (kudos.isAnonymous) { senderName = 'Ẩn danh'; senderAvatar = anonymousPlaceholderAsset }` — implemented as an immutable derived object, NOT a mutation of the kudos prop
+   - `<ImageGallery imageUrls={kudos.imageUrls} />` — component renders nothing when array is empty
+3. Write component tests for `<LikeButton />` (optimistic UI, `aria-pressed`, `min-height: 44px`; disabled when own kudos; `aria-label` toggles "Like"/"Unlike")
+4. Implement `<LikeButton />` using `useLike` hook + `LikeStateContext`
+5. Implement `<KudosFeed />` using `useKudosFeed` hook (polling, pagination, load more); render empty state "Be the first to send a Kudos!" with Write Kudos CTA when `kudosList` is empty
 6. Write E2E: like a kudos → count increments → unlike → count decrements
 
 ### Phase 4: Highlight + Spotlight (US1 + US2)
 
-1. Write tests for `<HighlightKudos />` (carousel navigation, dot indicators)
-2. Implement `<HighlightKudos />` carousel (top 5)
-3. Implement `<SpotlightBoards />`
-4. Implement `app/kudos/page.tsx` (SSR initial data fetch + `<SpecialDayContext.Provider />`)
-5. Wire `<KudosPage />` composing all sections
+1. Write tests for `<HighlightKudos />` (carousel navigation, dot indicators; empty state when `highlights` is empty — no crash)
+2. Implement `<HighlightKudos />` carousel (top 5); render empty state "No highlighted Kudos yet" when `highlights.length === 0`; `<LikeButton />` inside carousel reads `LikeStateContext` so like count stays in sync with feed
+3. Write tests for `<SpotlightBoards />`:
+   - Renders boards when data is available (US2 Scenario 1)
+   - Empty state: "No spotlights yet" message when board list is empty — section does NOT crash or leave a blank gap (US2 Scenario 2)
+   - Error state: non-sensitive error message + retry button when `spotlightError` is non-null; no stack trace or raw error exposed (US2 Scenario 3)
+   - Loading state: skeleton placeholder rendered when `isLoadingSpotlight=true`
+4. Implement `<SpotlightBoards />` with four states: loading (`isLoadingSpotlight`), error (`spotlightError`), empty (boards length 0), and populated. Manage `isLoadingSpotlight: boolean` and `spotlightError: string | null` as local state within `<SpotlightBoards />` (or passed from `<KudosPage />` if SSR fetch provides initial data); retry handler re-calls `GET /api/kudos/spotlight`.
+5. Implement `app/kudos/page.tsx` (SSR initial data fetch + `<SpecialDayContext.Provider />` + `<LikeStateContext.Provider initialState={initialLikeMap} />`); spotlight fetch failure on SSR MUST be caught and surfaced as `spotlightError` prop — do NOT crash the page.
+6. Wire `<KudosPage />` composing all sections
 
 ### Phase 5: Filter + Stats (US5 + US6 + US7)
 
-1. Implement `<SearchSunnerInput />` (filter by hashtag/department)
-2. Connect filter to `useKudosFeed` (refetch with filter params)
-3. Implement `<StatsPanel />` (total kudos, hearts, participants)
+1. Implement `<SearchSunnerInput />` with two filter modes:
+   - **Hashtag filter**: clicking a hashtag chip on any Kudos card calls `setFilterHashtag(tag)`; active chip displayed with clear button
+   - **Department filter**: dropdown or button group; calls `setFilterDepartment(dept)` — fetch available departments from `GET /api/kudos/stats` or a separate endpoint
+2. Connect both filters to `useKudosFeed` — refetch page 1 with `{ hashtag, department }` params when either changes
+3. Implement `<StatsPanel />` (total Kudos sent, total hearts given, total participants)
 4. Implement Top 10 Sunners widget within `<StatsPanel />`
-5. E2E: click hashtag chip → feed filters → clear → all kudos return
+5. E2E: click hashtag → feed filters; click department → feed filters; clear each → all kudos return
 
 ### Phase 6: Polish
 
@@ -255,9 +278,10 @@ public/
 - Heart animation: bounce scale 1 → 1.3 → 1 (300ms); respect `prefers-reduced-motion`
 - `aria-live="polite"` wrapper on heart count
 - Toast notifications: like error (roll back), copy link success
-- Copy Link button: write `{origin}/kudos#{kudosId}` to clipboard; `aria-label` update
+- Copy Link button: write `{origin}/kudos#{kudosId}` to clipboard; `aria-label` updates to reflect action. On page load, if `window.location.hash` matches a Kudos ID, scroll that card into view (`scrollIntoView({ behavior: 'smooth' })`) after feed renders (TR-007)
 - `isSpecialDay` visual: "x2" badge on heart button when on special day
 - Middleware: ensure unauthenticated users on `/kudos` redirect to `/login`
+- All navigation `href` values (e.g., `/login` redirect target) MUST be sourced from `.momorph/contexts/SCREENFLOW.md` — do not hardcode
 
 ### Risk Assessment
 
@@ -326,8 +350,13 @@ public/
 3. **Edge Cases**
    - [ ] Tab hidden → polling pauses → tab visible → polling resumes
    - [ ] Auth cookie expires mid-session → like returns 401 → toast + redirect to `/login`
-   - [ ] Very long kudos message → truncated at 3 lines with "Read more"
+   - [ ] Very long kudos message → truncated at 3 lines with "Xem thêm"; click expands full message
    - [ ] Highlight section with 0 liked kudos → empty state (no crash)
+   - [ ] Spotlight API fails → error state with retry button shown; no stack trace in UI
+   - [ ] Spotlight has no boards → empty state "No spotlights yet" shown; no blank gap
+   - [ ] Kudos with `isAnonymous=true` → sender name shows "Ẩn danh"; actual name absent from DOM
+   - [ ] Kudos with empty `imageUrls` → no image area rendered in card
+   - [ ] Kudos with non-empty `imageUrls` → up to 5 thumbnails rendered at 88×88px
 
 ### Coverage Goals
 
@@ -336,8 +365,11 @@ public/
 | `useLike` hook | 100% | High |
 | `useKudosFeed` hook | 95%+ | High |
 | `<LikeButton />` component | 90%+ | High |
+| `<KudosCard />` — anonymous display, truncation, empty imageUrls | 90%+ | High |
+| `<SpotlightBoards />` — empty/error/loading states | 85%+ | High |
 | `POST /api/kudos/:id/like` route | 100% | High |
 | E2E like/unlike flow | Key flow | High |
+| E2E anonymous kudos display | Key flow | High |
 
 ---
 
@@ -375,6 +407,6 @@ public/
 - **DOMPurify is non-negotiable**: Constitution Principle VI. Every Kudos message rendered with `dangerouslySetInnerHTML` MUST pass through DOMPurify. Prefer storing Kudos as sanitized HTML or plain text + markdown to simplify rendering.
 - **60s polling is NOT Supabase Realtime**: Realtime is explicitly out of scope for MVP. Use `setInterval(60000)` in `useKudosFeed`. When Supabase Realtime is added later, the hook interface stays the same.
 - **`isSpecialDay` is React Context**: Fetched once at page mount in `app/kudos/page.tsx` (SSR); passed via `<SpecialDayContext.Provider value={{ isSpecialDay }}>`. All `<LikeButton />` instances read from context — do NOT re-fetch on every click.
-- **Supabase RLS for anonymous kudos**: When `isAnonymous = true`, the `senderId` and `senderName` MUST NOT appear in API responses. Enforce via RLS policy or view that redacts sender fields when `isAnonymous = true`.
+- **Supabase RLS for anonymous kudos**: When `isAnonymous = true`, the `senderId` and `senderName` MUST NOT appear in API responses. Enforce via RLS policy or a Supabase view/function that redacts sender fields server-side when `isAnonymous = true`. **On the frontend**, `<KudosCard />` MUST also defensively replace sender display name/avatar with "Ẩn danh" if `isAnonymous=true` — belt-and-suspenders. The actual sender identity MUST NOT be present anywhere in the rendered DOM (no hidden data attributes, no accessible labels).
 - **Per-kudos state via Map**: `Map<string, KudosLocalState>` is used for `useLike` state to avoid O(n) re-renders on the full list. Only the specific card whose state changes re-renders.
 - **Heart count format**: Vietnamese locale — use `Intl.NumberFormat('vi-VN')` for display (e.g., 1000 → "1.000"). This is a display-only format; store raw integers in the DB.

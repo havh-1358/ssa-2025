@@ -27,6 +27,7 @@
 | `--font-body` | `"Montserrat", sans-serif` | Option locale labels |
 | `--text-option-size` | `16px` | VN / EN label size |
 | `--text-option-weight` | `700` | Option label weight |
+| `--text-option-line-height` | `24px` | Option label line-height (1.5×) |
 | `--text-option-color` | `#FFFFFF` | Option label color |
 
 ### Spacing
@@ -55,11 +56,13 @@
 
 The trigger button is rendered inside the Header component. These styles are derived from the Login and Homepage header designs.
 
+> **Conflict with Login design-style**: The Login screen's `design-style.md` (extracted from Figma) documents the inner language selector button as `padding: 16px` and the outer container `gap: 16px`. The values below (`padding: 8px`, `gap: 8px`) conflict. `TODO(value needed)`: Verify correct padding and gap from Figma for the trigger button on each screen. Use Login design-style values (padding: 16px, gap: 16px) for the Login screen until resolved.
+
 | Property | Value |
 |----------|-------|
-| Layout | flex, row, gap: 8px, align-items: center |
+| Layout | flex, row, gap: 8px (unverified — see conflict note above), align-items: center |
 | Background | transparent (inherits header background) |
-| Padding | `8px` |
+| Padding | `8px` (unverified — Login design-style shows 16px; see conflict note above) |
 | Border radius | `4px` |
 | Cursor | pointer |
 
@@ -67,7 +70,7 @@ The trigger button is rendered inside the Header component. These styles are der
 | Element | Asset | Size | Style |
 |---------|-------|------|-------|
 | Flag icon | `/assets/flags/vn.svg` or `/assets/flags/en.svg` | 24×16px | `object-cover` |
-| Locale text | "VN" or "EN" | — | Montserrat 700 14px `#FFFFFF` |
+| Locale text | "VN" or "EN" | — | Montserrat 700 16px, line-height 24px, letter-spacing 0.15px, `#FFFFFF` (Login screen); see note below |
 | Chevron | `MM_MEDIA_Down` | 24×24px | `#FFFFFF`; rotated 180° when dropdown open |
 
 **States:**
@@ -78,7 +81,7 @@ The trigger button is rendered inside the Header component. These styles are der
 | Active (open) | `rgba(255,255,255,0.1)` background; chevron rotated 180° |
 | Focus (keyboard) | outline `2px solid #FFEA9E` |
 
-> **Note**: On screens with 16px nav font (Awards, Kudos), the locale text in the trigger matches that screen's nav font size. On screens with 14px nav font (Homepage, Login), it uses 14px.
+> **Note**: The Login screen's own `design-style.md` (extracted directly from Figma) specifies the language label at **16px** (`--text-language`, Montserrat 700 16px). The note about "14px for Login/Homepage" above is unverified and conflicts with the Login Figma data. Until confirmed by Figma inspection on the Homepage frame, treat the Login locale text as **16px**. Awards and Kudos screens define their own nav font size — confirm per screen's design-style. `TODO(value needed)`: Verify Homepage header locale text size from Figma.
 
 ---
 
@@ -194,7 +197,7 @@ The trigger button is rendered inside the Header component. These styles are der
 |-------|-----------|----------|
 | Dropdown open | Fade in + scale from 0.95 to 1.0 | 150ms ease-out |
 | Dropdown close | Fade out + scale to 0.95 | 100ms ease-in |
-| Option hover | Background color transition | 100ms |
+| Option hover | Background color transition | 100ms ease-out |
 | Reduced motion | No scale animation | — |
 
 ---
@@ -220,3 +223,12 @@ The trigger button is rendered inside the Header component. These styles are der
 - **Flag assets**: Export from Figma or use open-source SVG flag icons. Store in `public/assets/flags/vn.svg` and `public/assets/flags/en.svg`.
 - **Divider between options**: Not visible in design; do NOT add a divider line between VN and EN.
 - **Selected state tracking**: When locale is `"vi"`, VN option shows selected style; when `"en"`, EN option shows selected style. Swap dynamically.
+
+## Open Questions
+
+| ID | Question | Blocking? | Source of Conflict |
+|----|----------|-----------|-------------------|
+| OQ-1 | What is the correct locale text font-size in the trigger button for Homepage and other non-Login/non-Awards screens? Login design-style confirms 16px for Login. Awards/Kudos need verification from their respective Figma frames. | No (use 16px for Login until confirmed for others) | Contradiction between this doc's note (14px for some screens) and Login design-style (16px) |
+| OQ-2 | Trigger button padding: is it `8px` (this doc) or `16px` (Login design-style inner button)? Figma verification required for the Language Selector trigger. | No (use Login design-style `16px` for Login screen) | Conflict between trigger button table in this doc vs. `[A.2]` table in Login design-style |
+| OQ-3 | Trigger button gap between elements: is it `8px` (this doc) or `16px` (Login design-style `[A.2]`)? | No (use `16px` for Login screen) | Same source conflict as OQ-2 |
+| OQ-4 | VN flag actual rendered size: 24×24px (Login design-style icon table) or 24×16px (this doc and hUyaaugye2 implementation mapping)? Flags are typically 3:2 ratio (24×16px). | No (use 24×16px — realistic flag ratio; Login's 24×24px likely a bounding box) | Login design-style icon table vs. hUyaaugye2 implementation mapping |

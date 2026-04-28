@@ -1,0 +1,1036 @@
+openapi: 3.0.3
+info:
+  title: SSA 2025 API
+  description: |
+    REST API for SSA 2025 — Sun* Annual Awards & Sun* Kudos platform.
+
+    ## Authentication
+    This API uses Supabase Auth session cookies (HttpOnly). Authentication is
+    established via Google OAuth flow:
+    1. Client calls `supabase.auth.signInWithOAuth({ provider: 'google' })`
+    2. Google redirects to `/auth/callback?code=<code>`
+    3. Server exchanges code for session; sets HttpOnly session cookie
+    4. All subsequent requests include the cookie automatically
+
+    Authenticated endpoints return `401` when the session cookie is absent or expired.
+
+    ## Error Responses
+    All endpoints return errors in the following format:
+    ```json
+    {
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "Human readable message",
+        "details": {}
+      }
+    }
+    ```
+
+    ## Anonymous Kudos
+    When `isAnonymous: true`, the API response omits `senderId`, `senderName`,
+    and `senderAvatarUrl`. These fields are absent from the JSON, not `null`.
+    The actual sender identity is stored in the database for admin purposes only.
+
+    ## Pagination
+    All list endpoints use cursor-less page-based pagination:
+    `?page=1&limit=20` → `{ data: [...], meta: { page, limit, total, totalPages } }`
+
+  version: "1.0.0"
+  contact:
+    name: SSA 2025 Dev Team
+    email: dev@sun-asterisk.com
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://ssa2025.sun-asterisk.com/api
+    description: Production server
+
+tags:
+  - name: Auth
+    description: OAuth callback route handler (not a JSON API — performs redirects)
+  - name: Kudos
+    description: Kudos feed, creation, highlights, spotlight, and statistics
+  - name: Likes
+    description: Like and unlike kudos
+  - name: Users
+    description: User profile search
+  - name: Upload
+    description: Image upload to Supabase Storage
+  - name: Admin
+    description: Admin-only configuration endpoints
+
+paths:
+
+  # ============================================
+  # AUTH — OAuth Callback (Route Handler, not JSON API)
+  # ============================================
+  /auth/callback:
+    get:
+      tags: [Auth]
+      summary: Google OAuth callback
+      description: |
+        Next.js Route Handler. Receives the OAuth authorization code from Google
+        and exchanges it for a Supabase session. Not a JSON API endpoint —
+        always responds with HTTP redirects.
+
+        **Flow:**
+        - `?error=access_denied` → redirect `/login` (no error param; user cancelled)
+        - `?error=<other>` → redirect `/login?error=auth_failed`
+        - `?code=<missing>` → redirect `/login?error=auth_failed`
+        - `?code=<valid>` → exchange session → redirect `/` (Homepage)
+        - `exchangeCodeForSession` throws → redirect `/login?error=auth_failed`
+      operationId: oauthCallback
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+          description: OAuth authorization code from Google
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: "OAuth error code (e.g. access_denied)"
+      responses:
+        "302":
+          description: Redirect to / (success) or /login (failure/cancel)
+          headers:
+            Location:
+              schema:
+                type: string
+              description: "/  OR  /login  OR  /login?error=auth_failed"
+
+  # ============================================
+  # KUDOS FEED
+  # ============================================
+  /kudos:
+    get:
+      tags: [Kudos]
+      summary: Get kudos feed
+      description: |
+        Returns paginated list of kudos ordered by `createdAt DESC`.
+        Supports filtering by hashtag and department.
+        Anonymous kudos omit sender identity fields.
+        Public — no authentication required for browsing.
+      operationId: getKudosFeed
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: hashtag
+          in: query
+          schema:
+            type: string
+            example: "#teamwork"
+          description: "Filter by hashtag (exact match). Example: #teamwork"
+        - name: department
+          in: query
+          schema:
+            type: string
+            example: "Engineering"
+          description: Filter by recipient's department name
+      responses:
+        "200":
+          description: Kudos feed (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KudosFeedResponse"
+              example:
+                data:
+                  - id: 42
+                    recipientId: "uuid-abc"
+                    recipientName: "Nguyen Van A"
+                    recipientAvatarUrl: "https://cdn.example.com/avatars/abc.jpg"
+                    senderName: "Tran Thi B"
+                    title: "Cảm ơn sự hỗ trợ tuyệt vời"
+                    message: "<p>Thank you so much!</p>"
+                    hashtags: ["#thank-you", "#teamwork"]
+                    imageUrls: []
+                    heartCount: 12
+                    isAnonymous: false
+                    createdAt: "2026-04-20T08:00:00Z"
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 85
+                  totalPages: 5
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Kudos]
+      summary: Create kudos
+      description: |
+        Submit a new Kudos recognition. Requires authentication.
+        - `message` is DOMPurify-sanitized server-side before DB INSERT.
+        - `imageUrl` must be a CDN URL from `POST /upload` (not a raw file).
+        - `idempotencyKey` (client-generated UUID on modal open) prevents
+          duplicate submissions: same key → `409 Conflict`.
+        - Self-send (`recipientId === senderId`) → `400 Bad Request`.
+      operationId: createKudos
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KudosCreateRequest"
+            example:
+              recipientId: "uuid-abc"
+              title: "Cảm ơn sự hỗ trợ tuyệt vời"
+              message: "<p><strong>Thank you</strong> so much!</p>"
+              hashtags: ["#thank-you", "#teamwork"]
+              imageUrl: "https://storage.supabase.co/kudos-images/abc.jpg"
+              isAnonymous: false
+              idempotencyKey: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "201":
+          description: Kudos created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KudosSingleResponse"
+        "400":
+          description: Self-send not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "SELF_SEND_FORBIDDEN"
+                  message: "Cannot send Kudos to yourself"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Duplicate idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "DUPLICATE_SUBMISSION"
+                  message: "This Kudos was already submitted"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ============================================
+  # KUDOS HIGHLIGHTS
+  # ============================================
+  /kudos/highlights:
+    get:
+      tags: [Kudos]
+      summary: Get highlight kudos
+      description: |
+        Returns the top 5 most-liked kudos ordered by `heartCount DESC`.
+        Used for the Highlight Kudos carousel on the Sun* Kudos page.
+        Public — no authentication required.
+      operationId: getKudosHighlights
+      responses:
+        "200":
+          description: Top 5 most-liked kudos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    maxItems: 5
+                    items:
+                      $ref: "#/components/schemas/KudosCard"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================
+  # KUDOS SPOTLIGHT
+  # ============================================
+  /kudos/spotlight:
+    get:
+      tags: [Kudos]
+      summary: Get spotlight boards
+      description: |
+        Returns admin-configured spotlight boards, each containing a curated
+        list of featured kudos. Ordered by `displayOrder ASC`.
+        Requires authentication.
+      operationId: getKudosSpotlight
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Spotlight boards with featured kudos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpotlightBoard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================
+  # KUDOS STATS
+  # ============================================
+  /kudos/stats:
+    get:
+      tags: [Kudos]
+      summary: Get kudos statistics
+      description: |
+        Returns aggregate statistics: total kudos sent, total hearts given,
+        total unique participants. Public — no authentication required.
+      operationId: getKudosStats
+      responses:
+        "200":
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/KudosStats"
+              example:
+                data:
+                  totalKudos: 1024
+                  totalHearts: 4096
+                  totalParticipants: 256
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================
+  # KUDOS TOP SUNNERS
+  # ============================================
+  /kudos/top-sunners:
+    get:
+      tags: [Kudos]
+      summary: Get top 10 Sunners
+      description: |
+        Returns the top 10 kudos recipients ranked by number of kudos received.
+        Used in the Stats sidebar on the Sun* Kudos page.
+        Public — no authentication required.
+      operationId: getTopSunners
+      responses:
+        "200":
+          description: Top 10 recipients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    maxItems: 10
+                    items:
+                      $ref: "#/components/schemas/TopSunner"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================
+  # KUDOS HASHTAGS
+  # ============================================
+  /kudos/hashtags:
+    get:
+      tags: [Kudos]
+      summary: Get available hashtags
+      description: |
+        Returns the full list of available hashtags for the Viet Kudos chip
+        selector and the feed filter. Ordered by `usageCount DESC`.
+        Requires authentication.
+      operationId: getKudosHashtags
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Available hashtags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Hashtag"
+              example:
+                data:
+                  - id: 1
+                    name: "#thank-you"
+                    usageCount: 42
+                  - id: 2
+                    name: "#teamwork"
+                    usageCount: 38
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ============================================
+  # KUDOS LIKE / UNLIKE
+  # ============================================
+  /kudos/{id}/like:
+    post:
+      tags: [Likes]
+      summary: Like a kudos
+      description: |
+        Add a like (heart) to a kudos. Requires authentication.
+        - `heartsGiven` is 1 normally; 2 when today is a special day (from `SpecialDayContext`).
+        - A user cannot like their own kudos → `403 Forbidden`.
+        - A user cannot like the same kudos twice → `409 Conflict`.
+        - `kudos.heartCount` is atomically incremented by `heartsGiven`.
+      operationId: likeKudos
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KudosIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [heartsGiven]
+              properties:
+                heartsGiven:
+                  type: integer
+                  enum: [1, 2]
+                  description: "1 = normal; 2 = special day multiplier"
+            example:
+              heartsGiven: 1
+      responses:
+        "200":
+          description: Like added; returns updated kudos heart count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      kudosId:
+                        type: integer
+                        format: int64
+                      heartCount:
+                        type: integer
+                      heartsGiven:
+                        type: integer
+              example:
+                data:
+                  kudosId: 42
+                  heartCount: 13
+                  heartsGiven: 1
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Cannot like own kudos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "SELF_LIKE_FORBIDDEN"
+                  message: "You cannot like your own Kudos"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Already liked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "ALREADY_LIKED"
+                  message: "You have already liked this Kudos"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [Likes]
+      summary: Unlike a kudos
+      description: |
+        Remove a previously placed like from a kudos. Requires authentication.
+        - `kudos.heartCount` is decremented by the original `heartsGiven` value.
+        - Returns `404` if the like does not exist.
+      operationId: unlikeKudos
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/KudosIdParam"
+      responses:
+        "200":
+          description: Like removed; returns updated kudos heart count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      kudosId:
+                        type: integer
+                        format: int64
+                      heartCount:
+                        type: integer
+              example:
+                data:
+                  kudosId: 42
+                  heartCount: 12
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Like not found (never liked or already removed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "LIKE_NOT_FOUND"
+                  message: "Like not found"
+
+  # ============================================
+  # USERS SEARCH
+  # ============================================
+  /users/search:
+    get:
+      tags: [Users]
+      summary: Search users by name
+      description: |
+        Full-text search on user display names (case-insensitive iLIKE).
+        Used by the Viet Kudos recipient search with 300ms debounce.
+        - Minimum query length: 2 characters (returns empty array for < 2 chars)
+        - Excludes the currently authenticated user from results
+        - Returns at most 10 suggestions
+        Requires authentication.
+      operationId: searchUsers
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            example: "nguyen"
+          description: Search query (min 2 characters)
+      responses:
+        "200":
+          description: Matching users (empty array if query < 2 chars or no matches)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    maxItems: 10
+                    items:
+                      $ref: "#/components/schemas/UserSummary"
+              example:
+                data:
+                  - id: "uuid-abc"
+                    name: "Nguyen Van A"
+                    avatarUrl: "https://cdn.example.com/avatars/abc.jpg"
+                    department: "Engineering"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ============================================
+  # IMAGE UPLOAD
+  # ============================================
+  /upload:
+    post:
+      tags: [Upload]
+      summary: Upload image to Supabase Storage
+      description: |
+        Upload a single image file to the `kudos-images` Supabase Storage bucket.
+        Returns a CDN URL to be included in `POST /kudos` as `imageUrl`.
+        - Accepted MIME types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+        - Maximum file size: 5 MB
+        - Upload timeout: 30 seconds (server-side AbortSignal)
+        Requires authentication.
+      operationId: uploadImage
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, GIF, or WebP; max 5 MB)
+      responses:
+        "201":
+          description: Upload successful; returns CDN URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [url]
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                        description: Supabase Storage CDN URL
+              example:
+                data:
+                  url: "https://storage.supabase.co/kudos-images/2026/04/abc123.jpg"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: Invalid file (MIME type or size)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "INVALID_FILE"
+                  message: "File must be an image (JPEG, PNG, GIF, WebP) and under 5 MB"
+
+  # ============================================
+  # ADMIN — SPECIAL DAYS
+  # ============================================
+  /admin/special-days:
+    get:
+      tags: [Admin]
+      summary: Get special days
+      description: |
+        Returns the list of configured special days (heart multiplier days).
+        Includes a `isToday` boolean for quick client-side check.
+        Used by `SpecialDayContext` — fetched once at Kudos page mount and cached.
+        Public — no authentication required (response is non-sensitive).
+      operationId: getSpecialDays
+      responses:
+        "200":
+          description: Special day configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SpecialDay"
+                  isToday:
+                    type: boolean
+                    description: True if today matches any special day in the list
+              example:
+                data:
+                  - id: 1
+                    date: "2026-05-21"
+                    title: "Sun* Anniversary"
+                    multiplier: 2
+                isToday: false
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+      description: |
+        Supabase Auth session cookie (HttpOnly). Set automatically by the
+        /auth/callback route handler after Google OAuth. Do NOT store in
+        localStorage or pass as a header — the browser sends it automatically.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number (1-based)
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Items per page (max 100)
+
+    KudosIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      description: Kudos record ID
+
+  responses:
+    Unauthorized:
+      description: Session cookie absent or expired
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Authentication required"
+
+    Forbidden:
+      description: Permission denied
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "You do not have permission to perform this action"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: "NOT_FOUND"
+              message: "Resource not found"
+
+    ValidationError:
+      description: Validation failed (Zod)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+          example:
+            error:
+              code: "VALIDATION_ERROR"
+              message: "Validation failed"
+              details:
+                title: ["Title is required"]
+                message: ["Message must be at least 1 character"]
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: "INTERNAL_ERROR"
+              message: "An unexpected error occurred"
+
+  schemas:
+
+    # ---- Error Schemas ----
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+            message:
+              type: string
+              description: Human-readable error message
+
+    ValidationErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+            details:
+              type: object
+              description: Per-field error arrays
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+
+    # ---- Pagination ----
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ---- User Schemas ----
+    UserSummary:
+      type: object
+      description: Lightweight user object for search results and kudos cards
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Supabase Auth user UUID
+        name:
+          type: string
+          example: "Nguyen Van A"
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        department:
+          type: string
+          nullable: true
+          example: "Engineering"
+
+    # ---- Kudos Schemas ----
+    KudosCard:
+      type: object
+      description: |
+        Public kudos display object. When `isAnonymous=true`, sender fields
+        (`senderId`, `senderName`, `senderAvatarUrl`) are ABSENT from the response.
+      required: [id, recipientId, recipientName, title, message, hashtags, imageUrls, heartCount, isAnonymous, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        recipientId:
+          type: string
+          format: uuid
+        recipientName:
+          type: string
+        recipientAvatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        senderId:
+          type: string
+          format: uuid
+          description: "Omitted from response when isAnonymous=true"
+        senderName:
+          type: string
+          description: "Omitted from response when isAnonymous=true"
+        senderAvatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: "Omitted from response when isAnonymous=true"
+        title:
+          type: string
+        message:
+          type: string
+          description: DOMPurify-sanitized HTML content
+        hashtags:
+          type: array
+          items:
+            type: string
+          example: ["#thank-you", "#teamwork"]
+        imageUrls:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+            format: uri
+          description: CDN URLs from Supabase Storage (empty array if no images)
+        heartCount:
+          type: integer
+          minimum: 0
+        isAnonymous:
+          type: boolean
+        likedByMe:
+          type: boolean
+          description: "Present only for authenticated requests; omitted for public requests"
+        createdAt:
+          type: string
+          format: date-time
+
+    KudosFeedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/KudosCard"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    KudosSingleResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/KudosCard"
+
+    KudosCreateRequest:
+      type: object
+      required: [recipientId, title, message, hashtags, isAnonymous, idempotencyKey]
+      properties:
+        recipientId:
+          type: string
+          format: uuid
+          description: UUID of the kudos recipient
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Kudos title (plain text, 1–100 characters)
+        message:
+          type: string
+          minLength: 1
+          description: |
+            Tiptap rich text HTML content. Plain-text equivalent must be 1–1000 characters.
+            Server sanitizes with DOMPurify before storing.
+        hashtags:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+          description: Selected hashtag strings (max 5)
+          example: ["#thank-you", "#teamwork"]
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            CDN URL from POST /upload. Single image per kudos.
+            Pass null if no image attached.
+        isAnonymous:
+          type: boolean
+          description: Whether to hide sender identity from the public response
+        idempotencyKey:
+          type: string
+          format: uuid
+          description: |
+            Client-generated UUID created when the Viet Kudos modal opens.
+            Prevents duplicate submissions on network retry or double-tap.
+            Returns 409 if the same key is submitted twice.
+
+    # ---- Spotlight Schemas ----
+    SpotlightBoard:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+        kudos:
+          type: array
+          items:
+            $ref: "#/components/schemas/KudosCard"
+
+    # ---- Stats Schemas ----
+    KudosStats:
+      type: object
+      properties:
+        totalKudos:
+          type: integer
+          description: Total number of kudos submitted
+        totalHearts:
+          type: integer
+          description: Total hearts given (SUM of all heartCount)
+        totalParticipants:
+          type: integer
+          description: Unique users who sent or received kudos
+
+    TopSunner:
+      type: object
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 10
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        kudosReceived:
+          type: integer
+          description: Number of kudos received by this user
+
+    # ---- Hashtag Schema ----
+    Hashtag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          description: "Hashtag string including # prefix, e.g. '#teamwork'"
+        usageCount:
+          type: integer
+          minimum: 0
+
+    # ---- Special Day Schema ----
+    SpecialDay:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        date:
+          type: string
+          format: date
+          description: ISO 8601 date (YYYY-MM-DD)
+        title:
+          type: string
+          example: "Sun* Anniversary"
+        multiplier:
+          type: integer
+          minimum: 1
+          default: 2

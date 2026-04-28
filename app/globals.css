@@ -1,8 +1,150 @@
 @import "tailwindcss";
 
 :root {
+  /* ============================================
+   * Base colors
+   * ============================================ */
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ============================================
+   * Language Selector tokens (hUyaaugye2)
+   * ============================================ */
+  --color-dropdown-bg: #00070c;
+  --color-dropdown-border: #998c5f;
+  --color-option-selected-bg: rgba(255, 234, 158, 0.2);
+  --color-option-hover-bg: rgba(255, 234, 158, 0.1);
+  --color-text-option: #ffffff;
+  --color-accent-gold: #ffea9e;
+
+  /* ============================================
+   * Login screen tokens (GzbNeVGJHz)
+   * ============================================ */
+  --color-bg-primary: #00101a;
+  --color-bg-fallback: #00101a;
+  --color-bg-header: rgba(11, 15, 18, 0.8);
+  --color-btn-google-bg: #ffea9e;
+  --color-btn-google-hover: #ffe07a;
+  --color-btn-google-active: #ffd44d;
+  --color-btn-google-disabled: rgba(255, 234, 158, 0.4);
+  --color-btn-google-loading: rgba(255, 234, 158, 0.6);
+  --color-btn-google-text: #00101a;
+  --color-text-primary: #ffffff;
+  --color-divider: #2e3940;
+  --color-border-footer: #2e3940;
+  --color-gradient-left-solid: #00101a;
+  --color-error-bg: rgba(239, 68, 68, 0.15);
+  --color-error-border: rgba(239, 68, 68, 0.4);
+  --color-error-text: #fca5a5;
+
+  /* Spacing */
+  --spacing-header-px: 144px;
+  --spacing-header-py: 12px;
+  --spacing-content-px: 144px;
+  --spacing-content-pt: 96px;
+  --spacing-content-pb: 96px;
+  --spacing-footer-px: 90px;
+  --spacing-footer-py: 40px;
+  --spacing-content-gap: 24px;
+  --spacing-sections-gap: 80px;
+  --spacing-btn-px: 24px;
+  --spacing-btn-py: 16px;
+  --spacing-content-left-pad: 16px;
+
+  /* Border & radius */
+  --radius-btn-google: 8px;
+  --radius-lang-btn: 4px;
+  --border-footer: 1px solid var(--color-border-footer);
+
+  /* ============================================
+   * Homepage SAA tokens (i87tDx10uM)
+   * ============================================ */
+  /* Header */
+  --color-header-bg: rgba(16, 20, 23, 0.8);
+  --header-height: 80px;
+  --header-padding-x: 144px;
+  --header-padding-y: 12px;
+
+  /* Nav links */
+  --color-nav-active: #ffea9e;
+  --color-nav-default: #ffffff;
+  --border-nav-active: 1px solid #ffea9e;
+
+  /* Buttons */
+  --color-btn-secondary-bg: rgba(255, 234, 158, 0.1);
+  --color-btn-secondary-border: #998c5f;
+  --radius-btn: 8px;
+  --btn-padding-x: 24px;
+  --btn-padding-y: 16px;
+  --btn-gap: 40px;
+
+  /* Content spacing */
+  --content-padding-x: 144px;
+  --content-padding-y: 96px;
+  --section-gap: 120px;
+
+  /* Countdown on homepage */
+  --countdown-gap: 40px;
+  --digit-gap: 14px;
+
+  /* ============================================
+   * Viet Kudos modal tokens (ihQ26W78P2)
+   * ============================================ */
+  --color-modal-bg: #fff8e1;
+  --color-overlay: rgba(0, 16, 26, 0.8);
+  --color-modal-text-dark: #00101a;
+  --color-input-bg: #ffffff;
+  --color-input-border: #998c5f;
+  --color-placeholder: #999999;
+  --color-checkbox-border: #999999;
+  --color-checkbox-bg: #ffffff;
+  --color-error: #ef4444;
+  --color-toolbar-bg: #f5f5f5;
+  --color-suggestion-hover: rgba(255, 234, 158, 0.1);
+  --color-suggestion-selected: rgba(255, 234, 158, 0.2);
+  --border-modal: 24px;
+  --border-input-radius: 8px;
+  --modal-padding: 40px;
+  --modal-gap: 32px;
+  --field-gap: 16px;
+
+  /* ============================================
+   * Sun* Kudos tokens (MaZUn5xHXZ)
+   * ============================================ */
+  --color-kudos-card-bg: #fff8e1;
+  --color-kudos-msg-bg: rgba(255, 234, 158, 0.4);
+  --color-kudos-text: #00101a;
+  --color-hashtag: #d4271d;
+  --color-timestamp: #999999;
+  --color-heart-count-gold: #ffea9e;
+  --radius-kudos-card: 24px;
+  --feed-gap: 24px;
+  --sidebar-gap: 24px;
+  --highlight-gap: 40px;
+
+  /* ============================================
+   * Award System tokens (zFYDgyj_pD)
+   * ============================================ */
+  --left-nav-gap: 16px;
+  --left-nav-padding: 16px;
+  --award-gap: 80px;
+  --color-nav-active-bg: rgba(255, 234, 158, 0.2);
+  --color-nav-hover-bg: rgba(255, 234, 158, 0.1);
+
+  /* ============================================
+   * Countdown Prelaunch tokens (8PJQswPZmU)
+   * ============================================ */
+  --color-bg-base: #00101a;
+  --color-card-bg: rgba(255, 234, 158, 0.05);
+  --color-gradient-overlay: linear-gradient(18deg, #00101a 0%, transparent 100%);
+  --border-card: 0.75px solid #ffea9e;
+  --radius-card: 12px;
+  --blur-card: blur(24.96px);
+  --gap-digit-blocks: 40px;
+  --gap-digit-cards: 4px;
+  --gap-digit-label: 12px;
+  --gap-title-blocks: 48px;
+  --font-display: "Digital Numbers", monospace;
 }
 
 @theme inline {
@@ -10,17 +152,119 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-montserrat: var(--font-montserrat);
+  --font-montserrat-alt: var(--font-montserrat-alt);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ============================================
+ * Digital Numbers font (self-hosted)
+ * Place DigitalNumbers.woff2 at public/fonts/
+ * ============================================ */
+@font-face {
+  font-family: "Digital Numbers";
+  src: url("/fonts/DigitalNumbers.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* ============================================
+ * Digit card glassmorphism — @supports fallback
+ * ============================================ */
+.digit-card-glass {
+  background: rgba(0, 16, 26, 0.85);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .digit-card-glass {
+    background: var(--color-card-bg);
+    backdrop-filter: var(--blur-card);
+    -webkit-backdrop-filter: var(--blur-card);
+  }
+}
+
+/* ============================================
+ * Viet Kudos modal animations (T062)
+ * ============================================ */
+.modal-slide-up {
+  animation: modalSlideUp 250ms ease forwards;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-slide-up {
+    animation: modalFadeIn 250ms ease forwards;
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+
+/* ============================================
+ * Like button heart bounce animation
+ * ============================================ */
+.like-btn-bounce {
+  display: inline-block;
+  animation: heartBounce 300ms ease-out;
+}
+
+@keyframes heartBounce {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================
+ * Award panel fade-in (T036)
+ * ============================================ */
+.award-panel-fade {
+  animation: awardFadeIn 150ms ease-out;
+}
+
+@keyframes awardFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================
+ * Reduced motion overrides
+ * ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-enter,
+  .dropdown-exit {
+    animation: none !important;
+    transition: opacity 100ms ease-in !important;
+    transform: none !important;
+  }
+
+  .digit-card-glass {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .award-panel-fade {
+    animation: none !important;
+  }
+
+  .like-btn-bounce {
+    animation: none !important;
+  }
+
+  /* Homepage: disable button hover transitions, nav hover, scale */
+  * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    transform: none !important;
+  }
 }

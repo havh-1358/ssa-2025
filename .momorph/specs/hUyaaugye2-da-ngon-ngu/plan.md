@@ -105,9 +105,10 @@ public/
         ├── vn.svg                        # Vietnam flag
         └── en.svg                        # UK/EN flag
 
-messages/
-├── vi.json                               # Vietnamese strings (already exists or create)
-└── en.json                               # English strings (already exists or create)
+i18n/
+└── messages/
+    ├── vi.json                           # Vietnamese strings (locale code: vi, display label: VN)
+    └── en.json                           # English strings
 ```
 
 ### Modified Files
@@ -116,7 +117,7 @@ messages/
 |------|--------|
 | `app/globals.css` | Add `--color-dropdown-bg`, `--color-dropdown-border`, `--color-option-selected-bg`, `--color-option-hover-bg`, `--color-text-option`, `--color-accent-gold` CSS variables |
 | `middleware.ts` | Ensure `locale` cookie is read and forwarded as `x-next-intl-locale` header |
-| `components/shared/Header.tsx` | Import and render `<LanguageSelector />` in the right slot |
+| `components/shared/Header.tsx` | Import and render `<LanguageSelector />` in the right slot. **Note**: `Header.tsx` is created by the Login plan (`GzbNeVGJHz`). This integration step is only needed if Header already exists; otherwise it is wired when the Login plan is executed. |
 
 ### Dependencies
 
@@ -124,6 +125,7 @@ messages/
 |---------|---------|---------|
 | `next-intl` | `^3.x` | Cookie-based locale; SSR-safe i18n |
 | `zod` | `^3.x` | Locale cookie value validation |
+| `focus-trap-react` | `^10.x` | WCAG-compliant focus trap for open dropdown (spec TR-004) |
 
 ---
 
@@ -145,16 +147,29 @@ messages/
 
 ### Phase 2: Component (US1 — Switch Language)
 
-1. Write failing tests for `<LanguageSelector />`:
+1. Write failing tests for `<LanguageSelector />` covering all spec scenarios including
+   Scenario 7 (full keyboard navigation per spec US1 S7):
    - Renders trigger with current locale flag + text
    - Click trigger opens dropdown
-   - Arrow keys navigate options
-   - Enter selects option → cookie updated → dropdown closes
-   - Escape closes without change
-   - Click outside closes
-   - Active locale highlighted
-2. Implement `<LanguageSelector />` to pass all tests
-3. Integrate into `<Header />` in the correct slot
+   - **S7 — Tab + Enter/Space**: Tab focus reaches trigger; pressing Enter or Space opens
+     dropdown; focus moves to the first option (or currently selected option)
+   - **S7 — Arrow Down/Up**: Arrow Down moves focus to next option; Arrow Up moves to
+     previous option; wraps at boundary
+   - **S7 — Enter selects**: Enter (or Space) on focused option → locale cookie updated
+     (`locale=<value>; path=/; max-age=31536000; SameSite=Lax`) → dropdown closes →
+     focus returns to trigger button
+   - **S7 — Escape closes**: Escape while dropdown is open → dropdown closes with no
+     locale change → focus returns to trigger button
+   - Click outside closes dropdown (no locale change)
+   - Active locale highlighted (`aria-selected="true"` on current option)
+   - `aria-expanded="true"` on trigger when open; `aria-expanded="false"` when closed
+   - `role="listbox"` on dropdown container; `role="option"` on each option
+2. Implement `<LanguageSelector />` to pass all tests.
+   Use `focus-trap-react ^10.x` (listed in Dependencies) to implement the focus trap
+   for WCAG TR-004 compliance. Activate trap when `isOpen=true`; deactivate on close.
+3. Integrate into `<Header />` in the correct slot.
+   **Note**: `Header.tsx` is created by the Login plan (`GzbNeVGJHz`). This step ONLY
+   imports `<LanguageSelector />` into the existing Header — do not recreate Header.tsx.
 
 ### Phase 3: Accessibility & Edge Cases
 
@@ -223,14 +238,18 @@ messages/
    - [ ] Click EN → locale changes; cookie set; dropdown closes; text changes to English
    - [ ] Reload page → English persists
 
-2. **Error Handling**
+2. **Keyboard Navigation — Scenario 7 (spec US1 S7)**
+   - [ ] Tab reaches trigger button; Enter or Space opens dropdown
+   - [ ] On open: focus moves to first option (or currently selected option)
+   - [ ] Arrow Down moves focus to next option; Arrow Up moves to previous option
+   - [ ] Enter (or Space) on focused option: selects locale, closes dropdown, focus returns to trigger
+   - [ ] Escape: closes dropdown without locale change; focus returns to trigger
+   - [ ] Tab while open: focus trapped inside dropdown (focus-trap-react — TR-004)
+
+3. **Error Handling & Edge Cases**
    - [ ] Cookie blocked → falls back to localStorage; no crash
    - [ ] Invalid cookie value → resets to VN
-
-3. **Edge Cases**
-   - [ ] Escape key closes dropdown; focus returns to trigger
-   - [ ] Arrow Down/Up navigates between options
-   - [ ] Tab while open → moves to next element outside (or traps, per focus-trap policy)
+   - [ ] Click outside while open → closes dropdown; no locale change
 
 ### Coverage Goals
 

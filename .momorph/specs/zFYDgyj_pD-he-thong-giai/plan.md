@@ -18,7 +18,7 @@ The Award System page (`/awards`) is a public, server-side rendered read-only pa
 **Primary Dependencies**: React 19, Tailwind CSS 4, next-intl
 **Database**: N/A (award data: static JSON, shared with Homepage)
 **Testing**: Vitest + React Testing Library; Playwright E2E
-**State Management**: `useState` for `activeCategory`; `useEffect` for URL hash; static props for awards
+**State Management**: `useState` for `activeCategory`, `isLoading`, and `error`; `useEffect` for URL hash pre-selection on mount; static props for awards (static import path); `isLoading`/`error` are only relevant on the future client-side API path
 **API Style**: Static JSON (MVP); optional `GET /api/awards` future path
 
 ---
@@ -102,6 +102,7 @@ app/
 components/
 ├── awards/
 │   ├── AwardsPage.tsx                    # Client Component: activeCategory state + URL hash + layout
+│   ├── AwardKeyvisual.tsx                # Server Component: 1440×547px banner + gradient overlay
 │   ├── AwardNavMenu.tsx                  # Client Component: role="tablist"; 6 nav items
 │   ├── AwardNavItem.tsx                  # Presentational: role="tab", aria-selected, aria-controls
 │   ├── AwardDetailPanel.tsx              # Client Component: role="tabpanel"; renders selected section
@@ -127,43 +128,64 @@ No new npm packages. Award data and types are shared from Homepage plan.
 ### Phase 0: Asset Preparation
 
 - Verify `data/awards.ts` and `types/awards.ts` exist (created by Homepage plan)
+- Confirm `data/awards.ts` exports all 6 category slugs as named constants: `#top-talent`, `#top-project`, `#top-project-leader`, `#best-manager`, `#signature-2025`, `#mvp`. These MUST be the single source of truth for hash values used by `<AwardNavMenu />`, `<AwardDetailPanel />`, and all tests. Add a `VALID_AWARD_HASHES` constant (string array) for fast O(1) lookup during hash validation on mount.
 - Export awards keyvisual → `public/assets/awards/keyvisual.jpg` (1440×547px)
 - Add any missing CSS tokens to `app/globals.css` (check Homepage plan already added shared tokens)
 
 ### Phase 1: Foundation (TDD)
 
 1. Verify `types/awards.ts` has `AwardCategory` and `AwardPrize` interfaces (from Homepage plan)
-2. Write tests for `<AwardNavItem />` (renders text, `role="tab"`, `aria-selected`, active styles)
+2. Write tests for `<AwardNavItem />` (renders text, `role="tab"`, `aria-selected`, active styles, focus outline on keyboard focus)
 3. Implement `<AwardNavItem />`
-4. Write tests for `<AwardNavMenu />` (renders 6 items, keyboard Up/Down navigation, hash update on click)
-5. Implement `<AwardNavMenu />`
+4. Write tests for `<AwardNavMenu />`:
+   - Renders all 6 items; container has `role="tablist"`
+   - Each item has `role="tab"`, `aria-selected`, and `aria-controls="{panel-id}"`
+   - Arrow Down moves focus to next item; Arrow Up moves to previous; wraps at ends
+   - Home key moves focus to first item; End key moves focus to last item
+   - Enter key on focused item selects it (updates `activeCategory`) and calls `router.replace` with the correct hash
+   - Hash update on mouse click also calls `router.replace`
+5. Implement `<AwardNavMenu />` following the WAI-ARIA Tabs pattern (automatic activation variant per TR-004)
 6. Write tests for `<AwardCategorySection />` (renders award name, recipient count, prize amount)
 7. Implement `<AwardCategorySection />`
 
 ### Phase 2: Core Layout (US1 — View Category Details)
 
 1. Write E2E test: navigate to `/awards` → default "Top Talent" selected → detail shows correct data → click "Top Project" → panel updates
-2. Implement `<AwardDetailPanel />` (shows selected category section; transition 150ms fade)
-3. Implement `<AwardsPage />` (state + hash sync + layout composition)
-4. Implement `app/awards/page.tsx` (static data import → pass to client component)
-5. Wire shared `<Header activeNav="awards" />` and `<Footer />`
+2. Implement `<AwardKeyvisual />` (1440×547px background image + gradient `linear-gradient(0deg, #00101A -4.23%, rgba(0,19,32,0) 52.79%)`)
+3. Implement `<AwardDetailPanel />`:
+   - Renders ONLY the selected category section; 150ms fade-in on switch; all non-active panels are `hidden`/`display:none`
+   - Detail panel has `role="tabpanel"` + `aria-labelledby="{tab-id}"` (TR-004)
+   - **Loading skeleton** (FR requirement — spec Edge Cases): when `isLoading=true`, render a skeleton placeholder (matching approximate panel height) instead of an empty panel; left nav items remain visible and clickable during loading
+   - **Error state**: when `error` is non-null, show "Unable to load award information" message with a retry CTA (spec Edge Cases)
+4. Implement `<AwardsPage />` (state: `activeCategory`, `isLoading`, `error`; hash sync on mount via `useEffect`; layout composition)
+5. Implement `app/awards/page.tsx` (static data import → pass to client component)
+6. Wire shared `<Header activeNav="awards" />` and `<Footer />`
 
-### Phase 3: Hash Routing + Keyboard Navigation (US1 + US2)
+### Phase 3: Hash Routing + Keyboard Navigation (FR-009 + FR-010)
 
-1. Add URL hash sync to `<AwardNavMenu />` (`router.replace` on click; `useEffect` on mount)
-2. Test: navigate to `/awards#top-project` → "Top Project" is pre-selected
-3. Test: navigate to `/awards#invalid` → fallback to "Top Talent"
-4. Add keyboard navigation: Arrow Up/Down cycles through items; Enter selects; Home/End
-5. Add focus management: selection via keyboard moves focus to detail panel heading
+1. **URL hash pre-selection on mount** (FR-010): in `<AwardsPage />` `useEffect`, read `window.location.hash` (strip `#`); look up against `VALID_AWARD_HASHES` constant from `data/awards.ts`; if valid → set `activeCategory` to that slug; if invalid or absent → fallback to `"top-talent"`.
+2. **URL hash sync on nav click**: in `<AwardNavMenu />`, on item click → call `router.replace(pathname + '#' + slug)` (no new history entry).
+3. Test: navigate to `/awards#top-project` → "Top Project" is pre-selected (FR-010 Scenario — valid hash)
+4. Test: navigate to `/awards#invalid` → fallback to "Top Talent" (FR-010 Scenario — invalid hash)
+5. Test: navigate to `/awards` (no hash) → default to "Top Talent" (FR-010 Scenario — absent hash)
+6. **Keyboard navigation** (FR-009, TR-004 WAI-ARIA Tabs):
+   - Arrow Down: move focus to next `role="tab"` item; wrap from last → first
+   - Arrow Up: move focus to previous `role="tab"` item; wrap from first → last
+   - Home: move focus to first item (Top Talent)
+   - End: move focus to last item (MVP)
+   - Enter: select the currently focused item → update `activeCategory` + call `router.replace`
+7. **Focus management**: after keyboard-driven selection (Enter), programmatically move focus to the `role="tabpanel"` heading (`<h2>` or first focusable element inside `<AwardDetailPanel />`)
 
 ### Phase 4: Navigation + Polish (US3)
 
 1. Verify header nav "Award Information" is active state (gold + underline)
 2. Add `<SectionTitle />` with "Sun* Annual Awards 2025" heading and `#2E3940` divider
 3. Add `<KudosPromoSection />` (shared from Homepage plan)
-4. Responsive: at tablet/mobile → left nav becomes horizontal scrollable tab row
+4. Responsive: at tablet/mobile → left nav becomes horizontal scrollable tab row (`overflow-x: auto`, `flex-nowrap`)
 5. `prefers-reduced-motion` — disable 150ms fade animation
-6. Error state in detail panel if award data fails (future API path)
+6. Error state in detail panel if award data fails (future API path: show "Unable to load award information" with retry CTA)
+7. Add i18n: award category names, prize labels, and section headings MUST have Vietnamese and English translations in `messages/vi.json` and `messages/en.json`. Reference keys via `useTranslations()` — no hardcoded Vietnamese/English strings in component files.
+8. All navigation `href` values MUST reference `.momorph/contexts/SCREENFLOW.md` as source of truth — do not hardcode `/` or `/kudos` without verifying against the screen flow document.
 
 ### Risk Assessment
 
@@ -171,8 +193,9 @@ No new npm packages. Award data and types are shared from Homepage plan.
 |------|-------------|--------|------------|
 | `data/awards.ts` not yet created (Homepage plan dependency) | Medium | High | Create Awards page AFTER Homepage plan Phase 0 is complete |
 | Hash sync causing hydration mismatch | Low | Low | Read hash only in `useEffect` (client only); server renders default ("top-talent") |
-| Left nav keyboard nav scope | Low | Low | Use standard `role="tablist"` pattern; well-documented |
+| Left nav keyboard nav scope | Low | Low | Use standard `role="tablist"` WAI-ARIA Tabs pattern (automatic activation variant); well-documented |
 | Mobile horizontal scroll tabs | Low | Low | Use `overflow-x: auto` + `flex-nowrap` on the nav container |
+| Hash slug mismatch (typo in constant vs URL) | Low | Medium | All 6 slugs defined in a single `VALID_AWARD_HASHES` constant in `data/awards.ts`; nav items and hash validation both derive from it |
 
 ### Estimated Complexity
 
@@ -218,19 +241,26 @@ No new npm packages. Award data and types are shared from Homepage plan.
 
 2. **Error Handling**
    - [ ] Invalid hash (`/awards#unknown`) → fallback to "Top Talent"
-   - [ ] Award data missing → empty state in detail panel (no crash)
+   - [ ] Absent hash (`/awards`) → default to "Top Talent"
+   - [ ] Award data missing → error state in detail panel shows "Unable to load award information" + retry CTA (no crash)
 
-3. **Edge Cases**
-   - [ ] Keyboard Up/Down navigates through all 6 items
-   - [ ] Escape from nav item returns focus to trigger (if applicable)
+3. **Loading State**
+   - [ ] `isLoading=true` → detail panel shows skeleton placeholder; left nav items still rendered and clickable
+
+4. **Edge Cases**
+   - [ ] Keyboard Arrow Down/Up navigates through all 6 items; wraps at ends
+   - [ ] Keyboard Home → first item (Top Talent); End → last item (MVP)
+   - [ ] Keyboard Enter selects focused item → focus moves to panel heading
 
 ### Coverage Goals
 
 | Area | Target | Priority |
 |------|--------|----------|
-| `<AwardNavMenu />` keyboard nav | 90%+ | High |
+| `<AwardNavMenu />` keyboard nav (Arrow Up/Down/Home/End/Enter) | 90%+ | High |
 | `<AwardCategorySection />` rendering | 90%+ | High |
-| Hash routing + pre-selection | 85%+ | High |
+| Hash routing + pre-selection (valid, invalid, absent hash) | 85%+ | High |
+| `<AwardDetailPanel />` loading skeleton | 80%+ | High |
+| `<AwardDetailPanel />` error state | 80%+ | Medium |
 | E2E category browse | Key flow | High |
 
 ---
@@ -267,5 +297,5 @@ No new npm packages. Award data and types are shared from Homepage plan.
 - The `<AwardNavMenu />` uses `role="tablist"` — NOT `role="listbox"` — because the detail panel is shown/hidden (tab pattern), not a form selection control.
 - The Awards page left nav uses **16px** nav font, not 14px. The `<Header />` component must accept a prop (e.g., `navFontSize`) to override the default 14px used on the Homepage.
 - URL hash updates use `router.replace()` (not `router.push()`) to avoid polluting the browser history on every category click.
-- The detail panel shows ALL award sections stacked with dividers (not hidden sections — the "active" state drives which section is scrolled into view or shown). However, per spec, it is a click-to-reveal pattern — only the selected category's panel is displayed; others are hidden.
+- **Click-to-reveal pattern (NOT stacked scroll)**: Only the selected category's detail panel is rendered/visible; all other panels are hidden (`display: none` or conditional render). The "active" state drives which panel shows — this is NOT a long-scrolling page where clicking a nav item smooth-scrolls to a section. It is a tab-panel swap.
 - `<AwardCategorySection />` is DISTINCT from `<AwardCategoryCard />` (Homepage): the card is a compact grid tile; the section is a full detail view with prize breakdown.

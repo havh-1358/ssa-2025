@@ -1,0 +1,97 @@
+erDiagram
+    departments {
+        bigint id PK
+        text name UK
+        timestamptz created_at
+    }
+
+    users {
+        uuid id PK
+        text name
+        text avatar_url
+        bigint department_id FK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    kudos {
+        bigint id PK
+        uuid sender_id FK
+        uuid recipient_id FK
+        text title
+        text message
+        text_array hashtags
+        text_array image_urls
+        integer heart_count
+        boolean is_anonymous
+        uuid idempotency_key UK
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz deleted_at
+    }
+
+    likes {
+        bigint id PK
+        bigint kudos_id FK
+        uuid user_id FK
+        integer hearts_given
+        timestamptz created_at
+    }
+
+    hashtags {
+        bigint id PK
+        text name UK
+        integer usage_count
+        timestamptz created_at
+    }
+
+    special_days {
+        bigint id PK
+        date date UK
+        text title
+        integer multiplier
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    spotlight_boards {
+        bigint id PK
+        text title
+        text description
+        integer display_order
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    spotlight_board_kudos {
+        bigint id PK
+        bigint spotlight_board_id FK
+        bigint kudos_id FK
+        integer display_order
+        timestamptz created_at
+    }
+
+    award_categories {
+        bigint id PK
+        text slug UK
+        text name
+        text name_en
+        text description
+        text description_en
+        decimal prize_amount
+        text prize_currency
+        integer recipient_count
+        integer display_order
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    departments ||--o{ users : "has members"
+    users ||--o{ kudos : "sends"
+    users ||--o{ kudos : "receives"
+    users ||--o{ likes : "places"
+    kudos ||--o{ likes : "receives"
+    kudos ||--o{ spotlight_board_kudos : "featured in"
+    spotlight_boards ||--o{ spotlight_board_kudos : "contains"

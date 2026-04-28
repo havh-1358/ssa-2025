@@ -31,11 +31,14 @@
 | `--text-nav-line` | `24px` | Nav line height |
 | `--text-nav-letter` | `0.15px` | Nav letter spacing |
 | `--text-section-title-size` | `24px` | Section title "Sun* Annual Awards 2025" |
-| `--text-section-title-weight` | `700` | Same |
+| `--text-section-title-weight` | `700` | Section title font weight |
+| `--text-section-title-line` | `32px` | Section title line height (1.33× size) |
 | `--text-award-heading-size` | `32px` | Award category heading |
-| `--text-award-heading-weight` | `700` | Same |
+| `--text-award-heading-weight` | `700` | Award heading font weight |
+| `--text-award-heading-line` | `40px` | Award heading line height (1.25× size) |
 | `--text-body-size` | `16px` | Award description text |
-| `--text-body-weight` | `400` | Same |
+| `--text-body-weight` | `400` | Body text font weight |
+| `--text-body-line` | `24px` | Body text line height (1.5× size) |
 
 ### Spacing
 
@@ -90,6 +93,7 @@
 | Width | 1440px |
 | Height | 547px |
 | Background | Image (cover) + gradient overlay |
+| Asset path | `public/assets/awards/keyvisual.jpg` → import as `/assets/awards/keyvisual.jpg` |
 | Gradient | `linear-gradient(0deg, #00101A -4.23%, rgba(0,19,32,0) 52.79%)` |
 
 ---
@@ -209,7 +213,7 @@
 |------------|---------|----------------|----------|
 | Desktop ≥ 1280px | 178px sidebar | 2-column row | 16px |
 | Tablet 768–1279px | Horizontal scroll tabs | 1-column | 14px |
-| Mobile 320–767px | Horizontal scroll tabs / dropdown | 1-column | 13px |
+| Mobile 320–767px | Horizontal scroll tabs (no dropdown) | 1-column | 13px |
 
 ---
 
@@ -240,18 +244,26 @@
 
 ## Implementation Mapping
 
-| Figma Node | Component | CSS / Tailwind |
-|------------|-----------|----------------|
+> **Constitution II compliance**: The Tailwind classes listed below show the DESIGN INTENT values for reference. In actual component code, all hex values MUST be replaced with CSS variable references (e.g., `bg-[var(--color-accent-gold-bg)]`). Raw hex is FORBIDDEN in component files.
+
+| Figma Node | Component | CSS / Tailwind (reference values — use CSS vars in code) |
+|------------|-----------|----------------------------------------------------------|
 | `313:8440` | `<Header activeNav="awards" />` | Shared header component |
-| `313:8437` | `<KeyvisualBackground />` | `h-[547px] bg-cover + gradient` |
+| `313:8437` | `<KeyvisualBackground />` | `h-[547px] bg-cover` + gradient overlay |
 | `313:8453` | `<SectionTitle />` | `flex flex-col gap-4` |
 | `313:8459` | `<AwardNavMenu />` | `flex flex-col gap-4 w-[178px]` |
-| Nav item active | `<AwardNavItem active />` | `bg-[rgba(255,234,158,0.2)] text-[#FFEA9E] rounded p-4` |
-| Nav item | `<AwardNavItem />` | `text-white rounded p-4 hover:bg-[rgba(255,234,158,0.1)]` |
+| Nav item active | `<AwardNavItem active />` | `bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active)] rounded p-4` |
+| Nav item | `<AwardNavItem />` | `text-[var(--color-text-primary)] rounded p-4 hover:bg-[var(--color-nav-hover-bg)]` |
 | `313:8466` | `<AwardDetailPanel />` | `flex flex-col gap-20 w-[856px]` |
 | Category section | `<AwardCategorySection category={...} />` | `flex flex-col gap-20` |
-| `313:8455` (divider) | `<hr />` | `border-t border-[#2E3940] w-full` |
+| `313:8455` (divider) | `<hr />` | `border-t border-[var(--color-divider)] w-full` |
 | Footer | `<Footer />` | Shared component |
+
+**Additional CSS variables needed** (not yet defined in shared tokens above — add to `app/globals.css`):
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--color-nav-active-bg` | `rgba(255, 234, 158, 0.2)` | Nav item active background |
+| `--color-nav-hover-bg` | `rgba(255, 234, 158, 0.1)` | Nav item hover background |
 
 ---
 

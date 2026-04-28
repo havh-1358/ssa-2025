@@ -66,22 +66,32 @@ The Viet Kudos screen is a modal form (overlay on top of the Sun* Kudos page) th
 **Scenario 7: Validation — missing recipient**
 - Given: title and message are filled, but no recipient selected
 - When: user clicks "Gui"
-- Then: an inline validation error appears below the recipient field; submission is blocked
+- Then: an inline validation error "Please select a recipient" appears below the recipient field; submission is blocked
 
-**Scenario 8: Validation — missing message**
+**Scenario 8: Validation — missing title**
+- Given: recipient is selected, message filled, but title is empty
+- When: user clicks "Gui"
+- Then: an inline validation error "Title is required" appears below the title field; submission is blocked
+
+**Scenario 9: Validation — missing message**
 - Given: recipient is selected, title filled, but message is empty
 - When: user clicks "Gui"
-- Then: an inline validation error appears below the message field; submission is blocked
+- Then: an inline validation error "Message is required" appears below the message field; submission is blocked
 
-**Scenario 9: Submit button loading state**
+**Scenario 10: Submit button loading state**
 - Given: user clicks "Gui" with valid data
 - When: API request is in flight
 - Then: submit button is disabled and shows a loading spinner; cancel button is also disabled
 
-**Scenario 10: API error on submit**
+**Scenario 11: API error on submit**
 - Given: user submits valid kudos
 - When: API returns an error
 - Then: modal remains open; error toast is shown; button returns to enabled state; user can retry
+
+**Scenario 12: Recipient search loading state**
+- Given: modal is open; user has typed at least 1 character in the recipient field
+- When: the debounced API request is in flight
+- Then: a loading indicator (spinner or skeleton) appears in the suggestions dropdown; results replace it when the request completes
 
 ---
 
@@ -106,9 +116,9 @@ The Viet Kudos screen is a modal form (overlay on top of the Sun* Kudos page) th
 - Then: hashtag is removed from the selected list
 
 **Scenario 3: Maximum hashtag limit**
-- Given: maximum number of hashtags is selected (e.g., 5)
-- When: user tries to add another hashtag
-- Then: additional selection is blocked; a hint message appears
+- Given: exactly 5 hashtags are selected (maximum allowed)
+- When: user tries to click another hashtag chip
+- Then: additional selection is blocked; unselected chips appear disabled; a hint message "Maximum 5 hashtags reached" appears below the chip row
 
 ---
 
@@ -207,9 +217,11 @@ The Viet Kudos screen is a modal form (overlay on top of the Sun* Kudos page) th
 
 ### Navigation Flow
 
-- **Triggered from**: Sun* Kudos page (`/kudos`) — Write Kudos CTA button
-- **On submit success**: Modal closes → feed shows new Kudos at top
-- **On cancel**: Modal closes → returns to Kudos feed
+- **Entry point**: Sun* Kudos page (`/kudos`) — authenticated user clicks the "Ghi nhan" (Write Kudos) button.
+- **On submit success**: Modal closes → Kudos feed updates (new entry appears at top) → user remains on `/kudos`.
+- **On cancel (button or Escape, form empty)**: Modal closes immediately → user remains on `/kudos`; no content is saved.
+- **On cancel (button or Escape, form has content)**: A confirmation dialog appears: "Are you sure? Your Kudos will not be saved." with two actions — **Cancel** (dismiss dialog, return to modal) and **Discard** (close modal, discard content). Only on "Discard" does the modal close.
+- **Unauthenticated access**: "Ghi nhan" button redirects to `/login` (no modal opens); after login, redirect returns to `/kudos`.
 
 Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
@@ -226,11 +238,15 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 ### Accessibility Requirements
 
-- **WCAG 2.1 AA**: All text on cream background passes ≥ 4.5:1
-- **Modal role**: `role="dialog"` with `aria-modal="true"` and `aria-labelledby="modal-title"`
-- **Focus management**: Focus moves to modal title on open; returns to trigger button on close
-- **Escape**: Always closes the modal
-- **Screen reader**: Form fields have proper `<label>` or `aria-label`
+- **WCAG 2.1 AA**: All text on cream background must pass ≥ 4.5:1 contrast ratio.
+- **Modal role**: `role="dialog"` with `aria-modal="true"` and `aria-labelledby="modal-title"`.
+- **Focus management**: Focus moves to modal title (or first focusable element) on open; returns to the "Ghi nhan" trigger button on close.
+- **Focus trap**: Tab key cycles only through focusable elements inside the modal. Shift+Tab cycles backwards. Elements outside the modal are inert while it is open.
+- **Keyboard navigation tab order**: Modal title → Recipient search input → Kudos Title input → Message editor → Hashtag chips (Arrow keys to navigate chips, Space/Enter to select) → Image upload → Anonymous checkbox → Cancel button → Submit button.
+- **Escape**: Always closes the modal (triggers confirmation dialog if form has content).
+- **Screen reader**: All form fields have associated `<label>` elements or `aria-label` attributes. Error messages are linked to their field via `aria-describedby`. Loading states are announced via `aria-live="polite"`.
+- **Rich text toolbar**: Toolbar buttons have `aria-label` (e.g., `aria-label="Bold"`) and `aria-pressed` to reflect active formatting state.
+- **Touch targets**: All interactive elements (buttons, chips, checkbox) are ≥ 44×44px per WCAG 2.5.5 (Constitution Principle II).
 
 ---
 
@@ -251,12 +267,14 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 ## API Requirements (Predicted)
 
-| Endpoint / Method | Purpose | Trigger |
-|-------------------|---------|---------|
-| `GET /api/users/search?q={query}` | Search sunner by name for recipient selection | User types in recipient field |
-| `GET /api/kudos/hashtags` | Load available hashtags for chip suggestions | Modal open |
-| `POST /api/kudos` | Submit new Kudos | "Gui" button click |
-| `POST /api/upload` | Upload image attachment | Image file selected |
+All endpoints below require an authenticated session (Supabase Auth cookie). Unauthenticated requests return HTTP 401.
+
+| Endpoint / Method | Auth | Purpose | Trigger |
+|-------------------|------|---------|---------|
+| `GET /api/users/search?q={query}` | Required | Search sunner by name for recipient selection | User types in recipient field (debounced 300ms) |
+| `GET /api/kudos/hashtags` | Required | Load available hashtags for chip suggestions | Modal open |
+| `POST /api/kudos` | Required | Submit new Kudos | "Gui" button click |
+| `POST /api/upload` | Required | Upload image attachment to Supabase Storage (bucket: `kudos-images`) | Image file selected |
 
 **POST /api/kudos payload**:
 ```json
@@ -288,6 +306,8 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 | `message` | `string` | `""` | Kudos message (rich text) |
 | `hashtags` | `string[]` | `[]` | Selected hashtags |
 | `availableHashtags` | `string[]` | `[]` | Hashtag chip options loaded from `GET /api/kudos/hashtags` |
+| `isLoadingHashtags` | `boolean` | `false` | True while `GET /api/kudos/hashtags` is in flight (chips show skeleton) |
+| `hashtagsError` | `string \| null` | `null` | Error if hashtag list API fails; show retry option |
 | `image` | `File \| null` | `null` | Attached image file (local, before upload) |
 | `imagePreviewUrl` | `string \| null` | `null` | Local object URL for preview |
 | `uploadedImageUrl` | `string \| null` | `null` | CDN URL returned after Supabase Storage upload |

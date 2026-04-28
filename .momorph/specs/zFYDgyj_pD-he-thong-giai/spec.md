@@ -95,9 +95,10 @@ The Award System page displays detailed information about all SSA 2025 award cat
 
 ### Edge Cases
 
-- **Award data from API**: If award data fails to load, show an error state in the detail panel — not a crash.
+- **Award data from API**: If award data fails to load, show an error state in the detail panel ("Unable to load award information" with a retry CTA) — not a crash.
+- **Award data loading (client-side path only)**: While `isLoading=true`, the detail panel MUST show a loading skeleton (not an empty panel). The left nav items are still rendered and clickable.
 - **Category not found in URL hash**: If `/awards#invalid` is visited, default to showing "Top Talent".
-- **Mobile nav**: Left nav collapses into a horizontal scrollable tab row or dropdown on mobile.
+- **Mobile nav**: Left nav collapses into a horizontal scrollable tab row (no dropdown) on tablet/mobile; `overflow-x: auto`; `flex-nowrap`; individual items remain tappable with ≥ 44px touch target height.
 
 ---
 
@@ -112,12 +113,12 @@ The Award System page displays detailed information about all SSA 2025 award cat
 | T | Section Title | `313:8453` | header | "Sun* Annual Awards 2025" (Montserrat 700 24px) + section divider |
 | C | Left Nav Menu | `313:8459` | nav | 6 category items (Top Talent, Top Project, Top Project Leader, Best Manager, Signature 2025, MVP) |
 | D | Detail Panel | `313:8466` | section | Scrollable panel for selected category; shows prize cards |
-| D.1 | Top Talent | `313:8467` | section | Top Talent award details + divider |
-| D.2 | Top Project | `313:8468` | section | Top Project award details |
-| D.3 | Top Project Leader | `313:8469` | section | Top Project Leader details |
-| D.4 | Best Manager | — | section | Best Manager details |
-| D.5 | Signature 2025 | — | section | Signature 2025 Creator details |
-| D.6 | MVP | — | section | MVP details |
+| D.1 | Top Talent | `313:8467` | section | Top Talent award details + divider; anchor `#top-talent` |
+| D.2 | Top Project | `313:8468` | section | Top Project award details; anchor `#top-project` |
+| D.3 | Top Project Leader | `313:8469` | section | Top Project Leader details; anchor `#top-project-leader` |
+| D.4 | Best Manager | — (Node ID not extracted; follow same structure as D.1–D.3) | section | Best Manager details; anchor `#best-manager` |
+| D.5 | Signature 2025 | — (Node ID not extracted; follow same structure as D.1–D.3) | section | Signature 2025 Creator details; anchor `#signature-2025` |
+| D.6 | MVP | — (Node ID not extracted; follow same structure as D.1–D.3) | section | MVP details; anchor `#mvp` |
 | D1 | Kudos Promo | `335:12023` | section | Sun* Kudos promotional block |
 | Footer | Footer | `354:4323` | footer | Shared footer component |
 
@@ -152,10 +153,22 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 ### Accessibility Requirements
 
 - **WCAG 2.1 AA**: All text passes ≥ 4.5:1 contrast
-- **Left nav keyboard**: Arrow Up/Down to navigate categories; Enter to select
+- **Left nav keyboard**: Arrow Up/Down to navigate categories; Enter to select; Home moves to first item; End moves to last item
 - **Left nav ARIA**: `role="tablist"` on nav container; each item `role="tab"` + `aria-selected` + `aria-controls="{panel-id}"`; detail panel `role="tabpanel"` + `aria-labelledby="{tab-id}"`
 - **Section landmarks**: Each award category section MUST have an `id` for anchor navigation and an ARIA landmark
 - **Focus management**: When nav item is clicked/selected with keyboard, focus moves to the corresponding detail panel heading
+
+#### Acceptance Scenario — Keyboard Navigation (US1 extension)
+
+**Scenario K1: Arrow key navigation in left nav**
+- Given: user focuses any left nav item (e.g., "Top Talent") via Tab key
+- When: user presses Arrow Down
+- Then: focus moves to the next nav item ("Top Project"); panel does NOT change until Enter is pressed (or changes on Arrow per WAI-ARIA tabs pattern — follow the "automatic activation" variant documented in TR-004)
+
+**Scenario K2: Enter selects focused nav item**
+- Given: user has navigated to "Best Manager" via Arrow keys
+- When: user presses Enter
+- Then: "Best Manager" becomes the active category; its detail panel is shown; focus moves to the "Best Manager" panel heading
 
 ---
 
@@ -209,6 +222,8 @@ Alternatively, award data can be a static JSON file (`data/awards.json`) if cate
 - **FR-006**: Sun* Kudos promo block MUST render and link to `/kudos`.
 - **FR-007**: Footer MUST display at the bottom (shared component).
 - **FR-008**: All text MUST respect active locale (VN / EN).
+- **FR-009**: Left nav MUST support keyboard navigation — Arrow Up/Down to move between category items; Enter to select the focused category.
+- **FR-010**: On page load with a valid URL hash (e.g., `/awards#top-project`), the matching category MUST be pre-selected; if the hash is invalid or missing, default to `#top-talent`.
 
 ### Technical Requirements
 

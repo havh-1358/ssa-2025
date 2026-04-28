@@ -87,6 +87,16 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 - When: the page scrolls past 80px
 - Then: the header remains fixed at the top with semi-transparent dark background
 
+**Scenario 5: Mobile hamburger menu opens**
+- Given: user is on a viewport < 768px (mobile)
+- When: user taps the hamburger menu icon
+- Then: a full-width nav drawer or dropdown opens, showing all nav links ("About SAA 2025", "Award Information", "Sun* Kudos") and the language selector; the hamburger icon changes to a close (×) icon; focus is trapped inside the open menu for keyboard users
+
+**Scenario 6: Mobile hamburger menu closes**
+- Given: the mobile nav drawer is open
+- When: user taps the close (×) icon, taps outside the drawer, or presses Escape
+- Then: the drawer closes; focus returns to the hamburger button
+
 ---
 
 ### US3: Browse Award System Summary [P2]
@@ -135,9 +145,12 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 ### Edge Cases
 
 - **Homepage rendered while platform is still in pre-launch**: Middleware MUST still redirect to countdown screen; homepage MUST never show before `LAUNCH_DATETIME`.
-- **Countdown reaches zero on homepage**: If the event start time passes while user is on the homepage, countdown shows `00 00 00` and stops; does not go negative.
-- **Award section API fails**: Display a fallback empty state, not a crash.
+- **Countdown reaches zero on homepage**: If the event start time passes while user is on the homepage, countdown shows `00 00 00` and stops; does not go negative. (Unlike the Countdown Prelaunch screen, no auto-redirect occurs — user is already on the homepage.)
+- **Award section API fails**: `awardsError = true`; display a fallback empty state with a retry prompt, not a crash; do not block the rest of the page from rendering.
+- **Award section loading**: `awardsLoading = true`; display skeleton cards in the award grid while data loads (client-fetch path); SSR path renders data synchronously.
 - **Background image fails**: `#00101A` base color ensures all content remains readable.
+- **Mobile nav drawer open during resize**: If user opens the hamburger menu and then resizes to desktop, the drawer MUST close and the desktop nav MUST render in its place.
+- **Logo asset missing**: If `saa-2025-logo.png` fails to load, render an `<img alt="SAA 2025">` text fallback so branding context is not lost.
 
 ---
 
@@ -151,7 +164,7 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 | A.1 | Logo | `I2167:9091;178:1033` | image | MM_MEDIA site logo 52×48px |
 | A.2 | Nav Links | `I2167:9091;178:653` | nav | "About SAA 2025" (active), "Award Information", "Sun* Kudos" |
 | A.3 | Language Selector | `I2167:9091;186:1601` | button | Shared `<LanguageSelector />` component |
-| C | Background Keyvisual | `2167:9027` | image | 1512×1392px full-bleed BG image with gradient overlay |
+| BG | Background Keyvisual | `2167:9027` | image | 1512×1392px full-bleed BG image with gradient overlay |
 | B.1 | Brand Logo | `2788:12911` | image | SAA 2025 logo 451×200px |
 | B.2 | Countdown | `2167:9037` | compound | DAYS/HOURS/MINUTES counter; 3 digit blocks 116×128px each |
 | B.3 | Event Info | `2167:9053` | text | Event tagline + livestream note |
@@ -164,17 +177,20 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 
 ### Navigation Flow
 
-- **From**: `/` (post-launch redirect from countdown)
+- **From**: `/` (post-launch — platform open, no active pre-launch redirect)
+- **From**: `/auth/callback` (successful OAuth login redirects here)
+- **From**: Any screen — clicking the header logo navigates to `/`
 - **To**: `/awards` — via "Award Information" nav or award card click
 - **To**: `/kudos` — via "Sun* Kudos" nav or Kudos promo CTA
 - **To**: `/login` — via auth-required action (if unauthenticated)
+- **Smooth-scroll**: "About SAA 2025" CTA scrolls to `#award-system` anchor on the same page (no route change)
 
 Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 ### Visual Requirements
 
 - **Responsive**: mobile ≥ 320px, tablet ≥ 768px, desktop ≥ 1280px (Constitution Principle II)
-- **Sticky header**: `position: fixed; top: 0; z-index: 100`
+- **Sticky header**: `position: fixed; top: 0; z-index: 100` (Tailwind: `z-[100]`)
 - **Background gradient**: `linear-gradient(12deg, #00101A 23.7%, rgba(0,18,29,0.46) 38.34%, rgba(0,19,32,0) 48.92%)`
 - **Next.js Image**: Keyvisual MUST use `<Image priority fill />` for LCP
 
@@ -182,8 +198,11 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 - **WCAG 2.1 AA**: All text on dark backgrounds passes ≥ 4.5:1
 - **Nav keyboard**: Tab → nav links → Enter to navigate
-- **Countdown aria-live**: Digit updates announced via `aria-live="polite"`
-- **Skip-to-content link**: Provide a visually hidden skip link before the header for keyboard users
+- **Hamburger button**: MUST use `aria-label="Open navigation menu"` / `aria-label="Close navigation menu"` and `aria-expanded={isOpen}` to communicate state to screen readers
+- **Mobile nav drawer**: When open, focus MUST be trapped inside the drawer; Escape key MUST close it and return focus to the hamburger button
+- **Countdown aria-live**: Digit updates announced via `aria-live="polite"`; each digit block wrapper MUST have `aria-label` combining value and unit (e.g., `aria-label="3 days"`)
+- **Skip-to-content link**: Provide a visually hidden skip link before the header for keyboard users (href `#main-content`)
+- **Logo link**: Header logo anchor MUST have `aria-label="SSA 2025 — go to homepage"` since it is an image-only link
 
 ---
 
@@ -221,6 +240,7 @@ Countdown is computed client-side from `NEXT_PUBLIC_LAUNCH_DATETIME` env var —
 | `timeRemaining` | `{days, hours, minutes}` | computed | Live countdown; updated every 60s |
 | `isExpired` | `boolean` | `false` | Countdown reached zero |
 | `awardsData` | `AwardCategory[] \| null` | `null` | Award categories for homepage grid; fetched server-side or via API |
+| `awardsLoading` | `boolean` | `true` | True while award categories are being fetched; shows skeleton/loading state in grid (client-fetch path only; SSR renders data synchronously via Suspense) |
 | `awardsError` | `boolean` | `false` | True if award categories fail to load; shows fallback empty state |
 
 ### Global State
@@ -245,6 +265,7 @@ Countdown is computed client-side from `NEXT_PUBLIC_LAUNCH_DATETIME` env var —
 - **FR-007**: Award system section MUST display award categories.
 - **FR-008**: Background image MUST degrade gracefully to `#00101A` if it fails to load.
 - **FR-009**: All UI text MUST respect the active locale (VN / EN).
+- **FR-010**: On viewports < 768px, nav links MUST collapse into a hamburger menu; the menu drawer MUST be keyboard-accessible and support Escape-to-close.
 
 ### Technical Requirements
 

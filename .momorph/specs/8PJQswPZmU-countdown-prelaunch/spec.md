@@ -50,8 +50,8 @@ The Countdown Prelaunch screen is a full-screen holding page displayed before th
 
 **Scenario 4: Countdown reaches zero**
 - Given: the countdown timer ticks down to 00 days / 00 hours / 00 minutes
-- When: the last second passes (or admin opens platform)
-- Then: the page transitions or redirects away from the countdown screen; no negative countdown values are shown
+- When: the final timer tick fires and `isExpired` becomes `true` (or admin opens platform)
+- Then: the client immediately redirects to `/login` without waiting for the next timer tick; no negative countdown values are shown at any point
 
 **Scenario 5: Minutes rollover**
 - Given: the countdown shows X days, Y hours, 00 minutes
@@ -127,7 +127,10 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 - **WCAG 2.1 AA**: White text on dark background must pass ≥ 4.5:1 contrast
 - **Screen reader**: Countdown values MUST be announced — use `aria-live="polite"` on digit blocks so updates are announced
+- **Container ARIA label**: The countdown container MUST have `aria-label="Countdown timer"` (or equivalent i18n string) so screen readers identify the landmark
+- **Unit label association**: Each digit block MUST use `aria-label` on its wrapper combining value and unit (e.g., `aria-label="5 days"`) for concise screen reader output; do NOT rely solely on visual layout to convey the unit
 - **Semantic markup**: Time values SHOULD use `<time>` element where applicable
+- **Keyboard navigation**: This screen has no interactive elements; the tab order is empty (or skips directly to any footer/skip-link target). Do NOT add artificial tab stops to the digit display elements
 - **Reduced motion**: If `prefers-reduced-motion: reduce`, suppress any CSS animation on digit transitions
 
 ---

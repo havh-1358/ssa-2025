@@ -29,7 +29,7 @@ The Language Selector is a **shared dropdown component** that appears in the hea
 
 **Why this priority**: Core accessibility requirement; shared component used across all screens.
 
-**Independent Test**: Open any screen with the language selector → click the selector → verify dropdown shows VN and EN options → select EN → verify all visible text changes to English → reload page → verify English is still selected.
+**Independent Test**: Open `/login` (primary test screen for this component) → click the language selector → verify dropdown shows VN and EN options → select EN → verify all visible text changes to English → reload page → verify English is still selected. The component is also present on all other screens listed in the Navigation Flow section.
 
 #### Acceptance Scenarios
 
@@ -62,6 +62,11 @@ The Language Selector is a **shared dropdown component** that appears in the hea
 - Given: user selected EN locale
 - When: user reloads the page or navigates to another screen
 - Then: interface remains in English; language selector shows EN flag + "EN"
+
+**Scenario 7: Full keyboard navigation**
+- Given: user is on any screen with the language selector; keyboard focus is elsewhere on the page
+- When: user presses Tab until the language selector trigger is focused, then presses Enter or Space
+- Then: dropdown opens; focus moves to the first (or currently selected) option; Arrow Down/Up navigate between VN and EN; pressing Enter selects the focused option and closes the dropdown with the locale updated; pressing Escape closes the dropdown without a change and returns focus to the trigger button
 
 ---
 
@@ -178,7 +183,7 @@ No API calls required. Locale is managed client-side via cookie / localStorage w
 ### Technical Requirements
 
 - **TR-001**: Implement with next-intl locale switching using **cookie-based locale without route prefix** (preferred — avoids URL structure change). Cookie is read server-side in middleware to set the `next-intl` locale for SSR. Client-side locale changes use `useRouter().refresh()` after cookie write.
-- **TR-002**: Locale cookie name: `locale`; value: `"vi"` or `"en"`; `path=/`; `max-age=31536000` (1 year); `SameSite=Lax` (not sensitive data — `Strict` is not required).
+- **TR-002**: Locale cookie name: `locale`; value: `"vi"` or `"en"`; `path=/`; `max-age=31536000` (1 year); `SameSite=Lax` (not sensitive data — `Strict` is not required). **Cross-reference conflict**: `GzbNeVGJHz-login/plan.md` uses cookie name `NEXT_LOCALE` (next-intl default). Implementation MUST use `locale` (this spec is authoritative). Update `login/plan.md` accordingly before implementation starts.
 - **TR-003**: Component MUST be reusable across all screens (extract as `<LanguageSelector />`).
 - **TR-004**: Dropdown overlay MUST trap focus while open (focus trap pattern).
 - **TR-005**: SSR default locale: if no `locale` cookie is present, default to `"vi"` both server-side and client-side.
@@ -217,3 +222,5 @@ No API calls required. Locale is managed client-side via cookie / localStorage w
 - This frame (`hUyaaugye2`) documents only the **dropdown popup**. The trigger button (flag + locale text + chevron) is part of the Header component (`<Header />`).
 - The dropdown is a **shared component** — it must be reused across Login, Countdown, Homepage, and all other screens with a header. Do NOT re-implement per screen.
 - Default locale is VN (`vi`). If no cookie is present, render in Vietnamese.
+- **Cookie name conflict**: `GzbNeVGJHz-login/plan.md` uses `NEXT_LOCALE` as the cookie name (next-intl default), while this spec (TR-002) defines `locale`. The spec is authoritative. The `login/plan.md` i18n section must be updated to use `locale` as the cookie name when configuring next-intl middleware. The i18n config should use `defineRouting({ ... })` and the middleware must read the `locale` cookie (not `NEXT_LOCALE`) to determine the active locale.
+- **Trigger button typography**: The trigger button locale label on the Login screen is **16px** (Montserrat 700, per Login design-style `--text-language` token). Do not apply a 14px override for Login. See open question OQ-1 in `design-style.md` for other screens.

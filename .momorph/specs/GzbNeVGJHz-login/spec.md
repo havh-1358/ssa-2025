@@ -35,7 +35,7 @@ already using Google Workspace).
 **Why this priority**: Core authentication — the only entry point to the platform.
 
 **Independent Test**: Open `/login` without a session → click "LOGIN With Google" →
-complete Google OAuth → verify redirect to `/dashboard` with active session.
+complete Google OAuth → verify redirect to `/` (Homepage) with active session.
 
 #### Acceptance Scenarios
 
@@ -43,7 +43,7 @@ complete Google OAuth → verify redirect to `/dashboard` with active session.
 - Given: user has a Google account and is on the Login screen
 - When: user clicks "LOGIN With Google"
 - Then: Google OAuth consent screen appears; after approval, Supabase Auth creates a session,
-  sets an `HttpOnly` cookie, and redirects the user to `/dashboard`
+  sets an `HttpOnly` cookie, and redirects the user to `/` (Homepage)
 
 **Scenario 2: Unauthenticated redirect**
 - Given: user navigates to any protected route without a valid session
@@ -53,8 +53,8 @@ complete Google OAuth → verify redirect to `/dashboard` with active session.
 **Scenario 3: Already authenticated**
 - Given: user already has a valid Supabase session
 - When: user visits `/login`
-- Then: middleware or page detects the active session and redirects to `/dashboard`
-  (no login action needed)
+- Then: middleware or page detects the active session and redirects to `/` (Homepage,
+  no login action needed)
 
 **Scenario 4: Google OAuth cancelled or denied**
 - Given: user clicked "LOGIN With Google" and Google consent screen appeared
@@ -76,9 +76,9 @@ complete Google OAuth → verify redirect to `/dashboard` with active session.
 **Scenario 7: First-time Google user (new account)**
 - Given: user authenticates with a Google account that has never logged into SSA 2025
 - When: Supabase Auth processes the OAuth callback
-- Then: Supabase automatically creates a new user record; the user lands on `/dashboard`
-  (no separate registration flow is required — Google OAuth is the only sign-up path).
-  First-time users go directly to `/dashboard` — no onboarding step.
+- Then: Supabase automatically creates a new user record; the user lands on `/` (Homepage,
+  no separate registration flow is required — Google OAuth is the only sign-up path).
+  First-time users go directly to `/` — no onboarding step.
 
 ---
 
@@ -183,7 +183,10 @@ colors, typography, and component states.
 
 - **From**: Any protected route (unauthenticated redirect via middleware) → `/login`
 - **From**: App launch with no active session → `/login`
-- **To**: `/dashboard` — on successful Google OAuth
+- **From**: `/auth/callback?error=auth_failed` (OAuth provider error) → `/login?error=auth_failed` — triggers error message display (US1 Scenario 5)
+- **From**: `/auth/callback?error=access_denied` (user cancelled consent) → `/login` — no error message shown (US1 Scenario 4)
+- **To**: `/` (Homepage) — on successful Google OAuth
+- **To**: `/auth/callback` (via browser redirect) — when OAuth flow is initiated
 - **To**: Language dropdown (in-page interaction, no route change)
 
 Source of truth: `.momorph/contexts/SCREENFLOW.md`
@@ -229,6 +232,8 @@ Supabase Auth Google OAuth provider.
 | Tagline text | Static / i18n | "Bắt đầu hành trình của bạn cùng SAA 2025.\nĐăng nhập để khám phá!" |
 | Language code label | Locale state | "VN" (default); "EN" when English selected; updates on locale change |
 | Copyright text | Static / i18n | "Bản quyền thuộc về Sun* © 2025" |
+| Error message text | `?error` query param + i18n | Shown when `error !== null`; generic non-sensitive message only (e.g., "Đăng nhập thất bại. Vui lòng thử lại." / "Login failed. Please try again."); source from URL `?error=auth_failed` (mapped to i18n key); cleared on next login attempt |
+| Login button label | Static / i18n | "LOGIN With Google" (idle) / "Đang đăng nhập..." (loading, VN) / "Signing in..." (loading, EN) |
 
 ---
 
@@ -242,7 +247,7 @@ Supabase Auth Google OAuth provider.
 | `GET /auth/callback` (Next.js route) | Handle OAuth redirect from Google | After Google consent |
 
 **Auth callback route**: Must be created at `app/auth/callback/route.ts` per Supabase Auth
-Next.js integration. Sets `HttpOnly` session cookie and redirects to `/dashboard`.
+Next.js integration. Sets `HttpOnly` session cookie and redirects to `/` (Homepage).
 
 ---
 
@@ -276,12 +281,12 @@ Next.js integration. Sets `HttpOnly` session cookie and redirects to `/dashboard
 
 - **FR-001**: System MUST render the Login page at `/login` route.
 - **FR-002**: System MUST redirect unauthenticated users to `/login` when accessing protected routes.
-- **FR-003**: System MUST redirect authenticated users away from `/login` to `/dashboard`.
+- **FR-003**: System MUST redirect authenticated users away from `/login` to `/` (Homepage).
 - **FR-004**: Clicking "LOGIN With Google" MUST initiate Supabase Google OAuth flow.
 - **FR-005**: On successful OAuth, system MUST create an `HttpOnly`, `Secure`, `SameSite=Strict`
-  session cookie and redirect to `/dashboard`.
+  session cookie and redirect to `/` (Homepage).
 - **FR-006**: On OAuth failure, system MUST display a non-sensitive error message at `/login`.
-- **FR-007**: Language selector MUST show VN and EN locale options; selecting either MUST update all visible text labels without a full page reload and persist the choice in a cookie.
+- **FR-007**: Language selector MUST show VN and EN locale options; selecting either MUST update all visible text labels without a full page reload and persist the choice in a cookie. Cookie name and attributes are defined by the Language Selector spec (`hUyaaugye2` TR-002): name `locale`, `SameSite=Lax`, `path=/`, `max-age=31536000`. Note: the `login/plan.md` uses `NEXT_LOCALE` (next-intl default) — implementation MUST align cookie name with `hUyaaugye2 TR-002` (`locale`).
 - **FR-008**: Background image MUST degrade gracefully to `#00101A` if it fails to load.
 - **FR-009**: Login button MUST enter loading/disabled state immediately on click and MUST prevent double-submission.
 - **FR-010**: Screen reader MUST announce loading state when OAuth redirect is initiated.
@@ -312,7 +317,7 @@ Next.js integration. Sets `HttpOnly` session cookie and redirects to `/dashboard
 
 ## Success Criteria
 
-- **SC-001**: User completes Google OAuth and lands on `/dashboard` within 3 seconds of consent.
+- **SC-001**: User completes Google OAuth and lands on `/` (Homepage) within 3 seconds of consent.
 - **SC-002**: No session token appears in `localStorage`, `sessionStorage`, or response body.
 - **SC-003**: Unauthenticated access to any protected route redirects to `/login` in < 50ms (middleware).
 - **SC-004**: Switching between VN and EN updates all visible text labels without a full page reload; selected locale persists in cookie across browser sessions.

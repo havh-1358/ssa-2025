@@ -1,0 +1,70 @@
+{
+  "languageSelector": {
+    "triggerLabel": "Language",
+    "ariaLabel": "Select language",
+    "ariaExpanded": "Language list is open",
+    "options": {
+      "vi": "VN",
+      "en": "EN"
+    },
+    "optionAriaLabel": {
+      "vi": "Vietnamese",
+      "en": "English"
+    }
+  },
+  "countdown": {
+    "title": "Event starts in",
+    "days": "DAYS",
+    "hours": "HOURS",
+    "minutes": "MINUTES",
+    "ariaLabel": "Countdown timer"
+  },
+  "homepage": {
+    "ctaAboutSaa": "About SAA 2025",
+    "ctaKudos": "Sun* Kudos",
+    "comingSoon": "Event starts in",
+    "tagline": "The biggest Sun* talent recognition event of the year",
+    "livestream": "Live-streamed online",
+    "awardSectionTitle": "Award System",
+    "kudosSectionTitle": "Sun* Kudos",
+    "awardsError": "Failed to load awards.",
+    "awardsRetry": "Retry",
+    "nav": {
+      "aboutSaa": "About SAA 2025",
+      "awardInfo": "Award Information",
+      "kudos": "Sun* Kudos",
+      "openMenu": "Open navigation menu",
+      "closeMenu": "Close navigation menu",
+      "logoLabel": "SSA 2025 — go to homepage"
+    }
+  },
+  "awards": {
+    "sectionTitle": "Sun* Annual Awards 2025",
+    "navAriaLabel": "Award categories",
+    "loadingLabel": "Loading award information",
+    "errorMessage": "Unable to load award information.",
+    "retryLabel": "Retry",
+    "recipients": "recipients",
+    "categories": {
+      "top-talent": "Top Talent",
+      "top-project": "Top Project",
+      "top-project-leader": "Top Project Leader",
+      "best-manager": "Best Manager",
+      "signature-2025": "Signature 2025",
+      "mvp": "MVP"
+    },
+    "prizes": {
+      "first": "1st Place",
+      "second": "2nd Place",
+      "third": "3rd Place",
+      "winner": "Winner"
+    }
+  },
+  "auth": {
+    "tagline": "Start your journey with SAA 2025.\nSign in to explore!",
+    "loginButton": "LOGIN With Google",
+    "signingIn": "Signing in...",
+    "copyright": "Copyright belongs to Sun* © 2025",
+    "error": "Login failed. Please try again."
+  }
+}

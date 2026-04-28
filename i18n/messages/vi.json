@@ -1,0 +1,70 @@
+{
+  "languageSelector": {
+    "triggerLabel": "Ngôn ngữ",
+    "ariaLabel": "Chọn ngôn ngữ",
+    "ariaExpanded": "Đang mở danh sách ngôn ngữ",
+    "options": {
+      "vi": "VN",
+      "en": "EN"
+    },
+    "optionAriaLabel": {
+      "vi": "Tiếng Việt",
+      "en": "Tiếng Anh"
+    }
+  },
+  "countdown": {
+    "title": "Sự kiện sẽ bắt đầu sau",
+    "days": "NGÀY",
+    "hours": "GIỜ",
+    "minutes": "PHÚT",
+    "ariaLabel": "Đếm ngược"
+  },
+  "homepage": {
+    "ctaAboutSaa": "Về SAA 2025",
+    "ctaKudos": "Sun* Kudos",
+    "comingSoon": "Sự kiện sẽ bắt đầu sau",
+    "tagline": "Sự kiện vinh danh nhân tài Sun* lớn nhất năm 2025",
+    "livestream": "Tường thuật trực tiếp qua sóng Livestream",
+    "awardSectionTitle": "Hệ thống giải thưởng",
+    "kudosSectionTitle": "Sun* Kudos",
+    "awardsError": "Không tải được dữ liệu giải thưởng.",
+    "awardsRetry": "Thử lại",
+    "nav": {
+      "aboutSaa": "Về SAA 2025",
+      "awardInfo": "Thông tin giải thưởng",
+      "kudos": "Sun* Kudos",
+      "openMenu": "Mở menu điều hướng",
+      "closeMenu": "Đóng menu điều hướng",
+      "logoLabel": "SSA 2025 — về trang chủ"
+    }
+  },
+  "awards": {
+    "sectionTitle": "Sun* Annual Awards 2025",
+    "navAriaLabel": "Danh mục giải thưởng",
+    "loadingLabel": "Đang tải thông tin giải thưởng",
+    "errorMessage": "Không thể tải thông tin giải thưởng.",
+    "retryLabel": "Thử lại",
+    "recipients": "người",
+    "categories": {
+      "top-talent": "Top Talent",
+      "top-project": "Top Project",
+      "top-project-leader": "Top Project Leader",
+      "best-manager": "Best Manager",
+      "signature-2025": "Signature 2025",
+      "mvp": "MVP"
+    },
+    "prizes": {
+      "first": "Giải nhất",
+      "second": "Giải nhì",
+      "third": "Giải ba",
+      "winner": "Người chiến thắng"
+    }
+  },
+  "auth": {
+    "tagline": "Bắt đầu hành trình của bạn cùng SAA 2025.\nĐăng nhập để khám phá!",
+    "loginButton": "LOGIN With Google",
+    "signingIn": "Đang đăng nhập...",
+    "copyright": "Bản quyền thuộc về Sun* © 2025",
+    "error": "Đăng nhập thất bại. Vui lòng thử lại."
+  }
+}

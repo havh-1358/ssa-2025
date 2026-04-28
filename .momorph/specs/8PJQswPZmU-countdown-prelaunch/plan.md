@@ -30,9 +30,9 @@ A full-screen pre-launch gate rendered at `/`. Next.js middleware redirects all 
 | Requirement | Constitution Rule | Status |
 |-------------|-------------------|--------|
 | I. Type Safety | Strict TS; Zod validates `LAUNCH_DATETIME` env var at startup | ✅ Planned |
-| II. Design Fidelity | All tokens (colors, blur, radii) as CSS vars in `globals.css` | ✅ Planned |
+| II. Design Fidelity | All tokens (colors, blur, radii) as CSS vars in `globals.css`; includes `--gap-digit-cards: 4px` | ✅ Planned |
 | II. Responsive | Digit blocks scale at 768px and 320px breakpoints | ✅ Planned |
-| II. WCAG 2.1 AA | `aria-live="polite"` on digit blocks; `<time>` element for countdown | ✅ Planned |
+| II. WCAG 2.1 AA | `aria-live="polite"` on digit blocks; `aria-label="Countdown timer"` on container; per-block `aria-label` combining value+unit (e.g., `"5 days"`); no tab stops on digit elements; `<time>` element for countdown | ✅ Planned |
 | III. Test-First | Tests written before implementation | ✅ Planned |
 | IV. Layered Arch | Page → `<CountdownTimer />` Client Component → `useCountdown` hook | ✅ Planned |
 | IV. Clean Code | No magic values; `LAUNCH_DATETIME` extracted to named constant | ✅ Planned |
@@ -117,7 +117,7 @@ public/
 
 | File | Change |
 |------|--------|
-| `app/globals.css` | Add `--color-bg-base`, `--color-text-primary`, `--color-accent-gold`, `--color-card-bg`, `--border-card`, `--radius-card`, `--blur-card`; `@font-face` for Digital Numbers |
+| `app/globals.css` | Add `--color-bg-base`, `--color-text-primary`, `--color-accent-gold`, `--color-card-bg`, `--border-card`, `--radius-card`, `--blur-card`, `--gap-digit-blocks`, `--gap-digit-cards`, `--gap-digit-label`, `--gap-title-blocks`; `@font-face` for Digital Numbers |
 | `middleware.ts` | Add pre-launch redirect logic alongside existing locale cookie handling |
 | `app/page.tsx` | Add server-side `isPrelaunch` check; import and conditionally render `<CountdownPage />` |
 
@@ -159,21 +159,31 @@ No new npm packages required for countdown itself.
 1. Write E2E test: navigate to `/kudos` before launch → expect redirect to `/`
 2. Implement middleware pre-launch redirect in `middleware.ts`
 3. Verify redirect is < 5ms (no DB query)
-4. Add FR-005a: if `LAUNCH_DATETIME` is in the past on first load → skip countdown, redirect to `/login`
+4. **FR-005a — Immediate expiry redirect on page load**: In `useCountdown`, check on mount whether `launchAt` is already in the past (`Date.now() >= launchAt.getTime()`). If true, set `isExpired = true` immediately (before the first `setInterval` fires). In `<CountdownTimer />`, detect `isExpired` on initial render and call `router.push('/login')` inside a `useEffect` with no delay — do NOT wait for the next tick. This prevents any flash of `00/00/00` or a live countdown. Write a unit test: given a `launchAt` 1ms in the past → `isExpired` is `true` synchronously on hook mount; E2E test: navigate to `/` with `LAUNCH_DATETIME` already past → browser is redirected to `/login` with no countdown visible.
 
 ### Phase 3: UI Components (US1 + US2)
 
 1. Write component tests for `<DigitCard />`, `<DigitBlock />`, `<CountdownTimer />`
 2. Implement `<DigitCard />` with glassmorphism styles
 3. Implement `<DigitBlock />` (digit cards + unit label)
-4. Implement `<CountdownTimer />` Client Component (uses `useCountdown` hook)
+4. Implement `<CountdownTimer />` Client Component (uses `useCountdown` hook):
+   - **Scenario 4 — `isExpired` redirect**: Add a `useEffect` that watches `isExpired` from `useCountdown`. When `isExpired` becomes `true` (either on mount if already past, or after a tick), call `router.push('/login')` immediately. This is the client-side redirect — no additional tick or delay. Never render negative values: clamp all values to `Math.max(0, value)` in `useCountdown`.
 5. Implement `<CountdownPage />` Server Component shell with keyvisual background
 6. Wire into `app/page.tsx` with `isPrelaunch` check
 
 ### Phase 4: Polish
 
-- `aria-live="polite"` wrapper for digit announcements
-- `prefers-reduced-motion` — suppress digit card CSS animation
+- **i18n (spec FR-006)**: Add keys to `i18n/messages/vi.json` and `i18n/messages/en.json` for:
+  - Countdown title: `"countdown.title"` → `"Sự kiện sẽ bắt đầu sau"` (VI) / `"Event starts in"` (EN)
+  - Unit labels: `"countdown.days"`, `"countdown.hours"`, `"countdown.minutes"` → `"NGÀY"` / `"DAYS"`, etc.
+  - Use `useTranslations()` in `<CountdownPage />` (for the title string) and `<DigitBlock />` (for the unit label string). Both components must call `const t = useTranslations('countdown')` and render `t('title')` / `t('days')` etc. respectively.
+- **Accessibility (spec Accessibility Requirements)**:
+  - Add `aria-label={t('ariaLabel') ?? 'Countdown timer'}` to the outer countdown container `<div>` in `<CountdownTimer />` so screen readers identify the landmark. (`t` is scoped to the `'countdown'` namespace via `useTranslations('countdown')`.)
+  - Each `<DigitBlock />` wrapper MUST have `aria-label={`${value} ${t('<unit>')}`}` (e.g., `aria-label={`${days} ${t('days')}`}`) combining the numeric value and the translated unit. This is distinct from the visual unit label below the cards.
+  - Wrap the digit group in `<div aria-live="polite">` so screen readers announce value changes.
+  - Set `tabIndex={-1}` (or no `tabIndex`) on all digit elements — this screen has no interactive elements; the tab order MUST be empty for the digit display. Do NOT add artificial tab stops.
+  - Add `aria-hidden="true"` to decorative `<DigitCard />` wrappers if individual digit cards are not meaningful in isolation (the block-level `aria-label` on `<DigitBlock />` provides the accessible name).
+- `prefers-reduced-motion` — suppress digit card CSS animation via `@media (prefers-reduced-motion: reduce)`
 - Zero-pad single-digit values (`5` → `05`)
 - Verify 3-digit support for days > 99
 - Responsive digit card scaling (tablet/mobile breakpoints)

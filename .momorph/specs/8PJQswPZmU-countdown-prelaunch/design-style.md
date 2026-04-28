@@ -16,7 +16,7 @@
 | `--color-bg-base` | `#00101A` | Page background fallback |
 | `--color-text-primary` | `#FFFFFF` | Title text, digit numerals, unit labels |
 | `--color-accent-gold` | `#FFEA9E` | Digit card border |
-| `--color-card-bg` | `rgba(255, 234, 158, 0.05)` | Digit card glassmorphism fill (approximate) |
+| `--color-card-bg` | `rgba(255, 234, 158, 0.05)` | Digit card glassmorphism fill |
 | `--color-gradient-overlay` | `linear-gradient(18deg, #00101A 0%, transparent 100%)` | BG gradient overlay |
 
 ### Typography
@@ -27,19 +27,23 @@
 | `--font-body` | `"Montserrat", sans-serif` | Title and unit labels |
 | `--text-title-size` | `36px` | "Sự kiện sẽ bắt đầu sau" |
 | `--text-title-weight` | `700` | Title weight |
+| `--text-title-line-height` | `1.2` (43px) | Title line height |
 | `--text-digit-size` | `73.73px` | Digit numeral size |
 | `--text-digit-weight` | `400` | Digit numeral weight |
+| `--text-digit-line-height` | `1` | Digit numeral line height (tight, no extra spacing) |
 | `--text-unit-size` | `36px` | NGÀY / GIỜ / PHÚT label size |
 | `--text-unit-weight` | `700` | Unit label weight |
+| `--text-unit-line-height` | `1.2` (43px) | Unit label line height |
 | `--text-color-on-dark` | `#FFFFFF` | All text on dark background |
 
 ### Spacing
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--gap-digit-blocks` | `~40px` | Gap between DAYS / HOURS / MINUTES blocks |
-| `--gap-digit-label` | `~12px` | Gap between digit card and unit label |
-| `--gap-title-blocks` | `~48px` | Gap between title and countdown blocks row |
+| `--gap-digit-blocks` | `40px` | Gap between DAYS / HOURS / MINUTES blocks |
+| `--gap-digit-cards` | `4px` | Gap between individual digit cards within one block (e.g., tens/units cards) |
+| `--gap-digit-label` | `12px` | Gap between digit card group and unit label below |
+| `--gap-title-blocks` | `48px` | Gap between title and countdown blocks row |
 
 ### Borders
 
@@ -66,7 +70,9 @@
 | Background color | `#00101A` |
 | Background image | `/assets/countdown/keyvisual.jpg` (cover) |
 | Gradient overlay | `linear-gradient(18deg, #00101A 0%, rgba(0,16,26,0) 100%)` |
-| z-index | 0 |
+| Gradient overlay z-index | 1 (above background image, below content) |
+| Content layer z-index | 2 |
+| z-index (image layer) | 0 |
 
 **Implementation notes**:
 - Use `<Image priority fill objectFit="cover" />` for the background photo
@@ -84,7 +90,7 @@
 | Color | `#FFFFFF` |
 | Text | "Sự kiện sẽ bắt đầu sau" (VN) / "Event starts in" (EN) |
 | Text align | center |
-| Margin bottom | ~48px |
+| Margin bottom | `48px` |
 
 ---
 
@@ -125,9 +131,9 @@ Each digit block is a vertical stack: digit card(s) above, unit label below.
 | Font size | 36px |
 | Color | `#FFFFFF` |
 | Text | NGÀY / GIỜ / PHÚT (VN) or DAYS / HOURS / MINUTES (EN) |
-| Margin top | ~12px |
+| Margin top | `12px` |
 
-**Multi-digit layout**: For values ≥ 10, two digit cards are displayed side by side with a small gap (~4px). For days ≥ 100, three cards.
+**Multi-digit layout**: For values ≥ 10, two digit cards are displayed side by side with a small gap (`4px`, matching `--gap-digit-cards`). For days ≥ 100, three cards.
 
 ---
 
@@ -167,6 +173,23 @@ Each digit block is a vertical stack: digit card(s) above, unit label below.
 
 ---
 
+## Component States
+
+### Digit Block (`<DigitBlock />`)
+
+The digit block is non-interactive (read-only display). No hover, focus, active, or disabled states apply. Keyboard users tab past it without focus stop.
+
+### Countdown Container
+
+| State | Behavior |
+|-------|----------|
+| Loading (SSR hydrating) | SSR-rendered static values shown; no visual loading spinner |
+| Active (counting down) | Values update every 60s via `setInterval` |
+| Expired (`isExpired = true`) | Immediately redirect to `/login`; never display negative values |
+| Misconfigured (no `LAUNCH_DATETIME`) | Each digit block shows `--` (double dash) instead of a number; server logs error |
+
+---
+
 ## Animation
 
 | Element | Animation | Duration |
@@ -181,11 +204,13 @@ Each digit block is a vertical stack: digit card(s) above, unit label below.
 | Figma Node | Component | CSS / Tailwind |
 |------------|-----------|----------------|
 | `2268:35127` (BG) | `<CountdownBackground />` | `relative w-full h-screen bg-[#00101A]` |
-| Title | `<CountdownTitle />` | `font-montserrat font-bold text-[36px] text-white text-center` |
-| `2268:35139/44/49` | `<DigitBlock days/hours/minutes />` | `flex flex-col items-center gap-3` |
+| `2268:35131` (Title) | `<CountdownTitle />` | `font-montserrat font-bold text-[36px] text-white text-center mb-[48px]` |
+| `2268:35139` (Days) | `<DigitBlock unit="days" />` | `flex flex-col items-center gap-[12px]` |
+| `2268:35144` (Hours) | `<DigitBlock unit="hours" />` | `flex flex-col items-center gap-[12px]` |
+| `2268:35149` (Minutes) | `<DigitBlock unit="minutes" />` | `flex flex-col items-center gap-[12px]` |
 | Digit card | `<DigitCard digit="0" />` | `w-[77px] h-[123px] rounded-[12px] border border-[#FFEA9E] backdrop-blur-[25px] bg-[rgba(255,234,158,0.05)] flex items-center justify-center` |
 | Digit numeral | `<span>` inside card | `font-["Digital_Numbers"] text-[73.73px] text-white leading-none` |
-| Unit label | `<CountdownLabel />` | `font-montserrat font-bold text-[36px] text-white mt-3` |
+| Unit label | `<CountdownLabel />` | `font-montserrat font-bold text-[36px] leading-[1.2] text-white mt-[12px]` |
 
 ---
 

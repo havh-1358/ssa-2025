@@ -30,12 +30,12 @@ The Homepage is rendered at `/` after the pre-launch countdown ends (`isPrelaunc
 | Requirement | Constitution Rule | Status |
 |-------------|-------------------|--------|
 | I. Type Safety | Strict TS; `AwardCategory` type from shared `types/awards.ts` | ✅ Planned |
-| II. Design Fidelity | All hex tokens → CSS vars in `globals.css`; no raw hex in components | ✅ Planned |
-| II. Responsive | 320/768/1280 breakpoints; hamburger nav on mobile; logo scales | ✅ Planned |
-| II. WCAG 2.1 AA | Skip-to-content link; countdown `aria-live`; nav keyboard accessible | ✅ Planned |
+| II. Design Fidelity | All hex tokens → CSS vars in `globals.css`; no raw hex in components; all tokens listed in Modified Files table | ✅ Planned |
+| II. Responsive | 320/768/1280 breakpoints; hamburger nav on mobile (FR-010); logo scales | ✅ Planned |
+| II. WCAG 2.1 AA | Skip-to-content link; countdown `aria-live` + per-block `aria-label`; hamburger `aria-label` + `aria-expanded`; focus trap in mobile drawer; Escape-to-close; header logo `aria-label` | ✅ Planned |
 | III. Test-First | Tests before components | ✅ Planned |
 | IV. Layered Arch | Page (Server) → Section components → `<CountdownTimer />` (Client island) | ✅ Planned |
-| IV. Clean Code | Award data from `data/awards.ts` not hardcoded per component | ✅ Planned |
+| IV. Clean Code | Award data from `data/awards.ts` not hardcoded per component; `MobileNavDrawer` extracted to own file | ✅ Planned |
 | V. Doc-Driven | spec.md + plan.md exist | ✅ Met |
 | VI. Security | Public page; no user data; no auth required | ✅ Compliant |
 
@@ -95,18 +95,22 @@ app/
 components/
 ├── homepage/
 │   ├── HomePage.tsx                      # Page root: header + keyvisual + hero + awards + kudos + footer
-│   ├── KeyvisualSection.tsx              # Full-bleed background image + gradient overlay
+│   ├── KeyvisualSection.tsx              # Full-bleed background image + gradient overlay (BG node 2167:9027)
 │   ├── HeroSection.tsx                   # Brand logo + countdown + event tagline + CTA buttons
-│   ├── CTAButtons.tsx                    # Client Component: smooth-scroll + /kudos navigation
-│   ├── AwardSummarySection.tsx           # Award category cards grid (section with id="award-system")
+│   ├── CTAButtons.tsx                    # Client Component: smooth-scroll to #award-system + /kudos navigation
+│   ├── AwardSummarySection.tsx           # Award category cards grid (section with id="award-system"); handles awardsLoading skeleton + awardsError retry
 │   ├── AwardCategoryCard.tsx             # Shared presentational card (homepage + awards page)
 │   └── KudosPromoSection.tsx             # Sun* Kudos promo block with CTA to /kudos
 ├── shared/
-│   ├── Header.tsx                        # Shared sticky header (Server Component + Client islands)
+│   ├── Header.tsx                        # Shared sticky header (Client Component: manages isMenuOpen state)
+│   ├── MobileNavDrawer.tsx               # Mobile nav drawer (focus trap, Escape-to-close, 100vw full-width)
 │   ├── Footer.tsx                        # Shared footer
 │   └── LanguageSelector.tsx             # (from Language Selector plan)
 └── countdown/
     └── CountdownTimer.tsx                # (from Countdown Prelaunch plan — reused here)
+
+hooks/
+└── useFocusTrap.ts                       # Focus trap hook for mobile nav drawer (or use focus-trap-react)
 
 data/
 └── awards.ts                             # Static award category data (shared with /awards page)
@@ -121,16 +125,38 @@ public/
         └── keyvisual.jpg                 # Homepage background key visual
 ```
 
+### New Files
+
+| File | Description |
+|------|-------------|
+| `components/homepage/HomePage.tsx` | Page root: header + keyvisual + hero + awards + kudos + footer |
+| `components/homepage/KeyvisualSection.tsx` | Full-bleed background image + gradient overlay (BG node 2167:9027) |
+| `components/homepage/HeroSection.tsx` | Brand logo + countdown + event tagline + CTA buttons |
+| `components/homepage/CTAButtons.tsx` | Client Component: smooth-scroll to `#award-system` + `/kudos` navigation |
+| `components/homepage/AwardSummarySection.tsx` | Award category cards grid; handles `awardsLoading` skeleton + `awardsError` retry |
+| `components/homepage/AwardCategoryCard.tsx` | Shared presentational card (homepage + awards page) |
+| `components/homepage/KudosPromoSection.tsx` | Sun* Kudos promo block with CTA to `/kudos` |
+| `components/shared/Header.tsx` | Shared sticky header (Client Component: manages `isMenuOpen` state) |
+| `components/shared/MobileNavDrawer.tsx` | Mobile nav drawer (focus trap, Escape-to-close, 100vw full-width) |
+| `components/shared/Footer.tsx` | Shared footer |
+| `hooks/useFocusTrap.ts` | Focus trap hook for mobile nav drawer (or use `focus-trap-react`) |
+| `data/awards.ts` | Static award category data (shared with `/awards` page) |
+| `types/awards.ts` | `AwardCategory`, `AwardPrize` TypeScript types |
+
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `app/globals.css` | Add homepage-specific tokens: `--color-header-bg`, `--color-btn-secondary-bg`, `--color-btn-secondary-border`, `--header-height`, `--header-padding-x`, `--content-padding-x`, `--btn-padding`, `--radius-btn` |
+| `app/globals.css` | Add homepage-specific tokens: `--color-header-bg`, `--color-btn-secondary-bg`, `--color-btn-secondary-border`, `--header-height`, `--header-padding-x`, `--header-padding-y`, `--content-padding-x`, `--content-padding-y`, `--section-gap`, `--countdown-gap`, `--digit-gap`, `--btn-padding`, `--btn-gap`, `--radius-btn`, `--color-nav-active`, `--color-nav-default`, `--color-divider`, `--border-nav-active` |
 | `app/page.tsx` | Add `<HomePage />` branch to the existing `isPrelaunch` conditional |
 
 ### Dependencies
 
-No new npm packages. `next/image` is built-in to Next.js.
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `focus-trap-react` | `^10.x` (optional) | Focus trap for mobile nav drawer; alternatively implement `useFocusTrap` hook natively |
+
+`next/image` is built-in to Next.js. All other dependencies already in project.
 
 ---
 
@@ -160,25 +186,41 @@ No new npm packages. `next/image` is built-in to Next.js.
 4. Implement `<HomePage />` shell composing all sections
 5. Wire into `app/page.tsx` — verify both branches (pre-launch and post-launch) work
 
-### Phase 3: Navigation & Header (US2)
+### Phase 3: Navigation & Header (US2 — including Hamburger Menu)
 
-1. Write tests for `<Header />`: sticky behavior, active nav link highlighting
-2. Implement shared `<Header />` with `activeNav` prop
-3. Verify "About SAA 2025" is active on homepage; nav links navigate correctly
+1. Write tests for `<Header />`: sticky behavior, active nav link highlighting, hamburger open/close on mobile viewport
+2. Implement shared `<Header />` with `activeNav` prop:
+   - `position: fixed; top: 0; z-index: 100` (spec US2 Scenario 4: sticky on scroll)
+   - Active link: gold color (`var(--color-accent-gold)`) + `border-bottom` underline
+   - Nav routes sourced from `lib/constants/routes.ts` (SCREENFLOW.md as source of truth — Constitution Principle II)
+3. Verify "About SAA 2025" is active on homepage; "Award Information" navigates to `/awards`; "Sun* Kudos" navigates to `/kudos`
+4. **FR-010 — Hamburger menu (US2 S5 + S6, viewports < 768px)**:
+   - Add `isMenuOpen: boolean` state to `<Header />` (Client Component or Client island within header).
+   - Render hamburger icon (☰) when `!isMenuOpen`; render close icon (×) when `isMenuOpen`. The button MUST carry `aria-label="Open navigation menu"` when closed and `aria-label="Close navigation menu"` when open, plus `aria-expanded={isMenuOpen}`.
+   - On open: render a full-width (`100vw`) drawer with the nav links stacked vertically, same `rgba(16,20,23,0.8)` background, `16px` padding; language selector also appears in the drawer.
+   - **Focus trap**: When the drawer opens, trap focus inside it (use a `useFocusTrap` hook or a library like `focus-trap-react`). When the drawer closes, return focus to the hamburger button.
+   - **Close triggers**: (a) click the × close button, (b) click/tap outside the drawer, (c) press `Escape`. All three MUST close the drawer and return focus to the hamburger button.
+   - **Resize behavior**: If the viewport is resized from mobile (< 768px) to desktop (≥ 768px) while the drawer is open, the drawer MUST close and the desktop nav MUST render in its place. Implement via a `useEffect` listening to `window.resize` (or a `useMediaQuery('(min-width: 768px)')` hook) that resets `isMenuOpen = false` when the breakpoint crosses above 768px.
+   - Write unit tests: drawer opens on hamburger click; closes on Escape; aria attributes toggle correctly. Write E2E test at 375px viewport: hamburger visible, desktop nav hidden; click hamburger → drawer opens; press Escape → drawer closes.
 
 ### Phase 4: Award Section + Kudos Promo (US3 + US4)
 
 1. Implement `<AwardSummarySection />` (grid of `<AwardCategoryCard />`, `id="award-system"`)
+   - **`awardsLoading` state**: On the client-fetch path, while `awardsLoading = true`, render skeleton cards in place of real `<AwardCategoryCard />` components (e.g., shimmer placeholder divs with the same grid dimensions). SSR path (static JSON import) renders data synchronously and skips this state.
+   - **`awardsError` state with retry**: When `awardsError = true`, render an empty-state block in the award grid with a user-facing retry prompt (e.g., a "Retry" button that re-fetches the data). Do NOT crash or leave the grid blank without explanation.
 2. Verify CTA smooth-scroll lands at `#award-system`
 3. Implement `<KudosPromoSection />` with CTA to `/kudos`
 4. Implement `<Footer />`
 
 ### Phase 5: Polish
 
-- Responsive: hamburger menu on mobile; logo scales; digit blocks scale
-- `awardsError` fallback: if award data fails (future API path), show empty state
-- `aria-live` on countdown; skip-to-content link
+- Responsive: logo scales proportionally on tablet/mobile; digit blocks scale; hamburger menu fully implemented in Phase 3
+- `awardsError` fallback and `awardsLoading` skeleton: covered in Phase 4
+- **Logo asset fallback**: The `<Image src="saa-2025-logo.png" alt="SAA 2025" />` component MUST always have a meaningful `alt` attribute (`"SAA 2025"`). If the PNG fails to load, the `alt` text provides branding context. Do NOT use `alt=""` for the brand logo.
+- `aria-live` on countdown; skip-to-content `<a href="#main-content">` link before header
+- Header logo `<a>` MUST have `aria-label="SSA 2025 — go to homepage"` (image-only anchor)
 - LCP optimization: verify keyvisual image scores in Lighthouse ≥ 90
+- `prefers-reduced-motion`: disable all transition animations (countdown tick, button hover, header nav hover)
 
 ### Risk Assessment
 
@@ -187,7 +229,7 @@ No new npm packages. `next/image` is built-in to Next.js.
 | LCP too slow (large keyvisual image) | Medium | Medium | Use `<Image priority fill />` + WebP format + proper sizing |
 | `<CountdownTimer />` not yet built | High (dependency) | High | Plan Countdown Prelaunch first; this plan depends on it |
 | `isPrelaunch` check timing race | Low | Low | Server-side check; no client race condition |
-| Mobile hamburger nav scope | Medium | Low | De-scope to P3; implement basic responsive collapse first |
+| Mobile hamburger nav scope | Medium | Medium | Full implementation required per FR-010; covered in Phase 3 step 4 (focus trap, Escape, resize behavior) |
 
 ### Estimated Complexity
 
@@ -232,12 +274,16 @@ No new npm packages. `next/image` is built-in to Next.js.
    - [ ] CTA "Sun* Kudos" navigates to `/kudos`
 
 2. **Error Handling**
-   - [ ] Award data missing → empty state shown, no crash
+   - [ ] Award data missing → empty state with retry prompt shown, no crash
+   - [ ] Award data loading → skeleton cards visible while `awardsLoading = true`
    - [ ] Keyvisual image fails → `#00101A` background visible; content readable
+   - [ ] Logo image fails → `alt="SAA 2025"` text fallback visible
 
 3. **Edge Cases**
-   - [ ] Countdown expires while on homepage → shows `00 00 00`, no negative values
+   - [ ] Countdown expires while on homepage → shows `00 00 00`, no negative values, no redirect (user is already on homepage)
    - [ ] `isPrelaunch` flips to true mid-session → middleware redirects on next navigation
+   - [ ] Hamburger menu open → resize to ≥ 768px → drawer closes, desktop nav shows
+   - [ ] Mobile 375px: hamburger opens, Escape closes, focus returns to hamburger button
 
 ### Coverage Goals
 

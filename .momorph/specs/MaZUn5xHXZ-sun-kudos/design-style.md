@@ -30,16 +30,20 @@
 
 ### Typography
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--font-body` | `"Montserrat", sans-serif` | All text |
-| `--text-section-heading` | `24px / 700` | Section titles |
-| `--text-kudos-message` | `16px / 400` | Kudos body text |
-| `--text-kudos-sender` | `14px / 700` | Sender/recipient names |
-| `--text-stats-number` | `32px / 700` | Stats large numbers |
-| `--text-stats-label` | `14px / 400` | Stats labels |
-| `--text-top10-rank` | `16px / 700` | Rank numbers |
-| `--text-top10-name` | `14px / 400` | Sunner names |
+| Token | Family | Size | Weight | Line Height | Usage |
+|-------|--------|------|--------|-------------|-------|
+| `--font-body` | `"Montserrat", sans-serif` | — | — | — | All text |
+| `--text-section-heading` | Montserrat | `24px` | `700` | `32px` | Section titles |
+| `--text-kudos-message` | Montserrat | `20px` | `700` | `28px` | Kudos body text in card (note: message text is 20px/700 per design, not 16px/400) |
+| `--text-kudos-card-label` | Montserrat | `16px` | `700` | `24px` | Kudos title label and hashtag text |
+| `--text-kudos-sender` | Montserrat | `16px` | `700` | `24px` | Sender/recipient names |
+| `--text-kudos-sender-detail` | Montserrat | `14px` | `400` | `20px` | Badge/star text below sender name |
+| `--text-kudos-timestamp` | Montserrat | `16px` | `700` | `24px` | Timestamp text (e.g., "10:00 - 10/30/2025") |
+| `--text-stats-number` | Montserrat | `32px` | `700` | `40px` | Stats large numbers |
+| `--text-stats-label` | Montserrat | `22px` | `700` | `28px` | Stats labels ("So tim ban nhan duoc:") |
+| `--text-top10-rank` | Montserrat | `16px` | `700` | `24px` | Rank numbers |
+| `--text-top10-name` | Montserrat | `14px` | `400` | `20px` | Sunner names |
+| `--text-heart-count-card` | Montserrat | `24px` | `700` | `32px` | Heart count inside card (dark bg) |
 
 ### Spacing
 
@@ -47,7 +51,8 @@
 |-------|-------|-------|
 | `--header-height` | `80px` | Fixed header |
 | `--header-padding-x` | `144px` | Header horizontal padding |
-| `--content-padding-y` | `96px 0px 120px 0px` | Bia top/bottom padding |
+| `--content-padding-top` | `96px` | Main content top padding |
+| `--content-padding-bottom` | `120px` | Main content bottom padding |
 | `--section-gap` | `120px` | Gap between major sections |
 | `--feed-gap` | `24px` | Gap between Kudos cards |
 | `--sidebar-gap` | `24px` | Gap between sidebar widgets |
@@ -93,6 +98,7 @@
 | Width | 1440px |
 | Height | 512px |
 | Background | Image (cover) |
+| Asset path | `public/assets/kudos/keyvisual.jpg` → import as `/assets/kudos/keyvisual.jpg` |
 | Gradient overlay | `linear-gradient(25deg, #00101A 14.74%, rgba(0,19,32,0) 47.8%)` |
 
 ---
@@ -158,7 +164,18 @@
 | Property | Value |
 |----------|-------|
 | Width | 1157px |
-| Height | 548px |
+| Height | 548px (variable by content) |
+| Display | flex, column |
+| Gap | — (open question: exact inner gap not extracted from Figma) |
+
+**States:**
+| State | Description |
+|-------|-------------|
+| Loading | Skeleton placeholder matching section height |
+| Empty | "No spotlights yet" message; section collapses gracefully — does NOT leave blank gap |
+| Error | Non-sensitive error message + retry button |
+
+> **Open question**: Spotlight board card internal layout (board title typography, card dimensions, border/radius) not extracted from Figma node `2940:14174`. Verify against Figma before implementation.
 
 ---
 
@@ -357,6 +374,16 @@ Same as first divider: 600×1px, `#FFEA9E`
 |----------|-------|
 | Width | 422px (in sidebar) |
 | Display | flex, column |
+| Gap | `24px` (between rank items, consistent with sidebar gap token) |
+
+**Each rank item:**
+| Sub-element | Size | Style |
+|------------|------|-------|
+| Rank number | — | Montserrat 700 16px, `#FFFFFF` |
+| Sunner name | — | Montserrat 400 14px, `#FFFFFF` |
+| Kudos/gift count | — | Montserrat 700 14px, `#FFEA9E` (gold accent) |
+
+> **Open question**: Exact item height, avatar presence, and internal layout for Top 10 Sunners row not extracted from Figma node `2940:13510`. Verify against Figma before implementation. Typography values above are derived from the `--text-top10-rank` / `--text-top10-name` tokens in this document.
 
 ---
 
@@ -438,8 +465,10 @@ Same as first divider: 600×1px, `#FFEA9E`
 
 ## Implementation Mapping
 
-| Figma Node | Component | CSS / Tailwind |
-|------------|-----------|----------------|
+> **Constitution II compliance**: The Tailwind classes below show DESIGN INTENT values for reference only. In actual component code, all hex values MUST be replaced with CSS variable references (e.g., `bg-[var(--color-kudos-card-bg)]`). Raw hex is FORBIDDEN in component files.
+
+| Figma Node | Component | CSS / Tailwind (reference values — use CSS vars in code) |
+|------------|-----------|----------------------------------------------------------|
 | `2940:13433` | `<Header activeNav="kudos" />` | Shared header |
 | `2940:13432` | `<KudosKeyvisual />` | `h-[512px] bg-cover` |
 | `2940:13449` | `<WriteKudosButton />` | `border border-[#998C5F] bg-[rgba(255,234,158,0.1)] w-[738px] h-[72px] px-4 py-6` |
@@ -453,7 +482,7 @@ Same as first divider: 600×1px, `#FFEA9E`
 | Message box | `<KudosMessage />` | `border border-[#FFEA9E] bg-[rgba(255,234,158,0.4)] px-6 py-4 rounded-lg` |
 | Message text | `<p>` inside | `font-montserrat font-bold text-[20px] text-[#00101A]` |
 | Hashtags | `<HashtagList />` | `font-montserrat font-bold text-[16px] text-[#D4271D]` |
-| Image thumbs | `<ImageGallery />` | `flex gap-4` each thumb `88px square border border-[#998C5F]` |
+| Image thumbs | `<ImageGallery imageUrls={string[]} />` | `flex gap-4` each thumb `88px square border border-[#998C5F]`; up to 5 images; renders nothing when `imageUrls` is empty |
 | Card action bar | `<CardActions />` | `w-[600px] h-[56px] flex gap-6` |
 | `I3127:21871;256:5216` | `<CopyLinkButton />` | `w-[145px] h-[56px] rounded p-4 flex gap-1 items-center` |
 | `I3127:21871;256:5175` | `<LikeButton kudosId liked count />` | `w-[101px] min-h-[44px] flex items-center gap-1 cursor-pointer py-[6px]` — 44px touch target, 32px visual height |

@@ -10,7 +10,7 @@
 
 Implement the SSA 2025 Login screen at `/login` — a full-screen branded page with Google
 OAuth (Supabase Auth) as the exclusive authentication method, a VN/EN language selector,
-and a copyright footer. On successful OAuth the user lands on `/dashboard`. Next.js
+and a copyright footer. On successful OAuth the user lands on `/` (Homepage, per SCREENFLOW.md). Next.js
 middleware protects all authenticated routes and redirects unauthenticated sessions to
 `/login`. The screen is server-rendered with a thin Client Component layer for interactive
 state (`isLoading`, `error`, `languageDropdownOpen`).
@@ -25,7 +25,7 @@ state (`isLoading`, `error`, `languageDropdownOpen`).
 | **UI Library** | React 19 |
 | **Styling** | Tailwind CSS 4 with CSS variable design tokens |
 | **Auth** | Supabase Auth — Google OAuth via `@supabase/ssr` |
-| **i18n** | `next-intl` — locales: `vn` (default), `en` |
+| **i18n** | `next-intl` — locales: `vi` (default), `en` |
 | **Validation** | Zod at all external boundaries |
 | **Testing (unit/integration)** | Vitest + React Testing Library |
 | **Testing (E2E)** | Playwright (Page Object Model) |
@@ -59,7 +59,7 @@ state (`isLoading`, `error`, `languageDropdownOpen`).
 ### Frontend Approach
 
 - **Page component** (`app/login/page.tsx`): Server Component. Reads session via
-  Supabase server client — redirects to `/dashboard` if session exists. Reads `?error`
+  Supabase server client — redirects to `/` if session exists. Reads `?error`
   query param and passes to client shell. No client-side state here.
 - **Client shell** (`app/login/LoginClient.tsx`): `"use client"`. Owns `isLoading`,
   `error`, `languageDropdownOpen` state. Renders Header, background, content, footer.
@@ -87,7 +87,7 @@ state (`isLoading`, `error`, `languageDropdownOpen`).
 
 ```
 Browser → /login → [Server] check session
-  → has session   → redirect /dashboard
+  → has session   → redirect /
   → no session    → render login page
 
 Click "LOGIN With Google"
@@ -97,7 +97,7 @@ Click "LOGIN With Google"
   → Google redirects to /auth/callback?code=...
   → [Server] exchangeCodeForSession(code)
   → sets HttpOnly session cookie
-  → redirect /dashboard
+  → redirect /
 
 OAuth cancelled (user dismissed Google consent)
   → Google redirects to /auth/callback?error=access_denied
@@ -112,18 +112,20 @@ OAuth provider error (account suspended, scope error, etc.)
 
 ### i18n Approach
 
-- `next-intl` with App Router. Locale stored in a `NEXT_LOCALE` cookie so SSR reads it
-  on the first render without a flash. No locale URL prefix (no `/vn/login`).
-- `i18n/config.ts` uses `defineRouting({ locales: ['vn', 'en'], defaultLocale: 'vn', localePrefix: 'never' })`.
+- `next-intl` with App Router. Locale stored in a `locale` cookie (name per `hUyaaugye2`
+  TR-002) so SSR reads it on the first render without a flash. No locale URL prefix (no `/vn/login`).
+- `i18n/config.ts` uses `defineRouting({ locales: ['vi', 'en'], defaultLocale: 'vi', localePrefix: 'never' })`.
 - `next-intl` middleware is initialized with `createMiddleware(routing)` — it reads the
-  cookie and injects locale for every request.
+  `locale` cookie and injects locale for every request.
 - **Locale switching mechanism**: `useLocale()` from `next-intl` is **read-only**.
   Switching locale requires:
-  1. Writing `NEXT_LOCALE=<new>` cookie via `document.cookie` (client-side) or a Server Action.
+  1. Writing `locale=<new>` cookie via `document.cookie` (client-side) or a Server Action.
+     Full cookie string: `locale=<value>; path=/; max-age=31536000; SameSite=Lax`
+     (attributes per `hUyaaugye2` TR-002 — authoritative source).
   2. Calling `router.refresh()` from `next/navigation` to re-render the Server Component
      tree with the new locale.
   - `hooks/useLanguage.ts` encapsulates this: sets cookie → calls `startTransition(() => router.refresh())`.
-- Message files: `i18n/messages/vn.json`, `i18n/messages/en.json`.
+- Message files: `i18n/messages/vi.json`, `i18n/messages/en.json`.
 
 ### Middleware Strategy
 
@@ -156,7 +158,7 @@ degradation and potential Supabase cookie refresh loops.
    - If `code` is missing or not a string (and no `error`) → redirect to `/login?error=auth_failed`.
 3. Call `supabase.auth.exchangeCodeForSession(code)`.
 4. If `exchangeCodeForSession` throws → redirect to `/login?error=auth_failed`.
-5. On success → redirect to `/dashboard`.
+5. On success → redirect to `/` (Homepage, per SCREENFLOW.md).
 
 **Critical**: Differentiating `access_denied` (cancel) from other errors is required by
 spec Scenarios 4 and 5. Treating all errors as `auth_failed` would incorrectly show an
@@ -192,16 +194,16 @@ app/
 │   └── callback/
 │       └── route.ts                    # OAuth code → session exchange
 ├── dashboard/
-│   └── page.tsx                        # Placeholder dashboard (redirect target for /dashboard)
+│   └── page.tsx                        # Placeholder dashboard (auth-protected route; NOT the post-login redirect target — use / instead)
 └── globals.css                         # Add Login design tokens (Phase 1)
 
 components/
 ├── auth/
-│   ├── LoginButton.tsx                 # Google login CTA with loading state
-│   └── LanguageSelector.tsx            # VN/EN dropdown with ARIA
-├── layout/
-│   ├── Header.tsx                      # Header bar (logo + language selector)
-│   └── Footer.tsx                      # Copyright footer with divider
+│   └── LoginButton.tsx                 # Google login CTA with loading state
+├── shared/
+│   ├── Header.tsx                      # Header bar (logo + language selector) — also used by other screens
+│   ├── Footer.tsx                      # Copyright footer with divider — also used by other screens
+│   └── LanguageSelector.tsx            # VN/EN dropdown — created by Language Selector plan; imported here
 ├── ui/
 │   └── ErrorMessage.tsx                # Auth error alert (role="alert")
 └── background/
@@ -221,7 +223,7 @@ i18n/
 ├── config.ts                           # next-intl locale config (locales, defaultLocale)
 ├── request.ts                          # next-intl getRequestConfig
 └── messages/
-    ├── vn.json                         # Vietnamese strings
+    ├── vi.json                         # Vietnamese strings (locale code: vi, display label: VN)
     └── en.json                         # English strings
 
 middleware.ts                           # Supabase session + next-intl locale composition
@@ -261,6 +263,15 @@ public/
 | `app/globals.css` | Add Login design tokens as CSS variables |
 | `app/layout.tsx` | (1) Add Montserrat + Montserrat_Alternates via `next/font/google`; (2) Add `NextIntlClientProvider` wrapping `{children}` — required for `useLocale()` and `useTranslations()` to work in Client Components. Pattern: `const locale = await getLocale(); const messages = await getMessages();` then `<NextIntlClientProvider locale={locale} messages={messages}>{children}</NextIntlClientProvider>` |
 | `next.config.ts` | Wrap with `createNextIntlPlugin('./i18n/request.ts')` from `next-intl/plugin`. The path argument tells next-intl where `getRequestConfig` is exported. |
+
+### Component Ownership Note
+
+`<LanguageSelector />`, `<Header />`, and `<Footer />` are **shared components** owned across plans:
+- `components/shared/LanguageSelector.tsx` — **created by Language Selector plan** (`hUyaaugye2`). Login plan imports it.
+- `components/shared/Header.tsx` — created in this plan (Login); reused by Countdown, Homepage, Awards, Kudos plans.
+- `components/shared/Footer.tsx` — created in this plan (Login); reused by all screen plans.
+
+Do NOT create a second `LanguageSelector` in `components/auth/` — import from `components/shared/`.
 
 ### Design Gap — EN Flag Icon
 
@@ -322,7 +333,7 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 5. Add Login design tokens to `app/globals.css` (all CSS variables from `design-style.md`).
 6. Update `app/layout.tsx` to load Montserrat and Montserrat_Alternates fonts.
 7. Create `i18n/config.ts` (exports `routing` via `defineRouting`), `i18n/request.ts`
-   (exports `getRequestConfig` — loads messages by locale), `i18n/messages/vn.json`,
+   (exports `getRequestConfig` — loads messages by locale), `i18n/messages/vi.json`,
    `i18n/messages/en.json` with all Login screen strings.
    `i18n/request.ts` minimal content:
    ```ts
@@ -340,9 +351,6 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 11. Create `vitest.config.ts` (environment: `jsdom`, setupFiles: `['./vitest.setup.ts']`),
     `vitest.setup.ts` (imports `@testing-library/jest-dom`), and `playwright.config.ts`
     (baseURL: `http://localhost:3000`, projects: chromium).
-9. Create `vitest.config.ts` (environment: `jsdom`, setupFiles: `['./vitest.setup.ts']`),
-   `vitest.setup.ts` (imports `@testing-library/jest-dom`), and `playwright.config.ts`
-   (baseURL: `http://localhost:3000`, projects: chromium).
 
 ---
 
@@ -355,18 +363,18 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 | `app/auth/callback/route.ts` — missing `code` (no error param) redirects to `/login?error=auth_failed` | Unit | `__tests__/auth/callback.test.ts` |
 | `app/auth/callback/route.ts` — `error=access_denied` redirects to `/login` with NO error param | Unit | `__tests__/auth/callback.test.ts` |
 | `app/auth/callback/route.ts` — `error=<other>` redirects to `/login?error=auth_failed` | Unit | `__tests__/auth/callback.test.ts` |
-| `app/auth/callback/route.ts` — valid `code` calls `exchangeCodeForSession` and redirects to `/dashboard` | Unit | `__tests__/auth/callback.test.ts` |
+| `app/auth/callback/route.ts` — valid `code` calls `exchangeCodeForSession` and redirects to `/` | Unit | `__tests__/auth/callback.test.ts` |
 | `app/auth/callback/route.ts` — `exchangeCodeForSession` throws → redirects to `/login?error=auth_failed` | Unit | `__tests__/auth/callback.test.ts` |
 | `LoginButton` — renders enabled with Google icon and text | Unit | `__tests__/components/LoginButton.test.tsx` |
 | `LoginButton` — entering loading state disables button and shows spinner | Unit | `__tests__/components/LoginButton.test.tsx` |
 | `LoginButton` — click calls `signInWithOAuth` | Unit | `__tests__/components/LoginButton.test.tsx` |
 | `LoginButton` — `aria-busy=true` when loading, `aria-busy=false` when idle | Unit | `__tests__/components/LoginButton.test.tsx` |
 | `ErrorMessage` — renders with `role="alert"` and `aria-live="assertive"` | Unit | `__tests__/components/ErrorMessage.test.tsx` |
-| `app/login/page.tsx` — authenticated session redirects to `/dashboard` | Integration | `__tests__/login/page.test.tsx` |
+| `app/login/page.tsx` — authenticated session redirects to `/` | Integration | `__tests__/login/page.test.tsx` |
 | `app/login/page.tsx` — `?error=auth_failed` renders ErrorMessage | Integration | `__tests__/login/page.test.tsx` |
 | `app/login/page.tsx` — no `?error` param → ErrorMessage is absent | Integration | `__tests__/login/page.test.tsx` |
 | `middleware.ts` — unauthenticated request to `/dashboard` redirects to `/login` | Integration | `__tests__/middleware.test.ts` |
-| E2E: User opens `/login`, clicks login, OAuth flow completes, lands on `/dashboard` | E2E | `e2e/login.spec.ts` |
+| E2E: User opens `/login`, clicks login, OAuth flow completes, lands on `/` (Homepage) | E2E | `e2e/login.spec.ts` |
 | E2E: User cancels Google consent → returns to `/login` with NO error message visible (US1 Scenario 4) | E2E | `e2e/login.spec.ts` |
 
 **Implementation** (after tests are written):
@@ -385,7 +393,18 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 4. `components/background/KeyVisual.tsx` — `<Image priority fill />` + gradient overlays.
 5. `app/login/LoginClient.tsx` — owns `isLoading`, `error` state; composes
    Header, KeyVisual, content block, LoginButton, ErrorMessage, Footer.
-6. `app/login/page.tsx` — session check → redirect; pass `errorParam` to `LoginClient`.
+   **FR-006 / US1 Scenario 5 — error message rendering**: `LoginClient` accepts an
+   `errorParam: string | null` prop. On mount it initialises `error` state from this
+   prop (`useState<string | null>(errorParam)`). When `error !== null`, it renders
+   `<ErrorMessage message={t('auth.error')} />` below the `<LoginButton />`. The `error`
+   state is reset to `null` inside the `onClick` handler of `LoginButton` before
+   `signInWithOAuth` is called (spec "Error auto-clear" edge case). The i18n key
+   `auth.error` maps to "Đăng nhập thất bại. Vui lòng thử lại." (VN) /
+   "Login failed. Please try again." (EN) — never expose the raw `?error` value to the UI.
+6. `app/login/page.tsx` — session check → redirect; read `?error` query param from
+   `await searchParams`; pass non-null value as `errorParam` prop to `LoginClient`
+   (FR-006: presence of `?error=auth_failed` triggers error message display per US1 Scenario 5).
+   Pass `null` when `?error` is absent (no error shown — Scenario 4 / happy path).
    **Next.js 15/16 breaking change**: `searchParams` is now a `Promise<Record<string, string>>`.
    The page component signature MUST be:
    ```tsx
@@ -407,24 +426,27 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 
 | Test | Type | File |
 |---|---|---|
-| `LanguageSelector` — renders VN flag, "VN" label, chevron | Unit | `__tests__/components/LanguageSelector.test.tsx` |
-| `LanguageSelector` — click opens dropdown with VN and EN options | Unit | `__tests__/components/LanguageSelector.test.tsx` |
-| `LanguageSelector` — selecting EN updates locale cookie and closes dropdown | Unit | `__tests__/components/LanguageSelector.test.tsx` |
-| `LanguageSelector` — Escape closes dropdown and returns focus to trigger | Unit | `__tests__/components/LanguageSelector.test.tsx` |
-| `LanguageSelector` — outside click closes dropdown | Unit | `__tests__/components/LanguageSelector.test.tsx` |
+| `LanguageSelector` — renders VN flag, "VN" label, chevron | Unit | `__tests__/shared/LanguageSelector.test.tsx` (owned by Language Selector plan; skip if already tested there) |
+| `LanguageSelector` — click opens dropdown with VN and EN options | Unit | `__tests__/shared/LanguageSelector.test.tsx` |
+| `LanguageSelector` — selecting EN updates locale cookie and closes dropdown | Unit | `__tests__/shared/LanguageSelector.test.tsx` |
+| `LanguageSelector` — Escape closes dropdown and returns focus to trigger | Unit | `__tests__/shared/LanguageSelector.test.tsx` |
+| `LanguageSelector` — outside click closes dropdown | Unit | `__tests__/shared/LanguageSelector.test.tsx` |
 | `Footer` — renders "Bản quyền thuộc về Sun* © 2025" with top border | Unit | `__tests__/components/Footer.test.tsx` |
 | E2E: language selector switches tagline and button label to English | E2E | `e2e/login.spec.ts` |
 
 **Implementation**:
 
 1. `hooks/useLanguage.ts` — reads locale via `useLocale()` from `next-intl` (read-only);
-   writes locale by setting `document.cookie = 'NEXT_LOCALE=<value>; path=/'` then calling
-   `startTransition(() => router.refresh())` from `next/navigation`. Exposes `{ locale, setLocale }`.
-2. `components/auth/LanguageSelector.tsx` — dropdown with `role="listbox"`,
-   `aria-expanded`, `aria-haspopup`, Escape handler, outside-click handler.
-3. `components/layout/Header.tsx` — logo + `LanguageSelector`; `80px` height,
-   `--color-bg-header` background.
-4. `components/layout/Footer.tsx` — copyright text, `border-top: var(--border-footer)`.
+   writes locale by setting `document.cookie = 'locale=<value>; path=/; max-age=31536000; SameSite=Lax'`
+   then calling `startTransition(() => router.refresh())` from `next/navigation`.
+   Cookie name `locale` is authoritative per `hUyaaugye2` TR-002.
+   Exposes `{ locale, setLocale }`.
+2. **Import** `<LanguageSelector />` from `components/shared/LanguageSelector.tsx` (created by
+   Language Selector plan `hUyaaugye2`). Do NOT re-implement it here. If Language Selector plan
+   has not been executed yet, implement it here first and move to `components/shared/`.
+3. `components/shared/Header.tsx` — logo + `<LanguageSelector />`; `80px` height,
+   `--color-bg-header` background. This is the shared Header reused by Countdown, Homepage, and all other screens.
+4. `components/shared/Footer.tsx` — copyright text, `border-top: var(--border-footer)`. This is the shared Footer.
 5. Wire `useLanguage` into `LoginClient.tsx`.
 
 ---
@@ -485,8 +507,8 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 1. **Happy Path**
    - [ ] Unauthenticated user visits `/login` → page renders
    - [ ] Click "LOGIN With Google" → `signInWithOAuth` called with `{ provider: 'google' }`
-   - [ ] OAuth callback with valid code → session cookie set → redirect to `/dashboard`
-   - [ ] Authenticated user visits `/login` → redirected to `/dashboard`
+   - [ ] OAuth callback with valid code → session cookie set → redirect to `/`
+   - [ ] Authenticated user visits `/login` → redirected to `/`
 
 2. **Error Handling**
    - [ ] OAuth callback with `error=access_denied` (user cancelled) → redirect to `/login` with NO error param (Scenario 4)
@@ -543,9 +565,10 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 
 | # | Question | Blocking? | Default Assumption |
 |---|---|---|---|
-| Q3 | Production domain for OAuth `redirectTo` | No (use localhost for dev) | `http://localhost:3000/auth/callback` |
-| Q4 | Mobile Figma design exists? | No | Use inferred responsive values from desktop design |
-| Q5 | Error message: inline banner vs toast | No | Inline banner below login button |
+| ~~Q1~~ | ~~Post-OAuth redirect target conflict~~ | ~~Resolved~~ | **`/` (Homepage)** — confirmed by user. SCREENFLOW.md is correct. Spec FR-003/FR-005 language around `/dashboard` is outdated and has been superseded. |
+| Q2 | Production domain for OAuth `redirectTo` | No (use localhost for dev) | `http://localhost:3000/auth/callback` |
+| Q3 | Mobile Figma design exists? | No | Use inferred responsive values from desktop design |
+| Q4 | Error message: inline banner vs toast | No | Inline banner below login button |
 
 ---
 
@@ -563,12 +586,15 @@ Google icon is loaded from a well-known CDN or inline SVG — not a Figma asset.
 - The `middleware.ts` composition order matters: Supabase session update MUST run before
   next-intl locale injection so the session cookie is fresh when locale is resolved.
 - The `app/dashboard/page.tsx` placeholder is a stub only — it will be replaced when
-  the Dashboard screen spec is implemented. It exists solely as a redirect target for auth.
+  the Dashboard screen spec is implemented. It is an auth-protected route but is **NOT**
+  the post-login redirect target. Post-OAuth success redirects to `/` (Homepage).
   Note: `app/(dashboard)/page.tsx` would route to `/` (root), NOT `/dashboard` — the
   route group syntax `()` is a folder-only grouping and does not contribute to the URL.
 - The `lib/supabase/server.ts` client MUST be imported only in Server Components and Route
   Handlers — never in files that could be bundled into the client.
-- `locale` cookie is the ONLY permitted use of non-HttpOnly cookie storage per
-  Constitution Principle VI (locale is not a security token).
+- `locale` cookie (name per `hUyaaugye2` TR-002 — NOT `NEXT_LOCALE`) is the ONLY
+  permitted use of non-HttpOnly cookie storage per Constitution Principle VI (locale
+  is not a security token). The `next-intl` middleware must be configured to read the
+  `locale` cookie name, not the default `NEXT_LOCALE`.
 - The `--color-btn-google-text` token (`#00101A`) doubles as both text color and icon
   tint for the Login button — a single token covers both children.

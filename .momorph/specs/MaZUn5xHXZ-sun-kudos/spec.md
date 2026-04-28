@@ -67,6 +67,16 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 - When: user scrolls to the Spotlight section
 - Then: boards render with titles and featured Kudos content
 
+**Scenario 2: No spotlight boards available (empty state)**
+- Given: no spotlight boards have been configured by admin
+- When: user scrolls to the Spotlight section
+- Then: an empty state message is shown (e.g., "No spotlights yet"); the section MUST NOT crash or leave a blank gap with no context
+
+**Scenario 3: Spotlight data fails to load (error state)**
+- Given: the API call to fetch spotlight boards fails (network error or server error)
+- When: user scrolls to the Spotlight section
+- Then: a non-sensitive error message is displayed; a retry option SHOULD be available; no raw error or stack trace is exposed to the user
+
 ---
 
 ### US3: Browse Recent Kudos Feed [P1]
@@ -96,7 +106,17 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 - When: user sees that Kudos card
 - Then: no image area is rendered; layout adjusts gracefully
 
-**Scenario 4: Pagination / load more**
+**Scenario 4a: Long Kudos message is truncated**
+- Given: a Kudos has a message longer than ~180 characters / 3 lines
+- When: user sees that Kudos card in the feed
+- Then: message is truncated to 3 lines with a "Xem thêm" (Read more) link; clicking "Xem thêm" expands the full message in-place
+
+**Scenario 4b: Anonymous Kudos**
+- Given: a Kudos was submitted with `isAnonymous=true`
+- When: user sees that Kudos card in the feed
+- Then: the sender name and avatar are replaced with "Ẩn danh" (Anonymous) placeholder; the sender's actual name and ID are NOT exposed in the DOM or API response
+
+**Scenario 5: Pagination / load more**
 - Given: more than one page of Kudos exists
 - When: user scrolls to the bottom of the feed or clicks "Load more"
 - Then: additional Kudos load without a full page reload
@@ -296,7 +316,7 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 | `title` | string | Kudos title/header |
 | `message` | string | Kudos body text |
 | `hashtags` | string[] | Tags |
-| `imageUrl` | string \| null | Optional attached image |
+| `imageUrls` | string[] | Optional attached images; up to 5 thumbnails (88×88px each); empty array when no images attached |
 | `heartCount` | number | Total hearts |
 | `isAnonymous` | boolean | Whether sender is hidden |
 | `createdAt` | ISO8601 | Creation time |
@@ -316,14 +336,15 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 | Endpoint / Method | Purpose | Trigger |
 |-------------------|---------|---------|
-| `GET /api/kudos?limit=10&page=1` | Load paginated Kudos feed | Page mount + load more |
+| `GET /api/kudos?limit=10&page=1&hashtag=&department=` | Load paginated Kudos feed; supports `hashtag` and `department` filter params | Page mount + load more + filter change |
 | `GET /api/kudos/highlights?limit=5` | Load top 5 most-liked Kudos | Page mount |
 | `GET /api/kudos/spotlight` | Load spotlight boards | Page mount |
 | `GET /api/kudos/stats` | Load general statistics | Page mount |
 | `GET /api/kudos/top-sunners?limit=10` | Load top 10 recipients | Page mount |
+| `GET /api/kudos/hashtags` | Load available hashtag list (for filter chips and filter UI) | Page mount |
 | `POST /api/kudos/:id/like` | Like a Kudos | Heart button click (not liked) |
 | `DELETE /api/kudos/:id/like` | Unlike a Kudos | Heart button click (already liked) |
-| `GET /api/admin/special-days` | Check if today is a special day | Page mount |
+| `GET /api/admin/special-days` | Check if today is a special day | Page mount (SSR) |
 
 ---
 
