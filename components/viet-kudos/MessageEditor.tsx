@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -8,6 +7,36 @@ import DOMPurify from "dompurify";
 
 const MAX_CHARS = 1000;
 const WARN_CHARS = 800;
+
+type ToolbarButtonProps = {
+  label: string;
+  ariaLabel: string;
+  isActive: boolean;
+  onMouseDown: (e: React.MouseEvent) => void;
+};
+
+function ToolbarButton({ label, ariaLabel, isActive, onMouseDown }: ToolbarButtonProps) {
+  return (
+    <button
+      type="button"
+      onMouseDown={onMouseDown}
+      aria-label={ariaLabel}
+      aria-pressed={isActive}
+      className={[
+        "w-8 h-8 flex items-center justify-center rounded",
+        "font-[family-name:var(--font-montserrat)] font-bold text-[14px]",
+        "text-[var(--color-modal-text-dark)]",
+        "transition-colors duration-100",
+        "focus-visible:outline-2 focus-visible:outline-[var(--color-error)]",
+        isActive
+          ? "bg-[rgba(255,234,158,0.3)]"
+          : "hover:bg-[rgba(255,234,158,0.15)]",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+}
 
 type MessageEditorProps = {
   onChange: (text: string) => void;
@@ -33,40 +62,6 @@ export function MessageEditor({ onChange, error }: MessageEditorProps) {
   const counterColor =
     charCount > MAX_CHARS ? "var(--color-error)" : "var(--color-placeholder)";
 
-  const toolbarBtn = useMemo(
-    () =>
-      (
-        label: string,
-        action: () => void,
-        isActive: boolean,
-        ariaLabel: string
-      ) => (
-        <button
-          key={label}
-          type="button"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            action();
-          }}
-          aria-label={ariaLabel}
-          aria-pressed={isActive}
-          className={[
-            "w-8 h-8 flex items-center justify-center rounded",
-            "font-[family-name:var(--font-montserrat)] font-bold text-[14px]",
-            "text-[var(--color-modal-text-dark)]",
-            "transition-colors duration-100",
-            "focus-visible:outline-2 focus-visible:outline-[var(--color-error)]",
-            isActive
-              ? "bg-[var(--color-accent-gold-hover,rgba(255,234,158,0.3))]"
-              : "hover:bg-[var(--color-accent-gold-subtle,rgba(255,234,158,0.15))]",
-          ].join(" ")}
-        >
-          {label}
-        </button>
-      ),
-    []
-  );
-
   return (
     <div className="flex flex-col gap-[var(--field-gap)]">
       <label
@@ -90,27 +85,24 @@ export function MessageEditor({ onChange, error }: MessageEditorProps) {
           role="toolbar"
           aria-label="Text formatting"
         >
-          {editor &&
-            toolbarBtn(
-              "B",
-              () => editor.chain().focus().toggleBold().run(),
-              editor.isActive("bold"),
-              "Bold"
-            )}
-          {editor &&
-            toolbarBtn(
-              "I",
-              () => editor.chain().focus().toggleItalic().run(),
-              editor.isActive("italic"),
-              "Italic"
-            )}
-          {editor &&
-            toolbarBtn(
-              "U",
-              () => editor.chain().focus().toggleUnderline().run(),
-              editor.isActive("underline"),
-              "Underline"
-            )}
+          <ToolbarButton
+            label="B"
+            ariaLabel="Bold"
+            isActive={editor?.isActive("bold") ?? false}
+            onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().toggleBold().run(); }}
+          />
+          <ToolbarButton
+            label="I"
+            ariaLabel="Italic"
+            isActive={editor?.isActive("italic") ?? false}
+            onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().toggleItalic().run(); }}
+          />
+          <ToolbarButton
+            label="U"
+            ariaLabel="Underline"
+            isActive={editor?.isActive("underline") ?? false}
+            onMouseDown={(e) => { e.preventDefault(); editor?.chain().focus().toggleUnderline().run(); }}
+          />
         </div>
 
         {/* Editor area */}

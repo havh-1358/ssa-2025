@@ -50,7 +50,6 @@ type LocaleOptionProps = {
 function LocaleOption({
   locale,
   isSelected,
-  isFocused: _isFocused,
   label,
   ariaLabel,
   onSelect,

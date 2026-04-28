@@ -63,7 +63,6 @@ export async function findKudosFeed({
   page = 1,
   limit = 10,
   hashtag,
-  department,
 }: {
   page?: number;
   limit?: number;

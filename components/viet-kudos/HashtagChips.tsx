@@ -11,17 +11,18 @@ type HashtagChipsProps = {
 
 export function HashtagChips({ selected, onChange }: HashtagChipsProps) {
   const [available, setAvailable] = useState<string[]>([]);
+  // Initialize true — loading starts immediately on mount
   const [isLoading, setIsLoading] = useState(true);
   const [hashtagsError, setHashtagsError] = useState<string | null>(null);
 
-  async function fetchHashtags() {
-    setIsLoading(true);
-    setHashtagsError(null);
+  // Inner fetch — no synchronous setState (all updates happen after await)
+  async function doFetch() {
     try {
       const res = await fetch("/api/kudos/hashtags");
       if (!res.ok) throw new Error("Failed");
       const json = await res.json();
       setAvailable(json.data ?? []);
+      setHashtagsError(null);
     } catch {
       setHashtagsError("Failed to load hashtags.");
     } finally {
@@ -29,8 +30,16 @@ export function HashtagChips({ selected, onChange }: HashtagChipsProps) {
     }
   }
 
+  // Retry resets loading state (called from button click, not from effect)
+  async function fetchHashtags() {
+    setIsLoading(true);
+    setHashtagsError(null);
+    await doFetch();
+  }
+
   useEffect(() => {
-    fetchHashtags();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void doFetch();
   }, []);
 
   function toggle(tag: string) {

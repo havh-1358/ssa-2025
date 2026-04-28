@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type RefObject } from "react";
+import { type RefObject } from "react";
 import type { AwardCategory } from "@/types/awards";
 import { AwardCategorySection } from "./AwardCategorySection";
 

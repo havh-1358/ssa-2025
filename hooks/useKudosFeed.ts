@@ -8,7 +8,8 @@ const POLL_INTERVAL_MS = 60_000;
 
 export function useKudosFeed(initialKudos: Kudos[] = []) {
   const [kudosList, setKudosList] = useState<Kudos[]>(initialKudos);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Track current page via ref — avoids synchronous setState in filter-change effect
+  const currentPageRef = useRef(1);
   const [total, setTotal] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
@@ -82,11 +83,8 @@ export function useKudosFeed(initialKudos: Kudos[] = []) {
       }
     }
     function handleVisibility() {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        startPolling();
-      }
+      if (document.hidden) stopPolling();
+      else startPolling();
     }
 
     startPolling();
@@ -97,17 +95,18 @@ export function useKudosFeed(initialKudos: Kudos[] = []) {
     };
   }, [pollFeed]);
 
-  // Re-fetch page 1 when filters change
+  // Re-fetch page 1 when filters change — use ref mutation instead of setState
   useEffect(() => {
-    setCurrentPage(1);
-    fetchPage(1, true);
+    currentPageRef.current = 1;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchPage(1, true);
   }, [filterHashtag, filterDepartment, fetchPage]);
 
   const loadMore = useCallback(async () => {
-    const nextPage = currentPage + 1;
-    setCurrentPage(nextPage);
+    const nextPage = currentPageRef.current + 1;
+    currentPageRef.current = nextPage;
     await fetchPage(nextPage, false);
-  }, [currentPage, fetchPage]);
+  }, [fetchPage]);
 
   const prependKudos = useCallback((kudos: Kudos) => {
     setKudosList((prev) => {

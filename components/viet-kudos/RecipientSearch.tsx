@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import type { RecipientOption } from "@/hooks/useKudosForm";
 
 type RecipientSearchProps = {
@@ -26,18 +26,12 @@ export function RecipientSearch({
   onSelect,
   onRetrySearch,
 }: RecipientSearchProps) {
-  const [open, setOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (searchQuery.length >= 2) setOpen(true);
-    else setOpen(false);
-  }, [searchQuery]);
+  // Derive open state directly — no effect needed
+  const open = searchQuery.length >= 2;
 
   const handleSelect = useCallback(
     (r: RecipientOption) => {
       onSelect(r);
-      setOpen(false);
     },
     [onSelect]
   );
@@ -75,22 +69,28 @@ export function RecipientSearch({
         </div>
       ) : (
         <>
-          <div className="relative">
+          {/* combobox wrapper carries aria-expanded (not the input) */}
+          <div
+            role="combobox"
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            aria-controls="recipient-listbox"
+            aria-owns="recipient-listbox"
+            className="relative"
+          >
             <input
-              ref={inputRef}
               type="search"
               value={searchQuery}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Tìm đồng nghiệp..."
+              aria-autocomplete="list"
+              aria-controls="recipient-listbox"
+              autoComplete="off"
               className="w-full px-6 py-4 rounded-[var(--border-input-radius)]
                 border border-[var(--color-input-border)] bg-[var(--color-input-bg)]
                 font-[family-name:var(--font-montserrat)] text-[16px]
                 text-[var(--color-modal-text-dark)] placeholder:text-[var(--color-placeholder)]
                 outline-none focus:border-[var(--color-modal-text-dark)]"
-              aria-autocomplete="list"
-              aria-haspopup="listbox"
-              aria-expanded={open}
-              autoComplete="off"
             />
             {isSearching && (
               <span
@@ -105,6 +105,7 @@ export function RecipientSearch({
 
           {open && (
             <div
+              id="recipient-listbox"
               role="listbox"
               className="absolute top-full left-0 right-0 mt-1
                 max-h-[240px] overflow-y-auto
@@ -125,7 +126,7 @@ export function RecipientSearch({
                     Retry
                   </button>
                 </div>
-              ) : searchResults.length === 0 && searchQuery.length >= 2 && !isSearching ? (
+              ) : searchResults.length === 0 && !isSearching ? (
                 <p
                   className="p-4 text-center text-[14px] text-[var(--color-placeholder)]
                     font-[family-name:var(--font-montserrat)]"

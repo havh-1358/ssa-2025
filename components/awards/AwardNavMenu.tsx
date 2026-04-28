@@ -17,7 +17,6 @@ type AwardNavMenuProps = {
 export function AwardNavMenu({
   categories,
   activeSlug,
-  focusedIndex,
   onActivate,
   onFocusChange,
   panelHeadingRef,

@@ -67,6 +67,7 @@ export function useLocale() {
     const current = isCookieWritable()
       ? readLocaleFromCookie()
       : readLocaleFromStorage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocaleState(current);
   }, []);
 

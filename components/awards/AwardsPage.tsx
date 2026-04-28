@@ -29,6 +29,7 @@ export function AwardsPage({ categories }: AwardsPageProps) {
     const hash = window.location.hash.slice(1);
     const hashKey = `#${hash}`;
     if (hash && VALID_AWARD_HASHES.includes(hashKey)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSlug(hash);
       const idx = categories.findIndex((c) => c.slug === hash);
       if (idx !== -1) setFocusedIndex(idx);
