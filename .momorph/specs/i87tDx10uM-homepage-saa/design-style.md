@@ -585,37 +585,72 @@ Contains D2.1 (see below).
 
 | Property | Value |
 |----------|-------|
-| Layout | flex row, justify-content space-between |
+| Width | `1512px` (full-bleed) |
+| Height | `144px` |
+| Layout | `display: flex; flex-direction: row; align-items: center; justify-content: space-between` |
+| Padding | `40px 90px` |
 | Background | inherits page bg `#00101A` |
+| Border top | `1px solid var(--color-divider)` → `#2E3940` |
+| Position | static, below main content |
 
-**E.1 — Logo:**
+**E.0 — Left group (Frame 488, Node: `I5001:14800;342:1407`):**
+
 | Property | Value |
 |----------|-------|
-| Component | `MM_MEDIA_Logo` — same as header logo |
+| Width | `971px` |
+| Height | `64px` |
+| Layout | `display: flex; flex-direction: row; align-items: center; gap: 80px` |
+| Children | E.1 Logo + E.2 Nav group |
 
-**E.2 — Footer Navigation (4 links):**
-| Link | i18n Key | State |
-|------|----------|-------|
-| "About SAA 2025" | `footer.nav.aboutSaa` | Default |
-| "Award Information" | `footer.nav.awardInfo` | Active (gold text shadow: `0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287`) |
-| "Sun* Kudos" | `footer.nav.kudos` | Default |
-| "Tiêu chuẩn chung" | `footer.nav.generalStandards` | Default |
+**E.1 — Logo (Node: `I5001:14800;342:1408`):**
 
-Footer nav link style: Montserrat 700, 16px, lh 24px, ls 0.15px, color `#FFFFFF`.
+| Property | Value |
+|----------|-------|
+| Component | `MM_MEDIA_Logo` — same asset as header logo |
+| Width | `69px` |
+| Height | `64px` |
+| Action | Click → scroll to top of homepage (`/`) |
+
+**E.2 — Footer Navigation group (Frame 476, Node: `I5001:14800;342:1409`):**
+
+| Property | Value |
+|----------|-------|
+| Width | `822px` |
+| Height | `64px` |
+| Layout | `display: flex; flex-direction: row; align-items: center; gap: 48px` |
+
+Nav link items (each is a button/link with `padding: 16px`, `height: 56px`):
+
+| # | Node | Link text | i18n Key | Route | Figma state shown |
+|---|------|-----------|----------|-------|-------------------|
+| 7.2 | `I5001:14800;342:1410` | "About SAA 2025" | `footer.nav.aboutSaa` | `/` | Default |
+| 7.3 | `I5001:14800;342:1411` | "Award Information" | `footer.nav.awardInfo` | `/awards` | Active — gold glow bg |
+| 7.4 | `I5001:14800;342:1412` | "Sun* Kudos" | `footer.nav.kudos` | `/kudos` | Default |
+| 7.5 | `I5001:14800;1161:9487` | "Tiêu chuẩn chung" | `footer.nav.generalStandards` | `/general-standards` | Default |
+
+Footer nav link typography: `Montserrat 700, 16px, line-height 24px, letter-spacing 0.15px, color #FFFFFF`.
 
 **Footer nav link states:**
-| State | Color | Text shadow |
-|-------|-------|-------------|
-| Default | `#FFFFFF` | none |
-| Active (current page) | `#FFFFFF` | `0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287` (gold glow) |
-| Hover | `#FFFFFF` | `rgba(255,255,255,0.1)` bg |
+
+| State | Background | Text color | Text shadow |
+|-------|-----------|------------|-------------|
+| Default | transparent | `#FFFFFF` | none |
+| Hover | `rgba(255, 234, 158, 0.10)` | `#FFFFFF` | none |
+| Active (current page) | `rgba(255, 234, 158, 0.10)` | `#FFFFFF` | `0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287` (gold glow) |
+| Focus | transparent | `#FFFFFF` | `outline: 2px solid #FFEA9E` |
 
 **E.3 — Copyright (Node: `I5001:14800;342:1413`):**
+
 | Property | Value |
 |----------|-------|
 | Text | `footer.copyright` — "Bản quyền thuộc về Sun* © 2025" / "Copyright belongs to Sun* © 2025" |
-| Font | Montserrat Alternates 700, 16px, lh 24px, center |
+| Font family | `Montserrat Alternates` |
+| Font weight | `700` |
+| Font size | `16px` |
+| Line height | `24px` |
+| Text align | `center` |
 | Color | `#FFFFFF` |
+| Position | right side of footer (justify-content: space-between pushes it to the end) |
 
 ---
 

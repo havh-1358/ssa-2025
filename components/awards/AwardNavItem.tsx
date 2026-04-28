@@ -1,47 +1,34 @@
-import type { KeyboardEvent } from "react";
+import { TargetIcon } from "./TargetIcon";
 
 type AwardNavItemProps = {
-  id: string;
-  panelId: string;
+  href: string;
   label: string;
   isActive: boolean;
-  tabIndex: number;
-  onClick: () => void;
-  onKeyDown: (e: KeyboardEvent<HTMLButtonElement>) => void;
 };
 
-export function AwardNavItem({
-  id,
-  panelId,
-  label,
-  isActive,
-  tabIndex,
-  onClick,
-  onKeyDown,
-}: AwardNavItemProps) {
+export function AwardNavItem({ href, label, isActive }: AwardNavItemProps) {
   return (
-    <button
-      type="button"
-      id={id}
-      role="tab"
-      aria-selected={isActive}
-      aria-controls={panelId}
-      tabIndex={tabIndex}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
+    <a
+      href={href}
+      aria-current={isActive ? "true" : undefined}
       className={[
-        "w-full text-left rounded-[4px] p-[var(--left-nav-padding)]",
+        "flex flex-row items-center gap-1",
+        "w-full p-4 no-underline",
         "font-[family-name:var(--font-montserrat)] font-bold",
-        "text-[16px] leading-6 tracking-[0.15px]",
-        "whitespace-nowrap",
-        "transition-colors duration-150 ease-in-out",
+        "text-[14px] leading-5 tracking-[0.25px]",
         "focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)]",
         isActive
-          ? "bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active)]"
-          : "bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-nav-hover-bg)]",
+          ? "border-b border-[var(--color-accent-gold)] text-[var(--color-accent-gold)]"
+          : "rounded-[4px] text-[var(--color-text-primary)] hover:bg-[var(--color-nav-hover-bg)]",
       ].join(" ")}
+      style={
+        isActive
+          ? { textShadow: "0px 4px 4px rgba(0,0,0,0.25), 0px 0px 6px #FAE287" }
+          : undefined
+      }
     >
-      {label}
-    </button>
+      <TargetIcon active={isActive} />
+      <span>{label}</span>
+    </a>
   );
 }

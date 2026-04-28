@@ -12,6 +12,15 @@ type CountdownTimerProps = {
   dayUnit: string;
   hourUnit: string;
   minuteUnit: string;
+  /**
+   * When true (default — used by the pre-launch CountdownPage), redirect to
+   * /login when the countdown expires. The HomePage HeroSection MUST set this
+   * to false to avoid a redirect loop (the homepage countdown targets the
+   * event end, not the platform launch).
+   */
+  redirectOnExpire?: boolean;
+  /** Visual variant — "homepage" uses 51.2×82 cards per Homepage SAA spec. */
+  variant?: "prelaunch" | "homepage";
 };
 
 export function CountdownTimer({
@@ -19,18 +28,18 @@ export function CountdownTimer({
   dayUnit,
   hourUnit,
   minuteUnit,
+  redirectOnExpire = true,
+  variant = "prelaunch",
 }: CountdownTimerProps) {
   const t = useTranslations("countdown");
   const router = useRouter();
-  const launchAt = new Date(launchAtISO);
-  const { days, hours, minutes, isExpired } = useCountdown(launchAt);
+  const { days, hours, minutes, isExpired } = useCountdown(launchAtISO);
 
-  // Redirect immediately when countdown expires (FR-005, FR-005a)
   useEffect(() => {
-    if (isExpired) {
+    if (isExpired && redirectOnExpire) {
       router.push(ROUTES.LOGIN);
     }
-  }, [isExpired, router]);
+  }, [isExpired, redirectOnExpire, router]);
 
   return (
     <div aria-label={t("ariaLabel")}>
@@ -38,9 +47,9 @@ export function CountdownTimer({
         aria-live="polite"
         className="flex flex-row gap-[var(--gap-digit-blocks)] flex-wrap justify-center items-start"
       >
-        <DigitBlock value={days} unit={dayUnit} />
-        <DigitBlock value={hours} unit={hourUnit} />
-        <DigitBlock value={minutes} unit={minuteUnit} />
+        <DigitBlock value={days} unit={dayUnit} variant={variant} />
+        <DigitBlock value={hours} unit={hourUnit} variant={variant} />
+        <DigitBlock value={minutes} unit={minuteUnit} variant={variant} />
       </div>
     </div>
   );

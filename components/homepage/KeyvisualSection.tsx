@@ -3,9 +3,9 @@ import Image from "next/image";
 export function KeyvisualSection() {
   return (
     <div
-      className="absolute inset-0 overflow-hidden"
+      className="absolute left-0 top-0 w-full overflow-hidden"
       aria-hidden="true"
-      style={{ zIndex: 0 }}
+      style={{ height: "1392px", zIndex: 0 }}
     >
       <Image
         src="/assets/homepage/keyvisual.jpg"

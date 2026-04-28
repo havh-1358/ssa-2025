@@ -1,14 +1,24 @@
 # Implementation Plan: Award System (He Thong Giai)
 
 **Frame**: `zFYDgyj_pD-he-thong-giai`
-**Date**: 2026-04-22
+**Date**: 2026-04-22 | **Updated**: 2026-04-29 (scroll layout confirmed; FR-013/014/015 added)
 **Spec**: `specs/zFYDgyj_pD-he-thong-giai/spec.md`
 
 ---
 
 ## Summary
 
-The Award System page (`/awards`) is a public, server-side rendered read-only page displaying all 6 SSA 2025 award categories. It uses a two-column layout: a left navigation panel (178px, `role="tablist"`) and a right detail panel (856px, `role="tabpanel"`). Category selection updates the URL hash (`/awards#top-talent`) and switches the visible panel without a page reload. Award data is sourced from the shared static `data/awards.ts` file created in the Homepage plan. The `<AwardCategoryCard />` presentational component is also shared with the Homepage.
+The Award System page (`/awards`) is a public, server-side rendered read-only page. All 6 SSA 2025 award categories are displayed simultaneously as a vertically-scrolling list. A sticky left navigation bar (178px) lists all 6 categories and highlights whichever section is currently in the viewport via `IntersectionObserver` scroll-spy. Clicking a nav item is an anchor link that smooth-scrolls to the target section and updates the URL hash via browser-native behavior. Award data is sourced from the shared static `data/awards.ts`.
+
+**FR-011**: Award sections alternate image position — D.1/D.3/D.5 image LEFT, D.2/D.4/D.6 image RIGHT. Driven by `imagePosition: "left" | "right"` on `AwardCategory`.
+
+**FR-012**: D.5 Signature 2025 has a dual-prize layout (5M individual + 8M team) separated by an "Hoặc" divider. Driven by optional `subLabel` on `AwardPrize`.
+
+**FR-013**: Section title renders TWO lines — subtitle "Sun* Annual Awards 2025" (24px white) + main heading "Hệ thống giải thưởng SAA 2025" (48px gold).
+
+**FR-014**: Each award category section uses 3 MM_MEDIA icons — Target (category name row), Diamond (recipient count row), License (prize value row).
+
+**FR-015**: Award images use `mix-blend-mode: screen` — they are pre-designed circular badge PNGs for screen blend on `#00101A` background.
 
 ---
 
@@ -18,7 +28,7 @@ The Award System page (`/awards`) is a public, server-side rendered read-only pa
 **Primary Dependencies**: React 19, Tailwind CSS 4, next-intl
 **Database**: N/A (award data: static JSON, shared with Homepage)
 **Testing**: Vitest + React Testing Library; Playwright E2E
-**State Management**: `useState` for `activeCategory`, `isLoading`, and `error`; `useEffect` for URL hash pre-selection on mount; static props for awards (static import path); `isLoading`/`error` are only relevant on the future client-side API path
+**State Management**: `useState` for `activeSlug` only — driven by `IntersectionObserver` scroll-spy in a `useEffect`; no `isLoading`/`error` component state (data is statically imported at build time)
 **API Style**: Static JSON (MVP); optional `GET /api/awards` future path
 
 ---
@@ -29,14 +39,16 @@ The Award System page (`/awards`) is a public, server-side rendered read-only pa
 
 | Requirement | Constitution Rule | Status |
 |-------------|-------------------|--------|
-| I. Type Safety | Strict TS; `AwardCategory` type from shared `types/awards.ts` | ✅ Planned |
-| II. Design Fidelity | All hex tokens → CSS vars in `globals.css`; no raw hex in components | ✅ Planned |
-| II. Responsive | 320/768/1280 breakpoints; left nav → horizontal tabs on mobile/tablet | ✅ Planned |
-| II. WCAG 2.1 AA | `role="tablist"` + `role="tab"` + `role="tabpanel"`; keyboard nav; focus management | ✅ Planned |
-| III. Test-First | Tests before components | ✅ Planned |
-| IV. Layered Arch | Page (Server) → `<AwardsPage />` → `<AwardNavMenu />` + `<AwardDetailPanel />` | ✅ Planned |
-| IV. Clean Code | Award data from `data/awards.ts` — not hardcoded per component | ✅ Planned |
-| V. Doc-Driven | spec.md + plan.md exist | ✅ Met |
+| I. Type Safety | Strict TS; `AwardCategory` (with `imagePosition`) and `AwardPrize` (with `subLabel?`) from `types/awards.ts` | ✅ Done |
+| I. Immutability | `AWARD_CATEGORIES` array frozen; no mutation of props or state | ✅ Planned |
+| II. Design Fidelity | All hex tokens → CSS vars in `globals.css`; no raw hex in components; `mix-blend-mode: screen` on images per FR-015 | ✅ Planned |
+| II. Responsive | 320/768/1280 breakpoints; left nav → horizontal scrollable row on tablet/mobile | ✅ Planned |
+| II. WCAG 2.1 AA | `role="navigation"` + anchor links + `aria-current`; `role="region"` + `aria-labelledby` on sections; `scroll-margin-top: 80px` for header offset | ✅ Planned |
+| III. Test-First | Tests written alongside components | ✅ Planned |
+| IV. Layered Arch | `app/awards/page.tsx` (Server) → `<AwardsPage />` (Client) → `<AwardNavMenu />` + `<AwardCategorySection />` | ✅ Planned |
+| IV. Clean Code | Award data from `data/awards.ts`; no hardcoded strings in components; i18n for all user-visible text | ✅ Planned |
+| IV. No Magic Values | All slugs from `AWARD_CATEGORIES`; all colors from CSS vars; no hardcoded px in components | ✅ Planned |
+| V. Doc-Driven | spec.md + plan.md + design-style.md exist and are consistent | ✅ Met |
 | VI. Security | Public read-only page; no auth required; no user data | ✅ Compliant |
 
 **Violations**: None.
@@ -47,37 +59,47 @@ The Award System page (`/awards`) is a public, server-side rendered read-only pa
 
 ### Frontend Approach
 
-- **Component Structure**:
-  - `app/awards/page.tsx` — Server Component; imports award data; renders `<AwardsPage />`
-  - `<AwardsPage />` — Client Component shell (needs `useState` for `activeCategory` and URL hash); loads award data via static import
-  - `<Header activeNav="awards" />` — Shared Server Component with `<LanguageSelector />` Client island
-  - `<AwardKeyvisual />` — Server Component; 547px background image + gradient overlay
-  - `<SectionTitle />` — Server Component; "Sun* Annual Awards 2025" + divider
-  - `<AwardNavMenu />` — Client Component; `role="tablist"`; 6 category items; handles active state + URL hash
-  - `<AwardNavItem />` — Presentational; `role="tab"` + `aria-selected` + `aria-controls`
-  - `<AwardDetailPanel />` — Client Component; `role="tabpanel"`; shows selected category section
-  - `<AwardCategorySection />` — Presentational; title + recipient count + prize amount + divider; **shared concept with Homepage `<AwardCategoryCard />`** but this page shows the full detail view
-  - `<KudosPromoSection />` — Shared Server Component (imported from `components/homepage/`)
-  - `<Footer />` — Shared Server Component
+**Component Structure** (current state + Phase 8 targets):
 
-- **Styling Strategy**: Tailwind CSS 4 + CSS custom properties. Nav font-size `16px` (vs `14px` on Homepage) applied via prop or Tailwind override on `<Header />`.
+| Component | Type | Responsibility |
+|-----------|------|----------------|
+| `app/awards/page.tsx` | Server Component | Import `AWARD_CATEGORIES`; auth check; render `<AwardsPage />` |
+| `<AwardsPage />` | Client Component | `activeSlug` state; `IntersectionObserver` setup; two-column layout |
+| `<Header activeNav="awards" />` | Shared Server Component | Fixed nav; "Award Information" active state |
+| `<AwardKeyvisual />` | Server Component | 1440×547px banner + gradient overlay |
+| `<SectionTitle subtitle mainHeading />` | Server Component | Updated shared component; `subtitle` prop (24px white) + `mainHeading` prop (48px gold) + divider; existing callers not affected (both props optional) |
+| `<AwardNavMenu />` | Client Component | `role="navigation"`; 6 `<a href="#slug">` anchors; `aria-current` driven by `activeSlug` prop; sticky position |
+| `<AwardNavItem />` | Presentational | `<a href="#slug">` anchor; active/hover/focus styles; `aria-current` |
+| `<AwardCategorySection />` | Presentational (Server-compatible) | Full detail view: icon+title row, description, icon+recipient row, icon+prize row; `id={slug}`; `scroll-margin-top`; `imagePosition` prop; D.5 "Hoặc" separator |
+| `<KudosPromoSection />` | Shared Server Component | Imported from `components/homepage/KudosPromoSection.tsx` |
+| `<Footer />` | Shared Server Component | Shared footer |
 
-- **Data Fetching**: Award categories from `data/awards.ts` (static import, shared with Homepage). No `useEffect` / client fetch.
+> **`<AwardDetailPanel />` is REMOVED** — not needed in scroll layout. All `<AwardCategorySection />` components are rendered directly by `<AwardsPage />` in a `flex flex-col gap-[80px]` wrapper.
 
-- **URL Hash Strategy**: On nav item click → `router.replace(pathname + '#' + slug)` (no new history entry). On mount → read `window.location.hash` to pre-select category; fallback to `"top-talent"` if hash is invalid or absent.
+**Styling Strategy**: Tailwind CSS 4 + CSS custom properties. `mix-blend-mode: screen` and `backdrop-filter: blur(32px)` on `<AwardCategorySection />` applied via inline `style` prop (not Tailwind class — Tailwind v4 cannot scan `.momorph` docs).
+
+**Scroll-spy Strategy**: `IntersectionObserver` watches each section element with `rootMargin: "-20% 0px -60% 0px"` (triggers when section enters the upper 40% of viewport). On intersection, `setActiveSlug(slug)`. Cleanup in `useEffect` return. Server renders `activeSlug = AWARD_CATEGORIES[0].slug` as default.
+
+**URL Hash Strategy**: Pure anchor links (`<a href="#top-talent">`). Browser handles scroll + hash update natively. No `router.replace()` needed. `scroll-margin-top: var(--header-height)` (80px) on each section ensures correct scroll position below fixed header.
+
+**IntersectionObserver Fallback**: If `IntersectionObserver` is unavailable (rare), `activeSlug` stays at its initial value (`"top-talent"`). Nav still works; only the visual highlight is affected. No error thrown.
 
 ### Backend Approach
 
-- **No backend changes required for MVP** — award data is static JSON shared with Homepage.
-- **Optional future**: `GET /api/awards` — returns same JSON via API route if CMS integration is needed.
+- **No backend changes required** — award data is static JSON.
+- **Optional future**: `GET /api/awards` API route if CMS integration is needed.
 
 ### Integration Points
 
-- **`data/awards.ts`**: Created in Homepage plan (`i87tDx10uM`). Import directly — do NOT duplicate.
-- **`types/awards.ts`**: `AwardCategory`, `AwardPrize` types — created in Homepage plan. Import directly.
-- **`<AwardCategoryCard />`**: Homepage plan creates this as a presentational card. The Awards page uses `<AwardCategorySection />` which is a MORE DETAILED view (not the same compact card). Create as a separate component in `components/awards/`.
-- **`<KudosPromoSection />`**: Shared from `components/homepage/KudosPromoSection.tsx`. Import and reuse.
-- **`<Header />`**: Shared; pass `activeNav="awards"` and `navFontSize="16px"` or equivalent prop.
+| Dependency | Location | Notes |
+|------------|----------|-------|
+| `data/awards.ts` | Created by Homepage plan | Import directly; `AWARD_CATEGORIES` array + `VALID_AWARD_HASHES` |
+| `types/awards.ts` | Created by Homepage plan | `AwardCategory` (with `imagePosition`) + `AwardPrize` (with `subLabel?`) — both updated |
+| `<KudosPromoSection />` | `components/homepage/` | Shared; import and reuse as-is |
+| `<Header />` | `components/shared/` | Pass `activeNav="awards"`; nav font-size 16px override |
+| Award images | `public/assets/awards/award-{slug}.png` | Pre-designed badge PNGs for screen blend mode; exist |
+| Keyvisual | `public/assets/awards/keyvisual.jpg` | Exists |
+| MM_MEDIA icons | Figma media library | Target, Diamond, License — 24×24px SVGs; download via MoMorph or use equivalent SVG fallback in `public/assets/awards/icons/` |
 
 ---
 
@@ -89,119 +111,138 @@ The Award System page (`/awards`) is a public, server-side rendered read-only pa
 .momorph/specs/zFYDgyj_pD-he-thong-giai/
 ├── spec.md
 ├── design-style.md
-└── plan.md   ← this file
+├── plan.md   ← this file
+└── tasks.md
 ```
 
-### Source Code
+### Source Code (target state after Phase 8)
 
 ```text
 app/
 └── awards/
-    └── page.tsx                          # Server Component: load award data → render <AwardsPage />
+    └── page.tsx                          # Server Component: load data, auth check → <AwardsPage />
 
 components/
 ├── awards/
-│   ├── AwardsPage.tsx                    # Client Component: activeCategory state + URL hash + layout
+│   ├── AwardsPage.tsx                    # Client Component: activeSlug state + IntersectionObserver + layout
 │   ├── AwardKeyvisual.tsx                # Server Component: 1440×547px banner + gradient overlay
-│   ├── AwardNavMenu.tsx                  # Client Component: role="tablist"; 6 nav items
-│   ├── AwardNavItem.tsx                  # Presentational: role="tab", aria-selected, aria-controls
-│   ├── AwardDetailPanel.tsx              # Client Component: role="tabpanel"; renders selected section
-│   └── AwardCategorySection.tsx         # Presentational: full detail view of one award category
+│   ├── AwardNavMenu.tsx                  # Client Component: role="navigation"; sticky; 6 anchor links
+│   ├── AwardNavItem.tsx                  # Presentational: <a href="#slug"> + aria-current + active styles
+│   └── AwardCategorySection.tsx          # Presentational: icon+title, description, icon+recipients, icon+prize(s)
 └── shared/
-    └── SectionTitle.tsx                  # Presentational: section heading + divider line (reusable)
+    └── SectionTitle.tsx                  # Updated: accepts subtitle + mainHeading; renders both with divider
 ```
+
+> `AwardDetailPanel.tsx` is **deleted** in Phase 8 (was tab-panel; no longer needed).
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `app/globals.css` | Add awards-specific tokens if not already present from Homepage: `--text-nav-size` override for Awards nav (16px), `--left-nav-gap`, `--left-nav-padding`, `--award-gap` |
+| `app/globals.css` | Add `html { scroll-behavior: smooth; }` + `@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }` to enable smooth anchor scrolling with accessibility override |
+| `types/awards.ts` | Already updated: `imagePosition` on `AwardCategory`, `subLabel?` on `AwardPrize` ✅ |
+| `data/awards.ts` | Already updated: `imagePosition` per category, `subLabel` on D.5 prizes ✅ |
+| `i18n/messages/vi.json` | Already updated: `perIndividualPrize`, `perTeamPrize`, `orSeparator` ✅ |
+| `i18n/messages/en.json` | Already updated ✅ |
+| `components/awards/AwardsPage.tsx` | Phase 8: replace tab state with IntersectionObserver scroll-spy |
+| `components/awards/AwardNavMenu.tsx` | Phase 8: replace tablist with `role="navigation"`; anchors |
+| `components/awards/AwardNavItem.tsx` | Phase 8: replace `<button role="tab">` with `<a href="#">` |
+| `components/awards/AwardCategorySection.tsx` | Phase 8: add `id`, `scroll-margin-top`, icons, fix typography, backdrop-filter |
+| `components/shared/SectionTitle.tsx` | Phase 8: add `mainHeading` prop for 48px gold heading |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `public/assets/awards/icons/icon-target.svg` | MM_MEDIA_Target icon (category name row) |
+| `public/assets/awards/icons/icon-diamond.svg` | MM_MEDIA_Diamond icon (recipient count row) |
+| `public/assets/awards/icons/icon-license.svg` | MM_MEDIA_License icon (prize value row) |
 
 ### Dependencies
 
-No new npm packages. Award data and types are shared from Homepage plan.
+No new npm packages. `IntersectionObserver` is built into all modern browsers; no polyfill needed for SSA 2025 target audience.
 
 ---
 
 ## Implementation Strategy
 
-### Phase 0: Asset Preparation
+### Current State (2026-04-29)
 
-- Verify `data/awards.ts` and `types/awards.ts` exist (created by Homepage plan)
-- Confirm `data/awards.ts` exports all 6 category slugs as named constants: `#top-talent`, `#top-project`, `#top-project-leader`, `#best-manager`, `#signature-2025`, `#mvp`. These MUST be the single source of truth for hash values used by `<AwardNavMenu />`, `<AwardDetailPanel />`, and all tests. Add a `VALID_AWARD_HASHES` constant (string array) for fast O(1) lookup during hash validation on mount.
-- Export awards keyvisual → `public/assets/awards/keyvisual.jpg` (1440×547px)
-- Add any missing CSS tokens to `app/globals.css` (check Homepage plan already added shared tokens)
+**Phases 0–6 complete** ✅ — types, data, alternating layout, dual-prize, i18n all done.
 
-### Phase 1: Foundation (TDD)
+**Phase 7 (in progress)**: Revert T061 (restore `mix-blend-mode: screen` on images).
 
-1. Verify `types/awards.ts` has `AwardCategory` and `AwardPrize` interfaces (from Homepage plan)
-2. Write tests for `<AwardNavItem />` (renders text, `role="tab"`, `aria-selected`, active styles, focus outline on keyboard focus)
-3. Implement `<AwardNavItem />`
-4. Write tests for `<AwardNavMenu />`:
-   - Renders all 6 items; container has `role="tablist"`
-   - Each item has `role="tab"`, `aria-selected`, and `aria-controls="{panel-id}"`
-   - Arrow Down moves focus to next item; Arrow Up moves to previous; wraps at ends
-   - Home key moves focus to first item; End key moves focus to last item
-   - Enter key on focused item selects it (updates `activeCategory`) and calls `router.replace` with the correct hash
-   - Hash update on mouse click also calls `router.replace`
-5. Implement `<AwardNavMenu />` following the WAI-ARIA Tabs pattern (automatic activation variant per TR-004)
-6. Write tests for `<AwardCategorySection />` (renders award name, recipient count, prize amount)
-7. Implement `<AwardCategorySection />`
+**Phase 8 (pending)**: Full scroll-layout refactor — 14 tasks (T063–T076) in `tasks.md`.
 
-### Phase 2: Core Layout (US1 — View Category Details)
+### Phase 0: Asset Preparation & Type Updates ✅ COMPLETE
 
-1. Write E2E test: navigate to `/awards` → default "Top Talent" selected → detail shows correct data → click "Top Project" → panel updates
-2. Implement `<AwardKeyvisual />` (1440×547px background image + gradient `linear-gradient(0deg, #00101A -4.23%, rgba(0,19,32,0) 52.79%)`)
-3. Implement `<AwardDetailPanel />`:
-   - Renders ONLY the selected category section; 150ms fade-in on switch; all non-active panels are `hidden`/`display:none`
-   - Detail panel has `role="tabpanel"` + `aria-labelledby="{tab-id}"` (TR-004)
-   - **Loading skeleton** (FR requirement — spec Edge Cases): when `isLoading=true`, render a skeleton placeholder (matching approximate panel height) instead of an empty panel; left nav items remain visible and clickable during loading
-   - **Error state**: when `error` is non-null, show "Unable to load award information" message with a retry CTA (spec Edge Cases)
-4. Implement `<AwardsPage />` (state: `activeCategory`, `isLoading`, `error`; hash sync on mount via `useEffect`; layout composition)
-5. Implement `app/awards/page.tsx` (static data import → pass to client component)
-6. Wire shared `<Header activeNav="awards" />` and `<Footer />`
+All shared dependencies verified; `imagePosition` and `subLabel` fields added to types and data.
 
-### Phase 3: Hash Routing + Keyboard Navigation (FR-009 + FR-010)
+### Phase 1: Foundation Components ✅ COMPLETE
 
-1. **URL hash pre-selection on mount** (FR-010): in `<AwardsPage />` `useEffect`, read `window.location.hash` (strip `#`); look up against `VALID_AWARD_HASHES` constant from `data/awards.ts`; if valid → set `activeCategory` to that slug; if invalid or absent → fallback to `"top-talent"`.
-2. **URL hash sync on nav click**: in `<AwardNavMenu />`, on item click → call `router.replace(pathname + '#' + slug)` (no new history entry).
-3. Test: navigate to `/awards#top-project` → "Top Project" is pre-selected (FR-010 Scenario — valid hash)
-4. Test: navigate to `/awards#invalid` → fallback to "Top Talent" (FR-010 Scenario — invalid hash)
-5. Test: navigate to `/awards` (no hash) → default to "Top Talent" (FR-010 Scenario — absent hash)
-6. **Keyboard navigation** (FR-009, TR-004 WAI-ARIA Tabs):
-   - Arrow Down: move focus to next `role="tab"` item; wrap from last → first
-   - Arrow Up: move focus to previous `role="tab"` item; wrap from first → last
-   - Home: move focus to first item (Top Talent)
-   - End: move focus to last item (MVP)
-   - Enter: select the currently focused item → update `activeCategory` + call `router.replace`
-7. **Focus management**: after keyboard-driven selection (Enter), programmatically move focus to the `role="tabpanel"` heading (`<h2>` or first focusable element inside `<AwardDetailPanel />`)
+`<AwardNavItem />`, `<AwardCategorySection />`, `<SectionTitle />` created. Note: nav item and section need Phase 8 updates (anchor links, icons, typography).
 
-### Phase 4: Navigation + Polish (US3)
+### Phase 2: Core Layout ✅ COMPLETE
 
-1. Verify header nav "Award Information" is active state (gold + underline)
-2. Add `<SectionTitle />` with "Sun* Annual Awards 2025" heading and `#2E3940` divider
-3. Add `<KudosPromoSection />` (shared from Homepage plan)
-4. Responsive: at tablet/mobile → left nav becomes horizontal scrollable tab row (`overflow-x: auto`, `flex-nowrap`)
-5. `prefers-reduced-motion` — disable 150ms fade animation
-6. Error state in detail panel if award data fails (future API path: show "Unable to load award information" with retry CTA)
-7. Add i18n: award category names, prize labels, and section headings MUST have Vietnamese and English translations in `messages/vi.json` and `messages/en.json`. Reference keys via `useTranslations()` — no hardcoded Vietnamese/English strings in component files.
-8. All navigation `href` values MUST reference `.momorph/contexts/SCREENFLOW.md` as source of truth — do not hardcode `/` or `/kudos` without verifying against the screen flow document.
+`<AwardKeyvisual />`, `<AwardsPage />`, `app/awards/page.tsx` created. Note: `<AwardDetailPanel />` was created but will be removed in Phase 8.
+
+### Phase 3: Hash Routing ✅ COMPLETE (to be replaced in Phase 8)
+
+`router.replace()` + `useEffect` hash logic present. Phase 8 replaces with anchor links + `IntersectionObserver`.
+
+### Phase 4: Navigation + Polish ✅ COMPLETE
+
+Header active state, `<KudosPromoSection />`, `<Footer />`, responsive nav, i18n all wired.
+
+### Phase 5: Polish ✅ COMPLETE
+
+Console.log audit, hex audit, file size checks, presentational audits done.
+
+### Phase 6: FR-011 + FR-012 ✅ COMPLETE
+
+`imagePosition` and `subLabel` implemented; "Hoặc" separator; i18n keys added.
+
+### Phase 7: Image Display Fix (in progress)
+
+- Revert T061: restore `mixBlendMode: "screen"` to `<AwardCategorySection>` image style.
+- Verify images render as glowing golden badges.
+
+### Phase 8: Scroll Layout Refactor (pending)
+
+Full replacement of tab-panel architecture with scroll layout. Execute in order:
+
+1. **T063** — `AwardNavMenu`: `role="tablist"` → `role="navigation"`; sticky positioning
+2. **T064** — `AwardNavItem`: `<button role="tab">` → `<a href="#slug">` anchor; `aria-current`
+3. **T065** — Delete `AwardDetailPanel`; render all sections directly in `AwardsPage` wrapper
+4. **T066** — `AwardCategorySection`: add `id={slug}`, `scroll-margin-top: 80px`, `role="region"`, `aria-labelledby`
+5. **T067** — `AwardsPage`: remove tab state; add `IntersectionObserver` `useEffect` for scroll-spy
+6. **T068** — `SectionTitle`: add `mainHeading` prop; render subtitle (24px white) + main heading (48px gold `#FFEA9E`) + divider
+7. **T069** — `AwardCategorySection`: restore `mixBlendMode: "screen"` on image
+8. **T070** — `AwardCategorySection`: add `backdropFilter: "blur(32px)"` + `borderRadius: "16px"` to content block
+9. **T071** — `AwardCategorySection`: restructure D.x.2.a — icon (Target) + category name (24px gold) in flex-row; description paragraph below (16px white bold, text-justify)
+10. **T072–T074** — Cleanup: remove old tab ARIA, `panelHeadingRef`, `focusedIndex`, unused props
+11. **globals.css** — Add `html { scroll-behavior: smooth; }` with `prefers-reduced-motion: reduce` override to `auto` (enables smooth anchor scrolling natively; works with all anchor `<a href="#slug">` links without JS)
+12. **T075** — `npx tsc --noEmit` zero errors
+13. **T076** — Browser verification: scroll, nav highlight, URL hash, mobile tabs
 
 ### Risk Assessment
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| `data/awards.ts` not yet created (Homepage plan dependency) | Medium | High | Create Awards page AFTER Homepage plan Phase 0 is complete |
-| Hash sync causing hydration mismatch | Low | Low | Read hash only in `useEffect` (client only); server renders default ("top-talent") |
-| Left nav keyboard nav scope | Low | Low | Use standard `role="tablist"` WAI-ARIA Tabs pattern (automatic activation variant); well-documented |
-| Mobile horizontal scroll tabs | Low | Low | Use `overflow-x: auto` + `flex-nowrap` on the nav container |
-| Hash slug mismatch (typo in constant vs URL) | Low | Medium | All 6 slugs defined in a single `VALID_AWARD_HASHES` constant in `data/awards.ts`; nav items and hash validation both derive from it |
+| `IntersectionObserver` scroll-spy accuracy | Low | Low | Use `rootMargin: "-20% 0px -60% 0px"` to activate when section is well into view; tunable via constant |
+| `scroll-margin-top` not respected on mobile | Low | Medium | Apply `scroll-margin-top` to section wrapper AND test on real device at 375px; fallback: `padding-top` on sections |
+| Icons (MM_MEDIA_Target/Diamond/License) unavailable via API | Medium | Low | Download during Phase 8 via MoMorph `get_media_file`; fallback: use equivalent open-source SVG icons (crosshair, gem, certificate) |
+| `SectionTitle` change breaks other pages using it | Low | Medium | Add new optional `mainHeading` prop with no default; existing callers pass `title` only → unchanged behavior |
+| `AwardDetailPanel` removal breaks types | Low | Low | TypeScript strict mode catches all missing imports at compile time (T075) |
+| D.5 "Hoặc" separator spacing | Low | Low | Current `gap-4` baseline; refine visually after Phase 8 |
+| FR-011: Missing `imagePosition` on `AwardCategory` | None | — | Already implemented and type-safe ✅ |
+| FR-012: Signature dual prize | None | — | Already implemented ✅ |
 
 ### Estimated Complexity
 
-- **Frontend**: Low-Medium (static data, tab pattern, hash routing)
-- **Backend**: None (static JSON only)
-- **Testing**: Low (few interactive behaviors)
+- **Frontend**: Low (scroll layout simpler than tab-panel; IntersectionObserver is standard)
+- **Backend**: None
+- **Testing**: Low (fewer interactive behaviors than tab-panel)
 
 ---
 
@@ -209,59 +250,67 @@ No new npm packages. Award data and types are shared from Homepage plan.
 
 ### Test Scope
 
-- [x] **Section rendering**: All 6 award categories reachable via left nav
-- [x] **Hash routing**: `/awards#top-project` pre-selects "Top Project"
-- [x] **Navigation**: Header nav "Award Information" is active; other links route correctly
-- [x] **Keyboard nav**: Arrow Up/Down cycles; Enter selects; focus moves to panel
+- [x] **Section rendering**: All 6 award categories render simultaneously
+- [x] **Alternating layout**: FR-011 image positions correct
+- [x] **Dual prize**: FR-012 Signature 2025 "Hoặc" separator renders
+- [ ] **Scroll-spy**: Nav highlight updates as sections enter viewport
+- [ ] **Anchor navigation**: Clicking nav items smooth-scrolls; URL hash updates
+- [ ] **Deep link**: `/awards#mvp` loads with MVP section at top of viewport
+- [ ] **Header nav**: "Award Information" is gold + underlined
+- [ ] **Section title**: Both "Sun* Annual Awards 2025" and "Hệ thống giải thưởng SAA 2025" render
+- [ ] **Images**: Award badge images render as golden glowing circles (screen blend mode)
+- [ ] **Responsive**: Left nav collapses to horizontal scroll row at 768px / 320px
 - [ ] **Data layer**: Static JSON — no integration test needed
 
 ### Test Categories
 
 | Category | Applicable? | Key Scenarios |
 |----------|-------------|---------------|
-| UI ↔ Logic | Yes | Nav click → panel switch; hash sync |
+| UI ↔ Logic | Yes | Scroll → nav highlight; nav click → scroll + hash |
 | App ↔ Data Layer | No | Static JSON (no async) |
-| Cross-platform | Yes | Left nav → tabs at 320/768 |
+| Cross-platform | Yes | Left nav → horizontal tabs at 320/768 |
 
 ### Mocking Strategy
 
 | Dependency | Strategy | Rationale |
 |------------|----------|-----------|
-| `window.location.hash` | jsdom default | Test hash-based pre-selection |
-| `next/navigation` (useRouter) | Mock | Verify `router.replace()` calls |
+| `IntersectionObserver` | Mock in jsdom | jsdom doesn't implement IntersectionObserver; mock with jest.fn() or vitest |
 | Award data | Real static import | No mocking needed |
+| `next/navigation` | Not needed | Anchor links use browser native; no `router.replace()` |
 
 ### Test Scenarios Outline
 
 1. **Happy Path**
-   - [ ] `/awards` loads with "Top Talent" selected by default
-   - [ ] All 6 nav items visible; clicking each shows correct detail panel
-   - [ ] `/awards#mvp` pre-selects "MVP" on page load
-   - [ ] "Award Information" nav link is gold + underlined
+   - [ ] `/awards` loads with all 6 sections visible; "Top Talent" nav item highlighted
+   - [ ] Scroll to "Best Manager" → nav item switches to "Best Manager"
+   - [ ] Click "MVP" nav → page scrolls to MVP section; URL becomes `/awards#mvp`
+   - [ ] `/awards#top-project` loads with Top Project section in view
+   - [ ] "Award Information" header nav is gold + underlined
 
-2. **Error Handling**
-   - [ ] Invalid hash (`/awards#unknown`) → fallback to "Top Talent"
-   - [ ] Absent hash (`/awards`) → default to "Top Talent"
-   - [ ] Award data missing → error state in detail panel shows "Unable to load award information" + retry CTA (no crash)
+2. **Content Verification**
+   - [ ] Each section shows: target icon + category name (24px gold) + description + diamond icon + count + license icon + amount
+   - [ ] Section title shows both lines: "Sun* Annual Awards 2025" (24px) + "Hệ thống giải thưởng SAA 2025" (48px gold)
+   - [ ] All 6 award images render as glowing golden badges (not invisible/opaque photo)
+   - [ ] FR-011: Odd sections (Top Talent, Top Project Leader, Signature 2025) have image on LEFT
+   - [ ] FR-012: Signature 2025 shows two prize blocks with "Hoặc" separator
 
-3. **Loading State**
-   - [ ] `isLoading=true` → detail panel shows skeleton placeholder; left nav items still rendered and clickable
-
-4. **Edge Cases**
-   - [ ] Keyboard Arrow Down/Up navigates through all 6 items; wraps at ends
-   - [ ] Keyboard Home → first item (Top Talent); End → last item (MVP)
-   - [ ] Keyboard Enter selects focused item → focus moves to panel heading
+3. **Edge Cases**
+   - [ ] `/awards#invalid` → page renders normally; first section (Top Talent) in view
+   - [ ] Scroll to very bottom → "MVP" remains active nav item
+   - [ ] Mobile (375px): left nav collapses to horizontal scroll row; all 6 items reachable
+   - [ ] `prefers-reduced-motion: reduce` → no scroll animation
 
 ### Coverage Goals
 
 | Area | Target | Priority |
 |------|--------|----------|
-| `<AwardNavMenu />` keyboard nav (Arrow Up/Down/Home/End/Enter) | 90%+ | High |
-| `<AwardCategorySection />` rendering | 90%+ | High |
-| Hash routing + pre-selection (valid, invalid, absent hash) | 85%+ | High |
-| `<AwardDetailPanel />` loading skeleton | 80%+ | High |
-| `<AwardDetailPanel />` error state | 80%+ | Medium |
-| E2E category browse | Key flow | High |
+| `<AwardCategorySection />` rendering (icons, title, description, prizes) | 90%+ | High |
+| `IntersectionObserver` scroll-spy logic in `<AwardsPage />` | 80%+ | High |
+| `<AwardNavMenu />` anchor links + `aria-current` | 85%+ | High |
+| `<SectionTitle />` two-line render | 80%+ | High |
+| FR-011 alternating layout | 90%+ | High |
+| FR-012 Signature 2025 dual-prize | 90%+ | High |
+| E2E scroll + nav highlight + URL hash | Key flow | High |
 
 ---
 
@@ -270,32 +319,37 @@ No new npm packages. Award data and types are shared from Homepage plan.
 ### Required Before Start
 
 - [x] `constitution.md` reviewed
-- [x] `spec.md` approved
-- [ ] `data/awards.ts` created (from Homepage plan Phase 0)
-- [ ] `types/awards.ts` created (from Homepage plan Phase 1)
-- [ ] Awards keyvisual image available → `public/assets/awards/keyvisual.jpg`
-- [ ] `<Header />` component supports `activeNav` and `navFontSize` props (from Homepage plan Phase 3)
-- [ ] `<KudosPromoSection />` built (from Homepage plan Phase 4)
-- [ ] `<Footer />` built (from Homepage plan Phase 4)
+- [x] `spec.md` reviewed and updated (scroll layout confirmed 2026-04-29)
+- [x] `data/awards.ts` — exists with `imagePosition` + D.5 `subLabel`
+- [x] `types/awards.ts` — exists with `imagePosition: "left" | "right"` + `subLabel?`
+- [x] Awards keyvisual: `public/assets/awards/keyvisual.jpg`
+- [x] Award category images: `public/assets/awards/award-{slug}.png` (6 files)
+- [x] `<Header />` supports `activeNav` prop
+- [x] `<KudosPromoSection />` built
+- [x] `<Footer />` built
+- [ ] MM_MEDIA icon SVGs downloaded to `public/assets/awards/icons/` (Phase 8 T071)
+- [ ] Phase 8 refactor complete (T063–T076)
 
 ### External Dependencies
 
-- None (static data; no third-party APIs)
+- None (static data; no third-party APIs; `IntersectionObserver` is browser-native)
 
 ---
 
 ## Next Steps
 
-1. Ensure Homepage plan (`i87tDx10uM`) Phase 0 is complete before starting (shared data/types)
-2. Run `/momorph.tasks` to generate the task breakdown
-3. Begin Phase 0 asset prep (keyvisual image)
+1. Execute Phase 7 (T061 — restore `mix-blend-mode: screen`)
+2. Execute Phase 8 (T063–T076 — full scroll layout refactor)
+3. Download MM_MEDIA icons during T071
 
 ---
 
 ## Notes
 
-- The `<AwardNavMenu />` uses `role="tablist"` — NOT `role="listbox"` — because the detail panel is shown/hidden (tab pattern), not a form selection control.
-- The Awards page left nav uses **16px** nav font, not 14px. The `<Header />` component must accept a prop (e.g., `navFontSize`) to override the default 14px used on the Homepage.
-- URL hash updates use `router.replace()` (not `router.push()`) to avoid polluting the browser history on every category click.
-- **Click-to-reveal pattern (NOT stacked scroll)**: Only the selected category's detail panel is rendered/visible; all other panels are hidden (`display: none` or conditional render). The "active" state drives which panel shows — this is NOT a long-scrolling page where clicking a nav item smooth-scrolls to a section. It is a tab-panel swap.
-- `<AwardCategorySection />` is DISTINCT from `<AwardCategoryCard />` (Homepage): the card is a compact grid tile; the section is a full detail view with prize breakdown.
+- **Scroll layout confirmed 2026-04-29**: All 6 sections always visible. Left nav is sticky anchor links with IntersectionObserver scroll-spy. NOT a tab-panel swap.
+- **`<AwardDetailPanel />` is removed in Phase 8** — was the tab-panel container; no longer needed.
+- **Awards nav font-size is 16px** — pass via `navFontSize` or Tailwind override on `<Header />`.
+- **`<AwardCategorySection />` is DISTINCT from `<AwardCategoryCard />`** (Homepage): card is compact grid tile; section is full detail view.
+- **`mix-blend-mode: screen` is REQUIRED on images** — do not remove. Images are pre-designed for screen blend on dark background.
+- **`scroll-margin-top: 80px`** on each section is critical — without it, anchor navigation hides the section heading under the fixed header.
+- **`IntersectionObserver` rootMargin** of `-20% 0px -60% 0px` means the observer fires when the section top is between 20% and 80% of the viewport height. This gives a natural "section in view" feel. Tune if needed.

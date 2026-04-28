@@ -1,48 +1,64 @@
-import Link from "next/link";
+"use client";
+
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ROUTES } from "@/lib/constants/routes";
 
 export function KudosPromoSection() {
   const t = useTranslations("homepage");
+  const router = useRouter();
 
   return (
     <section
       className="relative z-[2] w-full
         px-4 md:px-[var(--content-padding-x)]
-        py-[var(--content-padding-y)]
-        border-t border-[var(--color-divider)]"
+        py-[var(--content-padding-y)]"
     >
-      <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-        <div className="flex flex-col gap-4 text-center md:text-left">
-          <h2
-            className="font-[family-name:var(--font-montserrat)] font-bold
-              text-[24px] md:text-[32px] leading-10 text-[var(--color-text-primary)]"
-          >
-            {t("kudosSectionTitle")}
-          </h2>
-          <p
-            className="font-[family-name:var(--font-montserrat)]
-              text-[16px] leading-6 text-[var(--color-text-primary)] opacity-80 max-w-[480px]"
-          >
-            Gửi lời khen và ghi nhận đóng góp của đồng nghiệp trong SSA 2025
-          </p>
-        </div>
+      {/* D1_Sunkudos — 1152×500px, full background image */}
+      <div
+        className="relative w-full max-w-[1152px] mx-auto rounded-[16px] overflow-hidden"
+        style={{ height: "500px" }}
+      >
+        <Image
+          src="/assets/kudos/sunkudos-bg.png"
+          alt={t("kudosSectionTitle")}
+          fill
+          className="object-cover"
+        />
 
-        <Link
-          href={ROUTES.KUDOS}
-          className="inline-flex items-center justify-center
-            h-[60px] min-w-[180px] rounded-[var(--radius-btn)]
-            bg-[var(--color-accent-gold)] text-[var(--color-bg-base)]
-            px-[var(--btn-padding-x)] py-[var(--btn-padding-y)]
-            font-[family-name:var(--font-montserrat)] font-bold
-            text-[16px] leading-6
-            transition-all duration-150 ease-in-out
-            hover:opacity-90 hover:scale-[1.02]
-            active:opacity-80 active:scale-[0.98]
-            focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)] focus-visible:outline-offset-2"
-        >
-          {t("ctaKudos")}
-        </Link>
+        {/* D2.1_Button-IC — overlay, left: 65.83px, bottom: 46px */}
+        <div className="absolute" style={{ left: "65.83px", bottom: "46px" }}>
+          <button
+            type="button"
+            onClick={() => router.push(ROUTES.KUDOS)}
+            className="flex items-center gap-2
+              h-[56px] px-4 rounded-[4px]
+              bg-[var(--color-accent-gold)]
+              font-[family-name:var(--font-montserrat)] font-bold
+              text-[16px] leading-6 tracking-[0.15px]
+              text-[var(--color-bg-base)]
+              hover:opacity-90 active:opacity-80
+              focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)]
+              transition-opacity duration-150"
+            style={{ width: "126px" }}
+          >
+            {t("kudosCtaLabel")}
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8.49945 18.3095L5.68945 15.4995L12.0595 9.11945H7.10945V5.68945H18.3095V16.8895H14.8895V11.9395L8.49945 18.3095Z"
+                fill="#00101A"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </section>
   );

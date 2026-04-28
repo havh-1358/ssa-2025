@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Exclude MoMorph spec/doc directories — prevents Tailwind scanning .md files for class names */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@source not "../.momorph/**";
+
 :root {
   /* ============================================
    * Base colors
@@ -83,6 +87,20 @@
   --color-profile-dropdown-bg: #00070c;
   --color-profile-dropdown-border: #998c5f;
 
+  /* CTA button typography */
+  --text-btn-size: 22px;
+  --text-btn-line: 28px;
+
+  /* Button active state */
+  --color-btn-secondary-active: rgba(255, 234, 158, 0.15);
+
+  /* Kudos promo section */
+  --color-kudos-promo-bg: #0f0f0f;
+
+  /* Award cards */
+  --color-award-card-bg: rgba(255, 234, 158, 0.03);
+  --color-award-card-hover: rgba(255, 234, 158, 0.06);
+
   /* Content spacing */
   --content-padding-x: 144px;
   --content-padding-y: 96px;
@@ -149,7 +167,7 @@
   --gap-digit-cards: 4px;
   --gap-digit-label: 12px;
   --gap-title-blocks: 48px;
-  --font-display: "Digital Numbers", monospace;
+  --font-display: "DS-Digital", "Digital Numbers", var(--font-digital-numbers), monospace;
 }
 
 @theme inline {
@@ -168,8 +186,9 @@ body {
 }
 
 /* ============================================
- * Digital Numbers font (self-hosted)
- * Place DigitalNumbers.woff2 at public/fonts/
+ * Digital Numbers font — self-hosted
+ * Drop the real DigitalNumbers.woff2 at public/fonts/ to activate.
+ * Share Tech Mono (loaded via next/font) is the current fallback.
  * ============================================ */
 @font-face {
   font-family: "Digital Numbers";
@@ -243,9 +262,19 @@ body {
 }
 
 /* ============================================
+ * Smooth scroll — anchor navigation
+ * ============================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================
  * Reduced motion overrides
  * ============================================ */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .dropdown-enter,
   .dropdown-exit {
     animation: none !important;

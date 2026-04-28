@@ -1,27 +1,53 @@
+import { redirect } from "next/navigation";
 import { parseAndValidateLaunchDatetime, isPrelaunch } from "@/lib/launch";
 import { createClient } from "@/lib/supabase/server";
+import { ROUTES } from "@/lib/constants/routes";
 import { CountdownPage } from "@/components/countdown/CountdownPage";
 import { HomePage } from "@/components/homepage/HomePage";
 
 export default async function RootPage() {
-  let launchAt: Date | null = null;
+  const now = new Date();
+
+  // Prelaunch gate: show countdown while now < PRELAUNCH_DATETIME
+  let prelaunchAt: Date | null = null;
   try {
-    launchAt = parseAndValidateLaunchDatetime(process.env.LAUNCH_DATETIME);
+    prelaunchAt = parseAndValidateLaunchDatetime(
+      process.env.PRELAUNCH_DATETIME
+    );
   } catch {
-    // Invalid/missing LAUNCH_DATETIME — fall through to homepage
+    // Missing/invalid PRELAUNCH_DATETIME — skip prelaunch gate
   }
 
-  if (launchAt && isPrelaunch(new Date(), launchAt)) {
-    return <CountdownPage launchAt={launchAt} />;
+  if (prelaunchAt && isPrelaunch(now, prelaunchAt)) {
+    return <CountdownPage launchAt={prelaunchAt} />;
   }
 
+  // Post-prelaunch: require authentication
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(ROUTES.LOGIN);
+  }
+
+  // LAUNCH_DATETIME drives the homepage event-start countdown
+  let launchAtISO = process.env.NEXT_PUBLIC_LAUNCH_DATETIME ?? "";
+  try {
+    const launchAt = parseAndValidateLaunchDatetime(
+      process.env.NEXT_PUBLIC_LAUNCH_DATETIME
+    );
+    launchAtISO = launchAt.toISOString();
+  } catch {
+    launchAtISO = now.toISOString();
+  }
 
   return (
     <HomePage
-      launchAtISO={(launchAt ?? new Date()).toISOString()}
-      user={user ? { email: user.email ?? "" } : null}
+      launchAtISO={launchAtISO}
+      eventEndAtISO={launchAtISO}
+      user={{ email: user.email ?? "" }}
     />
   );
 }

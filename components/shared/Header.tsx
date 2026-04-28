@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { ROUTES } from "@/lib/constants/routes";
 import { LanguageSelector } from "./LanguageSelector";
 import { MobileNavDrawer } from "./MobileNavDrawer";
+import { NotificationBell } from "./NotificationBell";
 import { UserProfileButton } from "./UserProfileButton";
 
 type NavItem = {
@@ -117,10 +118,11 @@ export function Header({ activeNav = "", user }: HeaderProps) {
           })}
         </nav>
 
-        {/* Right side: profile, language selector + hamburger (mobile only) */}
-        <div className="flex items-center gap-3">
-          {user && <UserProfileButton email={user.email} />}
+        {/* Right side: bell + lang + profile (Frame 482: 220×56px, gap 16px) + hamburger */}
+        <div className="flex items-center gap-4">
+          <NotificationBell unreadCount={0} />
           <LanguageSelector />
+          {user && <UserProfileButton email={user.email} />}
 
           {/* Hamburger button — visible only on mobile (T016, T039) */}
           <button

@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import type { AwardCategory } from "@/types/awards";
-import { VALID_AWARD_HASHES } from "@/data/awards";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { KudosPromoSection } from "@/components/homepage/KudosPromoSection";
-import { SectionTitle } from "@/components/shared/SectionTitle";
 import { AwardKeyvisual } from "./AwardKeyvisual";
 import { AwardNavMenu } from "./AwardNavMenu";
-import { AwardDetailPanel } from "./AwardDetailPanel";
+import { AwardCategorySection } from "./AwardCategorySection";
 
 type AwardsPageProps = {
   categories: AwardCategory[];
@@ -19,76 +17,73 @@ type AwardsPageProps = {
 
 export function AwardsPage({ categories, user }: AwardsPageProps) {
   const t = useTranslations("awards");
-  const [activeSlug, setActiveSlug] = useState<string>(categories[0]?.slug ?? "top-talent");
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const [isLoading] = useState(false);
-  const [error] = useState<string | null>(null);
-  const panelHeadingRef = useRef<HTMLElement | null>(null);
+  const [activeSlug, setActiveSlug] = useState<string>(
+    categories[0]?.slug ?? "top-talent"
+  );
 
-  // Hash pre-selection on mount — client-only to avoid hydration mismatch (T020)
+  // Scroll-spy: highlight the last section whose top has scrolled past the trigger point
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    const hashKey = `#${hash}`;
-    if (hash && VALID_AWARD_HASHES.includes(hashKey)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActiveSlug(hash);
-      const idx = categories.findIndex((c) => c.slug === hash);
-      if (idx !== -1) setFocusedIndex(idx);
-    }
-    // Invalid or absent hash → silently keep default 'top-talent' (T022, T023)
-  }, [categories]);
+    const HEADER_HEIGHT = 80;
+    const TRIGGER_OFFSET = 120; // px below header where a section becomes "active"
 
-  function handleActivate(slug: string, index: number) {
-    setActiveSlug(slug);
-    setFocusedIndex(index);
-  }
+    const update = () => {
+      let current = categories[0]?.slug ?? "";
+      for (const cat of categories) {
+        const el = document.getElementById(cat.slug);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= HEADER_HEIGHT + TRIGGER_OFFSET) {
+          current = cat.slug;
+        }
+      }
+      setActiveSlug(current);
+    };
+
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [categories]);
 
   return (
     <>
       <Header activeNav="awards" user={user} />
 
       <main className="bg-[var(--color-bg-base)] min-h-screen">
-        {/* Keyvisual banner */}
+        {/* Keyvisual banner — includes ROOT FURTHER logo + title overlay */}
         <div className="pt-[var(--header-height)]">
-          <AwardKeyvisual />
+          <AwardKeyvisual
+            title={t("sectionTitle")}
+            mainHeading={t("mainHeading")}
+          />
         </div>
 
-        {/* Main content section */}
+        {/* Main content */}
         <section
           className="px-4 md:px-[var(--content-padding-x)]
-            pt-[var(--content-padding-y)] pb-[var(--content-padding-y)]"
+            pt-[120px] pb-[var(--content-padding-y)]"
         >
-          <SectionTitle title={t("sectionTitle")} />
 
-          {/* Two-column layout: 178px nav | flexible detail (T018, T031) */}
+          {/* Two-column layout: sticky 178px nav | scrollable sections */}
           <div
             className="flex flex-col md:flex-row
-              gap-8 md:gap-12
-              mt-10"
+              gap-8 md:gap-12"
           >
-            {/* Left nav — stacks above on mobile, sidebar on desktop */}
             <AwardNavMenu
               categories={categories}
               activeSlug={activeSlug}
-              focusedIndex={focusedIndex}
-              onActivate={handleActivate}
-              onFocusChange={setFocusedIndex}
-              panelHeadingRef={panelHeadingRef}
             />
 
-            {/* Right detail panel */}
-            <AwardDetailPanel
-              categories={categories}
-              activeSlug={activeSlug}
-              isLoading={isLoading}
-              error={error}
-              onRetry={() => {}}
-              headingRef={panelHeadingRef}
-            />
+            {/* All 6 sections — always visible, vertically stacked */}
+            {/* D.Danh sách giải thưởng: width 853px, margin 0 auto, gap 80px */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col gap-[80px] w-full max-w-[853px] mx-auto">
+                {categories.map((cat) => (
+                  <AwardCategorySection key={cat.slug} category={cat} />
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Kudos promo (T029) */}
+        {/* Kudos promo */}
         <KudosPromoSection />
       </main>
 

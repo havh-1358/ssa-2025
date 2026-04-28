@@ -9,6 +9,13 @@ interface CountdownState {
   isExpired: boolean;
 }
 
+const ZERO_STATE: CountdownState = {
+  days: 0,
+  hours: 0,
+  minutes: 0,
+  isExpired: false,
+};
+
 function computeRemaining(launchAt: Date): CountdownState {
   const diff = launchAt.getTime() - Date.now();
   if (diff <= 0) {
@@ -23,17 +30,22 @@ function computeRemaining(launchAt: Date): CountdownState {
   };
 }
 
-export function useCountdown(launchAt: Date): CountdownState {
-  // Lazy initializer runs synchronously — detects past date on first render (FR-005a)
-  const [state, setState] = useState<CountdownState>(() =>
-    computeRemaining(launchAt)
-  );
+/**
+ * Accepts an ISO string (not a Date) so the dependency is a stable primitive —
+ * passing `new Date(iso)` as a dep caused a new object reference every render
+ * which triggered an infinite useEffect re-run loop.
+ */
+export function useCountdown(launchAtISO: string): CountdownState {
+  const [state, setState] = useState<CountdownState>(ZERO_STATE);
 
   useEffect(() => {
-    if (state.isExpired) return;
+    const launchAt = new Date(launchAtISO);
+    const current = computeRemaining(launchAt);
+    setState(current);
+    if (current.isExpired) return;
     const id = setInterval(() => setState(computeRemaining(launchAt)), 60000);
     return () => clearInterval(id);
-  }, [launchAt, state.isExpired]);
+  }, [launchAtISO]); // string primitive — stable reference, no infinite loop
 
   return state;
 }

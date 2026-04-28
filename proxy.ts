@@ -43,22 +43,23 @@ async function updateSupabaseSession(
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  // Pre-launch gate: redirect all non-root routes to / while platform is pre-launch.
-  // Fail-open: if LAUNCH_DATETIME is missing or invalid, skip redirect.
-  if (pathname !== "/") {
-    try {
-      const launchAt = parseAndValidateLaunchDatetime(
-        process.env.LAUNCH_DATETIME
-      );
-      if (isPrelaunch(new Date(), launchAt)) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        url.search = "";
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      // Invalid/missing LAUNCH_DATETIME — continue normal routing
-    }
+  // Pre-launch gate: redirect all non-root routes to / while now < PRELAUNCH_DATETIME.
+  // Fail-open: if PRELAUNCH_DATETIME is missing or invalid, skip redirect.
+  let prelaunchActive = false;
+  try {
+    const prelaunchAt = parseAndValidateLaunchDatetime(
+      process.env.PRELAUNCH_DATETIME
+    );
+    prelaunchActive = isPrelaunch(new Date(), prelaunchAt);
+  } catch {
+    // Invalid/missing PRELAUNCH_DATETIME — continue normal routing
+  }
+
+  if (prelaunchActive && pathname !== "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   // Refresh Supabase session

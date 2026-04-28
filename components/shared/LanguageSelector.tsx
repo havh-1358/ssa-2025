@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import FocusTrap from "focus-trap-react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "@/hooks/useLocale";
 import { SUPPORTED_LOCALES, LocaleCode } from "@/lib/locale";
@@ -39,7 +38,6 @@ function Chevron({ open }: ChevronProps) {
 type LocaleOptionProps = {
   locale: LocaleCode;
   isSelected: boolean;
-  isFocused: boolean;
   label: string;
   ariaLabel: string;
   onSelect: (locale: LocaleCode) => void;
@@ -56,37 +54,39 @@ function LocaleOption({
   onKeyDown,
   optionRef,
 }: LocaleOptionProps) {
-  const selectedBg = isSelected
-    ? "bg-[var(--color-option-selected-bg)]"
-    : "bg-transparent";
-
   return (
     <li
       role="option"
       aria-selected={isSelected}
       aria-label={ariaLabel}
-      tabIndex={isSelected ? 0 : -1}
+      tabIndex={0}
       ref={optionRef}
-      className={`flex items-center gap-3 px-4 py-4 rounded-[4px] cursor-pointer
-        ${selectedBg}
+      className={`flex flex-row items-center justify-between px-4 py-0
+        h-[56px] w-full cursor-pointer
+        ${isSelected
+          ? "bg-[var(--color-option-selected-bg)] rounded-[2px]"
+          : "bg-transparent rounded-[4px]"
+        }
         hover:bg-[var(--color-option-hover-bg)]
         focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-gold)]
         transition-colors duration-100 ease-out`}
       onClick={() => onSelect(locale)}
       onKeyDown={(e) => onKeyDown(e, locale)}
     >
-      <Image
-        src={FLAG_PATHS[locale]}
-        alt=""
-        aria-hidden="true"
-        width={24}
-        height={16}
-        className="object-cover shrink-0"
-      />
-      <span
-        className="font-[family-name:var(--font-montserrat)] font-bold text-[16px] leading-6 text-[var(--color-text-option)]"
-      >
-        {label}
+      <span className="flex flex-row items-center gap-1">
+        <Image
+          src={FLAG_PATHS[locale]}
+          alt=""
+          aria-hidden="true"
+          width={24}
+          height={16}
+          className="object-cover shrink-0"
+        />
+        <span className="font-[family-name:var(--font-montserrat)] font-bold
+          text-[16px] leading-6 tracking-[0.15px] text-center
+          text-[var(--color-text-option)]">
+          {label}
+        </span>
       </span>
     </li>
   );
@@ -97,15 +97,16 @@ export function LanguageSelector() {
   const { locale, setLocale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLElement | null)[]>([]);
-
-  const openDropdown = useCallback(() => {
-    setIsOpen(true);
-  }, []);
 
   const closeDropdown = useCallback(() => {
     setIsOpen(false);
     triggerRef.current?.focus();
+  }, []);
+
+  const openDropdown = useCallback(() => {
+    setIsOpen(true);
   }, []);
 
   const handleSelect = useCallback(
@@ -116,35 +117,47 @@ export function LanguageSelector() {
     [setLocale, closeDropdown]
   );
 
-  // Close on outside click/focus-out
+  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!triggerRef.current?.parentElement?.contains(target)) {
-        closeDropdown();
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setIsOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [isOpen, closeDropdown]);
+  }, [isOpen]);
+
+  // Focus first/selected option after open
+  useEffect(() => {
+    if (!isOpen) return;
+    const selectedIndex = SUPPORTED_LOCALES.indexOf(locale);
+    const focusIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    // Defer to ensure DOM is committed
+    const id = requestAnimationFrame(() => {
+      optionRefs.current[focusIndex]?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isOpen, locale]);
 
   const handleTriggerKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        openDropdown();
-        // Move focus to currently selected or first option after open
-        requestAnimationFrame(() => {
-          const selectedIndex = SUPPORTED_LOCALES.indexOf(locale);
-          const focusIndex = selectedIndex >= 0 ? selectedIndex : 0;
-          optionRefs.current[focusIndex]?.focus();
-        });
+        if (isOpen) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        closeDropdown();
       }
     },
-    [openDropdown, locale]
+    [isOpen, openDropdown, closeDropdown]
   );
 
   const handleOptionKeyDown = useCallback(
@@ -166,6 +179,7 @@ export function LanguageSelector() {
           e.preventDefault();
           optionRefs.current[(currentIndex - 1 + total) % total]?.focus();
           break;
+        case "Tab":
         case "Escape":
           e.preventDefault();
           closeDropdown();
@@ -176,15 +190,15 @@ export function LanguageSelector() {
   );
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={t("ariaLabel")}
-        className={`flex items-center gap-2 px-2 py-2 rounded-[4px] cursor-pointer
-          min-w-[44px] min-h-[44px]
+        className={`flex flex-row items-center justify-between gap-[2px]
+          w-[108px] h-[56px] px-4 rounded-[4px] cursor-pointer
           hover:bg-white/10
           focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-gold)]
           transition-colors duration-100 ease-out
@@ -192,65 +206,54 @@ export function LanguageSelector() {
         onClick={() => (isOpen ? closeDropdown() : openDropdown())}
         onKeyDown={handleTriggerKeyDown}
       >
-        <Image
-          src={FLAG_PATHS[locale]}
-          alt=""
-          aria-hidden="true"
-          width={24}
-          height={16}
-          className="object-cover shrink-0"
-          suppressHydrationWarning
-        />
-        <span
-          suppressHydrationWarning
-          className="font-[family-name:var(--font-montserrat)] font-bold text-[16px] leading-6 text-white"
-        >
-          {t(`options.${locale}`)}
+        {/* Frame 485 — flag + locale label, 53×24px, gap 4px */}
+        <span className="flex flex-row items-center gap-1">
+          <Image
+            src={FLAG_PATHS[locale]}
+            alt=""
+            aria-hidden="true"
+            width={24}
+            height={16}
+            className="object-cover shrink-0"
+            suppressHydrationWarning
+          />
+          <span
+            suppressHydrationWarning
+            className="font-[family-name:var(--font-montserrat)] font-bold
+              text-[16px] leading-6 tracking-[0.15px] text-white text-center"
+          >
+            {t(`options.${locale}`)}
+          </span>
         </span>
         <Chevron open={isOpen} />
       </button>
 
       {isOpen && (
-        <FocusTrap
-          active={isOpen}
-          focusTrapOptions={{
-            allowOutsideClick: true,
-            escapeDeactivates: false,
-            onDeactivate: closeDropdown,
-          }}
+        <div
+          role="listbox"
+          aria-label={t("ariaLabel")}
+          className="absolute right-0 top-full mt-1 z-[999]
+            w-[122px] p-[6px]
+            rounded-[8px] border border-[var(--color-dropdown-border)]
+            bg-[var(--color-dropdown-bg)]"
         >
-          <div
-            className={`absolute right-0 top-full mt-1 z-[999]
-              w-[215px] min-h-[304px]
-              rounded-[8px] border border-[var(--color-dropdown-border)]
-              bg-[var(--color-dropdown-bg)]
-              shadow-[0_8px_32px_rgba(0,0,0,0.48)]
-              py-3
-              animate-in fade-in zoom-in-95 duration-150 ease-out`}
-          >
-            <ul
-              role="listbox"
-              aria-label={t("ariaLabel")}
-              className="flex flex-col gap-0"
-            >
-              {SUPPORTED_LOCALES.map((loc, i) => (
-                <LocaleOption
-                  key={loc}
-                  locale={loc}
-                  isSelected={loc === locale}
-                  isFocused={false}
-                  label={t(`options.${loc}`)}
-                  ariaLabel={t(`optionAriaLabel.${loc}`)}
-                  onSelect={handleSelect}
-                  onKeyDown={handleOptionKeyDown}
-                  optionRef={(el) => {
-                    optionRefs.current[i] = el;
-                  }}
-                />
-              ))}
-            </ul>
-          </div>
-        </FocusTrap>
+          <ul role="presentation" className="flex flex-col gap-0">
+            {SUPPORTED_LOCALES.map((loc, i) => (
+              <LocaleOption
+                key={loc}
+                locale={loc}
+                isSelected={loc === locale}
+                label={t(`options.${loc}`)}
+                ariaLabel={t(`optionAriaLabel.${loc}`)}
+                onSelect={handleSelect}
+                onKeyDown={handleOptionKeyDown}
+                optionRef={(el) => {
+                  optionRefs.current[i] = el;
+                }}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

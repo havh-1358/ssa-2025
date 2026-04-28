@@ -40,8 +40,8 @@ export function UserProfileButton({ email }: UserProfileButtonProps) {
           transition-colors duration-150"
       >
         <svg
-          width="20"
-          height="20"
+          width="24"
+          height="24"
           viewBox="0 0 20 20"
           fill="none"
           aria-hidden="true"

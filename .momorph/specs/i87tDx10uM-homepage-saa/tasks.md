@@ -25,9 +25,9 @@
 
 > T002 and T003 require Figma MCP (`mcp__momorph__get_media_files`). If assets already exist in `public/`, skip the export step.
 
-- [ ] T001 Copy award images from spec assets to public — `mkdir -p public/assets/awards && cp .momorph/specs/i87tDx10uM-homepage-saa/assets/award-*.png public/assets/awards/` | `public/assets/awards/`
-- [ ] T002 [P] Export RF logos from Figma: `MM_MEDIA_Root Text` → `public/assets/homepage/root-text.png`, `MM_MEDIA_Further Text` → `public/assets/homepage/further-text.png` | `public/assets/homepage/`
-- [ ] T003 [P] Export D2 assets from Figma: node `I3390:10349;313:8417` (264×219px) → `public/assets/homepage/kudos-illustration.png`; node `I3390:10349;329:2948` (364×72px) → `public/assets/homepage/kudos-logo.png` | `public/assets/homepage/`
+- [x] T001 Copy award images from spec assets to public — `mkdir -p public/assets/awards && cp .momorph/specs/i87tDx10uM-homepage-saa/assets/award-*.png public/assets/awards/` | `public/assets/awards/`
+- [x] T002 [P] Export RF logos from Figma: `MM_MEDIA_Root Text` → `public/assets/homepage/root-text.png`, `MM_MEDIA_Further Text` → `public/assets/homepage/further-text.png` | `public/assets/homepage/`
+- [x] T003 [P] Export D2 assets from Figma: node `I3390:10349;313:8417` (264×219px) → `public/assets/homepage/kudos-illustration.png`; node `I3390:10349;329:2948` (364×72px) → `public/assets/homepage/kudos-logo.png` | `public/assets/homepage/`
 
 **Checkpoint**: `public/assets/awards/award-*.png` (×6) and `public/assets/homepage/root-text.png`, `further-text.png`, `kudos-illustration.png`, `kudos-logo.png` all present.
 
@@ -39,10 +39,10 @@
 
 ⚠️ **CRITICAL**: Complete all Phase 2 tasks before beginning any user story work.
 
-- [ ] T004 Add `imageSrc: string` field to `AwardCategory` interface | `types/awards.ts`
-- [ ] T005 Add `imageSrc: "/assets/awards/award-{slug}.png"` to all 6 entries in `AWARD_CATEGORIES` (slugs: top-talent, top-project, top-project-leader, best-manager, signature-2025, mvp) | `data/awards.ts`
-- [ ] T006 [P] Add missing CSS variables to Homepage SAA tokens section: `--text-btn-size: 22px`, `--text-btn-line: 28px`, `--color-btn-secondary-active: rgba(255,234,158,0.15)`, `--color-kudos-promo-bg: #0f0f0f`, `--color-award-card-bg: rgba(255,234,158,0.03)`, `--color-award-card-hover: rgba(255,234,158,0.06)` | `app/globals.css`
-- [ ] T007 [P] Add `theLeModal.*` i18n keys to `vi.json` and `en.json` — keys: `title` ("Thể lệ"), `sectionATitle` ("Người nhận"), `sectionBTitle` ("Người gửi"), `sectionCTitle` ("Kudos Quốc Dân"), `closeBtn` ("Đóng"), `writeKudosBtn` ("Viết KUDOS"); body text for each section from design-style.md F section | `i18n/messages/vi.json`, `i18n/messages/en.json`
+- [x] T004 Add `imageSrc: string` field to `AwardCategory` interface | `types/awards.ts`
+- [x] T005 Add `imageSrc: "/assets/awards/award-{slug}.png"` to all 6 entries in `AWARD_CATEGORIES` (slugs: top-talent, top-project, top-project-leader, best-manager, signature-2025, mvp) | `data/awards.ts`
+- [x] T006 [P] Add missing CSS variables to Homepage SAA tokens section: `--text-btn-size: 22px`, `--text-btn-line: 28px`, `--color-btn-secondary-active: rgba(255,234,158,0.15)`, `--color-kudos-promo-bg: #0f0f0f`, `--color-award-card-bg: rgba(255,234,158,0.03)`, `--color-award-card-hover: rgba(255,234,158,0.06)` | `app/globals.css`
+- [x] T007 [P] Add `theLeModal.*` i18n keys to `vi.json` and `en.json` — keys: `title` ("Thể lệ"), `sectionATitle` ("Người nhận"), `sectionBTitle` ("Người gửi"), `sectionCTitle` ("Kudos Quốc Dân"), `closeBtn` ("Đóng"), `writeKudosBtn` ("Viết KUDOS"); body text for each section from design-style.md F section | `i18n/messages/vi.json`, `i18n/messages/en.json`
 
 > T007 is conditional: if team decides TheLeModal is VN-only, skip T007 and hardcode strings in T017.
 
@@ -56,9 +56,9 @@
 
 **Independent Test**: Navigate to `/` (post-launch) → (1) "Thời gian: 26/12/2025" and "Địa điểm: Âu Cơ Art Center" visible in two columns; (2) livestream note below; (3) "About SAA 2025" click → URL `/awards`; (4) "Sun* Kudos" click → URL `/kudos`; (5) button text is 22px.
 
-- [ ] T008 [P] [US1] Create `EventInfoBlock` Server Component: `flex flex-col gap-2`; Row 1 — `flex flex-row gap-[60px]`: time group (label `t("eventTimeLabel")` 16px white bold ls 0.15px + value `t("eventDate")` 24px gold bold), venue group (label `t("eventVenueLabel")` + value `t("eventVenue")` same sizes); Row 2 — livestream `t("livestream")` 16px white bold ls 0.5px; `useTranslations("homepage")` | `components/homepage/EventInfoBlock.tsx`
-- [ ] T009 [US1] In `HeroSection`, remove `<div className="flex flex-col gap-2">` containing tagline paragraph + livestream paragraph; replace with `<EventInfoBlock />` | `components/homepage/HeroSection.tsx`
-- [ ] T010 [US1] Fix `CTAButtons` — 4 changes: (1) replace `handleAboutSAA` scrollIntoView body with `router.push(ROUTES.AWARDS)`; (2) change `text-[16px] leading-6` → `text-[var(--text-btn-size)] leading-[var(--text-btn-line)]` on both buttons; (3) replace `hover:bg-[rgba(255,234,158,0.2)]` → `hover:bg-[var(--color-btn-secondary-hover)]`; (4) replace `active:bg-[rgba(255,234,158,0.15)]` → `active:bg-[var(--color-btn-secondary-active)]` | `components/homepage/CTAButtons.tsx`
+- [x] T008 [P] [US1] Create `EventInfoBlock` Server Component: `flex flex-col gap-2`; Row 1 — `flex flex-row gap-[60px]`: time group (label `t("eventTimeLabel")` 16px white bold ls 0.15px + value `t("eventDate")` 24px gold bold), venue group (label `t("eventVenueLabel")` + value `t("eventVenue")` same sizes); Row 2 — livestream `t("livestream")` 16px white bold ls 0.5px; `useTranslations("homepage")` | `components/homepage/EventInfoBlock.tsx`
+- [x] T009 [US1] In `HeroSection`, remove `<div className="flex flex-col gap-2">` containing tagline paragraph + livestream paragraph; replace with `<EventInfoBlock />` | `components/homepage/HeroSection.tsx`
+- [x] T010 [US1] Fix `CTAButtons` — 4 changes: (1) replace `handleAboutSAA` scrollIntoView body with `router.push(ROUTES.AWARDS)`; (2) change `text-[16px] leading-6` → `text-[var(--text-btn-size)] leading-[var(--text-btn-line)]` on both buttons; (3) replace `hover:bg-[rgba(255,234,158,0.2)]` → `hover:bg-[var(--color-btn-secondary-hover)]`; (4) replace `active:bg-[rgba(255,234,158,0.15)]` → `active:bg-[var(--color-btn-secondary-active)]` | `components/homepage/CTAButtons.tsx`
 
 **Checkpoint**: Event info block renders in hero; "About SAA 2025" navigates to `/awards`; buttons use CSS var font size.
 
@@ -66,14 +66,14 @@
 
 ## Phase 4: US2 — Navigate to Platform Sections (Priority: P1)
 
-**Goal**: Complete the header right-group (add NotificationBell) and fix Footer to use the correct i18n namespace with all 4 nav links and proper active state.
+**Goal**: Complete the header right-group (add NotificationBell) and fix Footer to use the correct i18n namespace with all 4 nav links and proper active state. *(Pixel-perfect footer dimensions are addressed in Phase 10 / US7.)*
 
 **Independent Test**: (1) Header right-group order: LanguageSelector → NotificationBell → UserProfileButton (when authenticated); (2) Footer shows MM_MEDIA_Logo + 4 nav links + copyright; (3) "About SAA 2025" footer link has gold glow on homepage; (4) all footer text from `footer.*` i18n namespace.
 
-- [ ] T011 [P] [US2] Create `NotificationBell` Client Component — 40×40px `<button>`, bell SVG icon (inline), badge dot `w-2 h-2 bg-[var(--color-accent-gold)] rounded-full absolute top-1 right-1` when `unreadCount > 0`; states: hover `bg-white/10`, focus `outline-2 solid gold`, active `bg-white/15`; `aria-label="Notifications"`; no onClick handler (TBD); Props: `unreadCount?: number` (default 0) | `components/shared/NotificationBell.tsx`
-- [ ] T012 [US2] In `Header` right group, add `<NotificationBell unreadCount={0} />` between `<LanguageSelector />` and `{user && <UserProfileButton>}` | `components/shared/Header.tsx`
-- [ ] T013 [P] [US2] Rewrite `Footer`: (1) add `activeNav?: string` prop; (2) change `useTranslations("auth")` → `useTranslations("footer")`; (3) layout `flex flex-row justify-between items-center px-[var(--spacing-footer-px)] py-[var(--spacing-footer-py)]`; (4) left: `<Image src="/assets/auth/logos/mm-media-logo.png" width={52} height={48} alt="SSA 2025" />`; (5) center: `<nav>` with 4 links — `t("nav.aboutSaa")`→`/`, `t("nav.awardInfo")`→`/awards`, `t("nav.kudos")`→`/kudos`, `t("nav.generalStandards")`→`#`; active link: style `textShadow: "0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"`; (6) right: copyright `t("copyright")` Montserrat Alternates 700 16px | `components/shared/Footer.tsx`
-- [ ] T014 [US2] Pass `activeNav` prop to `<Footer>` from `HomePage` (`"home"`), `AwardsPage` (`"awards"`), `KudosPage` (`"kudos"`) | `components/homepage/HomePage.tsx`, `components/awards/AwardsPage.tsx`, `components/kudos/KudosPage.tsx`
+- [x] T011 [P] [US2] Create `NotificationBell` Client Component — 40×40px `<button>`, bell SVG icon (inline), badge dot `w-2 h-2 bg-[var(--color-accent-gold)] rounded-full absolute top-1 right-1` when `unreadCount > 0`; states: hover `bg-white/10`, focus `outline-2 solid gold`, active `bg-white/15`; `aria-label="Notifications"`; no onClick handler (TBD); Props: `unreadCount?: number` (default 0) | `components/shared/NotificationBell.tsx`
+- [x] T012 [US2] In `Header` right group, add `<NotificationBell unreadCount={0} />` between `<LanguageSelector />` and `{user && <UserProfileButton>}` | `components/shared/Header.tsx`
+- [x] T013 [P] [US2] Rewrite `Footer`: (1) add `activeNav?: string` prop; (2) change `useTranslations("auth")` → `useTranslations("footer")`; (3) layout `flex flex-row justify-between items-center px-[var(--spacing-footer-px)] py-[var(--spacing-footer-py)]`; (4) left: `<Image src="/assets/auth/logos/mm-media-logo.png" width={52} height={48} alt="SSA 2025" />`; (5) center: `<nav>` with 4 links — `t("nav.aboutSaa")`→`/`, `t("nav.awardInfo")`→`/awards`, `t("nav.kudos")`→`/kudos`, `t("nav.generalStandards")`→`#`; active link: style `textShadow: "0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"`; (6) right: copyright `t("copyright")` Montserrat Alternates 700 16px | `components/shared/Footer.tsx`
+- [x] T014 [US2] Pass `activeNav` prop to `<Footer>` from `HomePage` (`"home"`), `AwardsPage` (`"awards"`), `KudosPage` (`"kudos"`) | `components/homepage/HomePage.tsx`, `components/awards/AwardsPage.tsx`, `components/kudos/KudosPage.tsx`
 
 **Already completed (no action needed):**
 - [x] T-A1 [US2] `UserProfileButton` + `ProfileDropdown` created (auth-gated, logout via Supabase) | `components/shared/UserProfileButton.tsx`, `components/shared/ProfileDropdown.tsx`
@@ -90,8 +90,8 @@
 
 **Independent Test**: Scroll to award section → (1) supertitle "Sun* Annual Awards 2025" (24px white) + 1px divider + "Hệ thống giải thưởng" (57px gold); (2) 6 cards in 3-column grid with 80px gap; (3) each card has award image (336×336px); (4) category name and description from i18n; (5) click any card → URL `/awards`.
 
-- [ ] T015 [P] [US3] Full redesign of `AwardCategoryCard`: (1) `<button type="button" onClick={() => router.push(ROUTES.AWARDS)}>` wrapper (no `<Link>`); (2) image area `<Image src={category.imageSrc} width={336} height={336} alt={t(\`categories.${category.slug}\`)} style={{mixBlendMode:"screen",boxShadow:"0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"}} />`; (3) text area (336×144px): name `t(\`categories.${category.slug}\`)` 24px gold 400 lh 32px, description `t(\`descriptions.${category.slug}\`)` 16px white 400 lh 24px ls 0.5px, CTA `t("ctaLabel")` 16px white 500 ls 0.15px; (4) remove `topPrize` display; (5) replace hardcoded rgba with `bg-[var(--color-award-card-bg)] hover:bg-[var(--color-award-card-hover)]`; (6) add `useTranslations("awards")` | `components/homepage/AwardCategoryCard.tsx`
-- [ ] T016 [US3] Update `AwardSummarySection`: (1) add C1 header above grid — supertitle `t("sectionTitle", {ns:"awards"})` → use second `useTranslations("awards")` for `awards.sectionTitle` 24px white 700; 1px `<hr className="border-[var(--color-divider)]">`; main title `t("awardSectionTitle")` from `homepage` namespace 57px gold 700 lh 64px ls -0.25px; (2) update grid gap from `gap-6` → `gap-[80px]`; (3) grid stays `grid-cols-3` on desktop | `components/homepage/AwardSummarySection.tsx`
+- [x] T015 [P] [US3] Full redesign of `AwardCategoryCard`: (1) `<button type="button" onClick={() => router.push(ROUTES.AWARDS)}>` wrapper (no `<Link>`); (2) image area `<Image src={category.imageSrc} width={336} height={336} alt={t(\`categories.${category.slug}\`)} style={{mixBlendMode:"screen",boxShadow:"0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"}} />`; (3) text area (336×144px): name `t(\`categories.${category.slug}\`)` 24px gold 400 lh 32px, description `t(\`descriptions.${category.slug}\`)` 16px white 400 lh 24px ls 0.5px, CTA `t("ctaLabel")` 16px white 500 ls 0.15px; (4) remove `topPrize` display; (5) replace hardcoded rgba with `bg-[var(--color-award-card-bg)] hover:bg-[var(--color-award-card-hover)]`; (6) add `useTranslations("awards")` | `components/homepage/AwardCategoryCard.tsx`
+- [x] T016 [US3] Update `AwardSummarySection`: (1) add C1 header above grid — supertitle `t("sectionTitle", {ns:"awards"})` → use second `useTranslations("awards")` for `awards.sectionTitle` 24px white 700; 1px `<hr className="border-[var(--color-divider)]">`; main title `t("awardSectionTitle")` from `homepage` namespace 57px gold 700 lh 64px ls -0.25px; (2) update grid gap from `gap-6` → `gap-[80px]`; (3) grid stays `grid-cols-3` on desktop | `components/homepage/AwardSummarySection.tsx`
 
 **Checkpoint**: Award section shows correct header hierarchy; 6 cards have award images; clicking navigates to `/awards`.
 
@@ -103,9 +103,9 @@
 
 **Independent Test**: (1) Widget visible at `fixed right-[19px] bottom-[120px]` with gold glow shadow; (2) unauthenticated + Write Kudos click → `/login`; (3) authenticated + Write Kudos click → `/kudos`; (4) SAA Rules click → TheLeModal visible; (5) "Đóng" in modal → modal closes.
 
-- [ ] T017 [P] [US6] Create `TheLeModal` Client Component — Props: `isOpen: boolean`, `onClose: () => void`, `isAuthenticated: boolean`; backdrop `fixed inset-0 z-[150] bg-[var(--color-overlay)]` (click closes); modal `relative max-w-[680px] w-full max-h-[90vh] overflow-y-auto rounded-[8px]` centered; title `t("theLeModal.title")` 45px `text-[var(--color-accent-gold)]` 700; 3 sections A/B/C with headers from `t("theLeModal.section*")`; footer buttons: "Đóng" `onClick={onClose}` and "Viết KUDOS" `onClick={() => isAuthenticated ? router.push(ROUTES.KUDOS) : router.push(ROUTES.LOGIN)}`; `role="dialog" aria-modal="true" aria-labelledby="the-le-title"` | `components/homepage/TheLeModal.tsx`
-- [ ] T018 [US6] Create `FloatingWidget` Client Component — Props: `isAuthenticated: boolean`; `fixed right-[19px] bottom-[120px] z-[90]`; inline style `boxShadow: "0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"`; layout `flex flex-row items-center` (106×64px); local state `const [theLeOpen, setTheLeOpen] = useState(false)`; Write Kudos button (pen SVG, 40×40px): `onClick={() => isAuthenticated ? router.push(ROUTES.KUDOS) : router.push(ROUTES.LOGIN)}`; divider `/` text; SAA Rules button (kudos logo icon): `onClick={() => setTheLeOpen(true)}`; renders `<TheLeModal isOpen={theLeOpen} onClose={() => setTheLeOpen(false)} isAuthenticated={isAuthenticated} />`; both buttons: `hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)] aria-label` | `components/shared/FloatingWidget.tsx`
-- [ ] T019 [US6] Add `<FloatingWidget isAuthenticated={!!user} />` inside `<main>` in `HomePage` (after all sections) | `components/homepage/HomePage.tsx`
+- [x] T017 [P] [US6] Create `TheLeModal` Client Component — Props: `isOpen: boolean`, `onClose: () => void`, `isAuthenticated: boolean`; backdrop `fixed inset-0 z-[150] bg-[var(--color-overlay)]` (click closes); modal `relative max-w-[680px] w-full max-h-[90vh] overflow-y-auto rounded-[8px]` centered; title `t("theLeModal.title")` 45px `text-[var(--color-accent-gold)]` 700; 3 sections A/B/C with headers from `t("theLeModal.section*")`; footer buttons: "Đóng" `onClick={onClose}` and "Viết KUDOS" `onClick={() => isAuthenticated ? router.push(ROUTES.KUDOS) : router.push(ROUTES.LOGIN)}`; `role="dialog" aria-modal="true" aria-labelledby="the-le-title"` | `components/homepage/TheLeModal.tsx`
+- [x] T018 [US6] Create `FloatingWidget` Client Component — Props: `isAuthenticated: boolean`; `fixed right-[19px] bottom-[120px] z-[90]`; inline style `boxShadow: "0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"`; layout `flex flex-row items-center` (106×64px); local state `const [theLeOpen, setTheLeOpen] = useState(false)`; Write Kudos button (pen SVG, 40×40px): `onClick={() => isAuthenticated ? router.push(ROUTES.KUDOS) : router.push(ROUTES.LOGIN)}`; divider `/` text; SAA Rules button (kudos logo icon): `onClick={() => setTheLeOpen(true)}`; renders `<TheLeModal isOpen={theLeOpen} onClose={() => setTheLeOpen(false)} isAuthenticated={isAuthenticated} />`; both buttons: `hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)] aria-label` | `components/shared/FloatingWidget.tsx`
+- [x] T019 [US6] Add `<FloatingWidget isAuthenticated={!!user} />` inside `<main>` in `HomePage` (after all sections) | `components/homepage/HomePage.tsx`
 
 **Checkpoint**: Widget at bottom-right with gold glow; all 3 button interaction scenarios work; modal opens/closes.
 
@@ -117,7 +117,7 @@
 
 **Independent Test**: Scroll to Kudos promo → (1) `#0F0F0F` bg, 16px radius visible; (2) left: "Phong trào ghi nhận" 24px + "Sun* Kudos" 57px gold + body copy; (3) right: illustration + KUDOS logo; (4) "Chi tiết" → URL `/kudos`.
 
-- [ ] T020 [US4] Full rewrite of `KudosPromoSection`: outer `w-full px-4 md:px-[var(--content-padding-x)] py-[var(--content-padding-y)]`; inner `relative w-full max-w-[1120px] h-[500px] mx-auto rounded-[16px] bg-[var(--color-kudos-promo-bg)]`; D2 left `absolute left-[64px] top-1/2 -translate-y-1/2 w-[457px] flex flex-col gap-8`: label `t("kudosPromoLabel")` 24px white 700, title `t("kudosSectionTitle")` 57px `text-[var(--color-accent-gold)]` 700 ls -0.25px, body `t("kudosPromoBody")` 16px white 700 ls 0.5px text-justify; D2.1 CTA `<button onClick={() => router.push(ROUTES.KUDOS)} className="flex items-center gap-2 w-[127px] h-[56px] px-4 rounded-[4px] bg-[var(--color-accent-gold)]">` — label `t("kudosCtaLabel")` 16px `text-[var(--color-bg-base)]` 700 ls 0.15px + MM_MEDIA_Up SVG 24×24 `#00101A`; D2 right assets: illustration `absolute right-[148px] top-1/2 -translate-y-1/2 <Image src="/assets/homepage/kudos-illustration.png" width={264} height={219} />` + logo `absolute right-[20px] top-1/2 -translate-y-1/2 <Image src="/assets/homepage/kudos-logo.png" width={364} height={72} />` | `components/homepage/KudosPromoSection.tsx`
+- [x] T020 [US4] Full rewrite of `KudosPromoSection`: outer `w-full px-4 md:px-[var(--content-padding-x)] py-[var(--content-padding-y)]`; inner `relative w-full max-w-[1120px] h-[500px] mx-auto rounded-[16px] bg-[var(--color-kudos-promo-bg)]`; D2 left `absolute left-[64px] top-1/2 -translate-y-1/2 w-[457px] flex flex-col gap-8`: label `t("kudosPromoLabel")` 24px white 700, title `t("kudosSectionTitle")` 57px `text-[var(--color-accent-gold)]` 700 ls -0.25px, body `t("kudosPromoBody")` 16px white 700 ls 0.5px text-justify; D2.1 CTA `<button onClick={() => router.push(ROUTES.KUDOS)} className="flex items-center gap-2 w-[127px] h-[56px] px-4 rounded-[4px] bg-[var(--color-accent-gold)]">` — label `t("kudosCtaLabel")` 16px `text-[var(--color-bg-base)]` 700 ls 0.15px + MM_MEDIA_Up SVG 24×24 `#00101A`; D2 right assets: illustration `absolute right-[148px] top-1/2 -translate-y-1/2 <Image src="/assets/homepage/kudos-illustration.png" width={264} height={219} />` + logo `absolute right-[20px] top-1/2 -translate-y-1/2 <Image src="/assets/homepage/kudos-logo.png" width={364} height={72} />` | `components/homepage/KudosPromoSection.tsx`
 
 **Checkpoint**: Kudos promo has dark `#0F0F0F` bg with two-column layout; "Chi tiết" → `/kudos`.
 
@@ -129,8 +129,8 @@
 
 **Independent Test**: Scroll to RF section → (1) root-text + further-text images visible side-by-side; (2) 3 text blocks render; (3) locale switch VN→EN updates all text; (4) quote is center-aligned, paragraphs are justified.
 
-- [ ] T021 [P] [US5] Create `RootFurtherSection` Server Component — `w-full px-4 md:px-[104px] py-[120px] flex flex-col items-center gap-8 max-w-[1152px] mx-auto`; RF.1 logos: `<div className="flex flex-row gap-4">` with `<Image src="/assets/homepage/root-text.png" alt="Root" />` + `<Image src="/assets/homepage/further-text.png" alt="Further" />`; RF.2 opening `<p className="text-[24px] leading-[32px] font-bold text-[var(--color-text-primary)] text-justify w-full">{t("rootFurtherParagraph1")}</p>`; RF.3 quote `<blockquote className="text-[20px] leading-[32px] font-bold text-[var(--color-text-primary)] text-center">{t("rootFurtherQuote")}</blockquote>`; RF.4 closing `<p>` same as RF.2 using `t("rootFurtherParagraph2")`; `useTranslations("homepage")` | `components/homepage/RootFurtherSection.tsx`
-- [ ] T022 [US5] In `HomePage`, add `<RootFurtherSection />` in the sections area between the hero wrapper `</div>` and `<AwardSummarySection />` | `components/homepage/HomePage.tsx`
+- [x] T021 [P] [US5] Create `RootFurtherSection` Server Component — `w-full px-4 md:px-[104px] py-[120px] flex flex-col items-center gap-8 max-w-[1152px] mx-auto`; RF.1 logos: `<div className="flex flex-row gap-4">` with `<Image src="/assets/homepage/root-text.png" alt="Root" />` + `<Image src="/assets/homepage/further-text.png" alt="Further" />`; RF.2 opening `<p className="text-[24px] leading-[32px] font-bold text-[var(--color-text-primary)] text-justify w-full">{t("rootFurtherParagraph1")}</p>`; RF.3 quote `<blockquote className="text-[20px] leading-[32px] font-bold text-[var(--color-text-primary)] text-center">{t("rootFurtherQuote")}</blockquote>`; RF.4 closing `<p>` same as RF.2 using `t("rootFurtherParagraph2")`; `useTranslations("homepage")` | `components/homepage/RootFurtherSection.tsx`
+- [x] T022 [US5] In `HomePage`, add `<RootFurtherSection />` in the sections area between the hero wrapper `</div>` and `<AwardSummarySection />` | `components/homepage/HomePage.tsx`
 
 **Checkpoint**: RF section visible between hero and awards; all 3 text blocks render; locale switch works.
 
@@ -140,11 +140,11 @@
 
 **Purpose**: Responsive layout, accessibility, type-checking, and linting across all new components.
 
-- [ ] T023 [P] Add responsive overrides for new sections: `AwardSummarySection` grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`; `KudosPromoSection` inner switches from fixed `h-[500px]` to flex-col at mobile with reduced padding; `RootFurtherSection` padding reduces at sm (`px-4 md:px-[104px]`) | `components/homepage/AwardSummarySection.tsx`, `components/homepage/KudosPromoSection.tsx`, `components/homepage/RootFurtherSection.tsx`
-- [ ] T024 [P] Add ARIA attributes: `FloatingWidget` buttons — `aria-label="Write Kudos"` / `aria-label="SAA Rules"`; `TheLeModal` — `role="dialog" aria-modal="true" aria-labelledby="the-le-title"`; `NotificationBell` — `aria-label="Notifications"` + `aria-live="polite"` on badge | `components/shared/FloatingWidget.tsx`, `components/homepage/TheLeModal.tsx`, `components/shared/NotificationBell.tsx`
-- [ ] T025 [P] Write Vitest unit tests: (a) `EventInfoBlock` — renders `eventTimeLabel`, `eventDate`, `eventVenueLabel`, `eventVenue`, `livestream` from i18n; (b) `CTAButtons` — About SAA calls `router.push("/awards")`, not `scrollIntoView`; (c) `FloatingWidget` — unauthenticated click → `router.push("/login")`, authenticated → `router.push("/kudos")` | `__tests__/EventInfoBlock.test.tsx`, `__tests__/CTAButtons.test.tsx`, `__tests__/FloatingWidget.test.tsx`
-- [ ] T026 Run `npx tsc --noEmit` — must pass with zero errors | (all modified files)
-- [ ] T027 Run `pnpm lint` (or `npx next lint`) — must pass with zero warnings | (all modified files)
+- [x] T023 [P] Add responsive overrides for new sections: `AwardSummarySection` grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`; `KudosPromoSection` inner switches from fixed `h-[500px]` to flex-col at mobile with reduced padding; `RootFurtherSection` padding reduces at sm (`px-4 md:px-[104px]`) | `components/homepage/AwardSummarySection.tsx`, `components/homepage/KudosPromoSection.tsx`, `components/homepage/RootFurtherSection.tsx`
+- [x] T024 [P] Add ARIA attributes: `FloatingWidget` buttons — `aria-label="Write Kudos"` / `aria-label="SAA Rules"`; `TheLeModal` — `role="dialog" aria-modal="true" aria-labelledby="the-le-title"`; `NotificationBell` — `aria-label="Notifications"` + `aria-live="polite"` on badge | `components/shared/FloatingWidget.tsx`, `components/homepage/TheLeModal.tsx`, `components/shared/NotificationBell.tsx`
+- [x] T025 [P] Write Vitest unit tests: (a) `EventInfoBlock` — renders `eventTimeLabel`, `eventDate`, `eventVenueLabel`, `eventVenue`, `livestream` from i18n; (b) `CTAButtons` — About SAA calls `router.push("/awards")`, not `scrollIntoView`; (c) `FloatingWidget` — unauthenticated click → `router.push("/login")`, authenticated → `router.push("/kudos")` | `__tests__/EventInfoBlock.test.tsx`, `__tests__/CTAButtons.test.tsx`, `__tests__/FloatingWidget.test.tsx`
+- [x] T026 Run `npx tsc --noEmit` — must pass with zero errors | (all modified files)
+- [x] T027 Run `pnpm lint` (or `npx next lint`) — must pass with zero warnings | (all modified files)
 
 ---
 
@@ -160,16 +160,18 @@ Phase 1 (Assets)
          └──► Phase 5 (US3 — P2)  ──┼──► Phase 9 (Polish)
          └──► Phase 6 (US6 — P2)  ──┤
          └──► Phase 7 (US4 — P3)  ──┤
-         └──► Phase 8 (US5 — P3)  ──┘
+         └──► Phase 8 (US5 — P3)  ──┤
+         └──► Phase 10 (US7 — P3) ──┘
 ```
 
 - **Phase 1**: No dependencies — start immediately; T002 and T003 can run in parallel
 - **Phase 2**: Depends on Phase 1 (T001 needed for T005 imageSrc paths); T004/T006/T007 can run in parallel after T001
-- **Phases 3–8**: All depend on Phase 2; can begin in priority order or in parallel if staffed
+- **Phases 3–8, 10**: All depend on Phase 2; can begin in priority order or in parallel if staffed
   - **Phase 5** additionally depends on T001 (award images) and T004/T005 (imageSrc type/data)
   - **Phase 7** additionally depends on T003 (D2 assets)
   - **Phase 8** additionally depends on T002 (RF logo assets)
-- **Phase 9**: Depends on Phases 3–8 complete
+  - **Phase 10** (US7 Footer) is independent of all other US phases — can run any time after Phase 2
+- **Phase 9**: Depends on Phases 3–8 + 10 complete
 
 ### Within Each Phase
 
@@ -221,7 +223,27 @@ Phase 1 (Assets)
 | Phase 7 | 1 | US4 — P3 |
 | Phase 8 | 2 | US5 — P3 |
 | Phase 9 (Polish) | 5 | — |
-| **Total** | **27** | +3 done in prior session |
+| Phase 10 | 2 | US7 — P3 |
+| **Total** | **29** | +3 done in prior session |
+
+---
+
+## Phase 10: US7 — Footer Navigation (Priority: P3)
+
+**Goal**: Align the Footer component with the precise Figma spec (node `5001:14800`) — correct logo size, grouped layout, nav gap/button sizing, accurate active/hover states, and the General Standards route.
+
+**Independent Test**: Scroll to footer → (1) logo is `69×64px`; (2) logo + nav are in one flex group with `80px` gap; (3) nav links have `48px` gap and each button is `56px` tall; (4) active link shows `rgba(255,234,158,0.10)` bg + gold text-shadow glow; (5) hover shows same `rgba(255,234,158,0.10)` bg; (6) "Tiêu chuẩn chung" link has a real route (not `#`).
+
+- [x] T028 Add `GENERAL_STANDARDS: "/general-standards"` to ROUTES constant | `lib/constants/routes.ts`
+- [x] T029 [US7] Update `Footer`: (1) correct logo size `width={69} height={64}`; (2) wrap logo + `<nav>` in a `<div className="flex flex-row items-center gap-[80px]">` left-group; (3) remove `flex-col md:flex-row` from root footer → keep `flex-row items-center justify-between` always (responsive: keep as-is, mobile collapses via parent); (4) update nav `<ul>` gap from `gap-4` → `gap-[48px]`; (5) each `<Link>` add `h-[56px] flex items-center` and change padding to `px-[16px]`; (6) change `hover:bg-white/10` → `hover:bg-[rgba(255,234,158,0.10)]`; (7) add active `bg-[rgba(255,234,158,0.10)]` class when `isActive` (currently only textShadow); (8) fix `generalStandards` href from `"#"` → `ROUTES.GENERAL_STANDARDS` | `components/shared/Footer.tsx`
+
+**Checkpoint**: Footer logo is 69×64px; logo and nav share a left wrapper with 80px gap; nav buttons 48px apart and 56px tall; active link shows gold bg + glow; hover shows gold bg; "Tiêu chuẩn chung" link has real route.
+
+---
+
+## Bug Fixes
+
+- [x] TFIX-001 Fix D1 card background — `#0F0F0F` base with inline radial-gradient approximation. Figma node `I3390:10349;313:8416` (MM_MEDIA_Kudos Background). Asset exported from Figma node I3390:10349;313:8416 and placed in public/assets/homepage/. | `components/homepage/KudosPromoSection.tsx`
 
 ---
 

@@ -162,6 +162,50 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 
 ---
 
+### US7: Navigate Using Footer [P3]
+
+**As a** SSA 2025 visitor  
+**I want to** use footer links to move between sections or go back to the top  
+**So that** I have a convenient navigation option at the bottom of the page
+
+**Why this priority**: Secondary nav path — the header is the primary nav; the footer is a convenience fallback.
+
+**Independent Test**: Scroll to the bottom of homepage → verify footer renders with logo, 4 nav links, and copyright text → click each link → verify expected navigation occurs.
+
+#### Acceptance Scenarios
+
+**Scenario 1: Footer renders at bottom of page**
+- Given: user scrolls to the bottom of the homepage
+- When: section is in viewport
+- Then: footer is visible with logo (left), nav links (center-left), and copyright text (right)
+
+**Scenario 2: Click "About SAA 2025" footer link**
+- Given: user is viewing the footer
+- When: user clicks "About SAA 2025"
+- Then: page scrolls to top (`/`)
+
+**Scenario 3: Click "Award Information" footer link**
+- Given: user is viewing the footer
+- When: user clicks "Award Information"
+- Then: navigates to `/awards` page
+
+**Scenario 4: Click "Sun* Kudos" footer link**
+- Given: user is viewing the footer
+- When: user clicks "Sun* Kudos"
+- Then: navigates to `/kudos` page
+
+**Scenario 5: Click "Tiêu chuẩn chung" footer link**
+- Given: user is viewing the footer
+- When: user clicks "Tiêu chuẩn chung"
+- Then: navigates to `/general-standards` page (or equivalent route)
+
+**Scenario 6: Active link highlighted**
+- Given: user is on the Awards page and scrolls to footer
+- When: footer renders
+- Then: "Award Information" link shows active state (gold text-shadow glow + subtle gold bg)
+
+---
+
 ### US6: Use Floating Quick-Action Widget [P2]
 
 **As a** SSA 2025 visitor
@@ -239,7 +283,10 @@ The Homepage is the main landing page of SSA 2025, displayed after the pre-launc
 | D1 | Kudos Promo Outer Container | `3390:10349` | section | 1224×500px outer shell; inner group 1120×500px with `#0F0F0F` bg and `border-radius: 16px` |
 | D2 | Kudos Content Column | `I3390:10349;313:8419` | compound | Left column 457×408px; flex column gap 32px; contains 3 text elements + D2.1 button row; right side has illustration (264×219px) and Kudos logo (364×72px, "KUDOS" SVN-Gotham 96px `#DBD1C1`) |
 | D2.1 | Kudos CTA Button | `I3390:10349;313:8426` | button | 127×56px; gold bg `#FFEA9E`; label `homepage.kudosCtaLabel` ("Chi tiết") + `MM_MEDIA_Up` icon; navigates to `/kudos` |
-| E | Footer | `5001:14800` | footer | Logo + 4 nav links + copyright "Bản quyền thuộc về Sun* © 2025" |
+| E | Footer | `5001:14800` | footer | Full-bleed 1512×144px; `padding: 40px 90px`; `border-top: 1px solid #2E3940`; flex row space-between; Left group (logo 69×64px + nav gap 48px) with 80px gap; Right: copyright text |
+| E.1 | Footer Logo | `I5001:14800;342:1408` | image | `MM_MEDIA_Logo` 69×64px; click → scroll to `/` |
+| E.2 | Footer Nav | `I5001:14800;342:1409` | nav | 822×64px flex row gap 48px; 4 links: About SAA / Award Info / Sun* Kudos / Tiêu chuẩn chung; each 56px h, padding 16px; active state: `rgba(255,234,158,0.1)` bg + gold text-shadow glow |
+| E.3 | Copyright | `I5001:14800;342:1413` | text | "Bản quyền thuộc về Sun* © 2025"; Montserrat Alternates 700 16px white; right-aligned |
 
 **Visual specs**: See [`design-style.md`](./design-style.md).
 
@@ -370,6 +417,7 @@ Countdown is computed client-side from `NEXT_PUBLIC_LAUNCH_DATETIME` env var —
 - **FR-010**: On viewports < 768px, nav links MUST collapse into a hamburger menu; the menu drawer MUST be keyboard-accessible and support Escape-to-close.
 - **FR-011**: Root Further theme section MUST render 3 text blocks (opening paragraph, quote, closing paragraph) and theme logos in the correct locale.
 - **FR-012**: Floating widget MUST remain visible at the right edge of the viewport at all scroll positions; Write Kudos button requires authentication — redirects to `/login` if unauthenticated, navigates to write kudos flow if authenticated; SAA Rules button opens **Thể lệ modal** (Figma: `b1Filzi9i6`) without auth check.
+- **FR-013**: Footer MUST render at the bottom of every page; nav links MUST navigate to their respective routes; active link MUST reflect the current page with gold-glow state; logo click MUST scroll to top of homepage.
 
 ### Technical Requirements
 

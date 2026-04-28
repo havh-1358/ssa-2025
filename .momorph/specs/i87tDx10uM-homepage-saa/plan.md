@@ -35,7 +35,7 @@ Refactor and complete the Homepage SAA to match the final Figma design. Most inf
 - `AwardSummarySection` is missing the C1 section header (supertitle + divider + 57px gold title)
 - `AwardCategoryCard` needs a full redesign — wrong dimensions, missing award image, uses hardcoded descriptions instead of i18n
 - `KudosPromoSection` needs a full redesign to match D1/D2/D2.1 spec (dark `#0F0F0F` bg, two-column layout)
-- `Footer` uses wrong i18n namespace (`auth` → `footer`) and is missing all 4 nav links (E.2)
+- `Footer` uses wrong i18n namespace (`auth` → `footer`), wrong container dimensions (missing `padding: 40px 90px`, `border-top`, `height: 144px`), wrong logo size (52×48 → 69×64px), and is missing all 4 nav links with active state (E.2) — see US7
 - `Header` still needs **NotificationBell** (A.4)
 - Award card images need to be copied from `.momorph/specs/assets/` to `public/assets/awards/`
 - RF logo assets and D2 illustration/logo need Figma download
@@ -151,7 +151,7 @@ Refactor and complete the Homepage SAA to match the final Figma design. Most inf
 | `components/homepage/AwardCategoryCard.tsx` | Full redesign: 336×504px, award image 336×336px, i18n name/description, CTA "Chi tiết", `router.push(ROUTES.AWARDS)` on click | 📋 TODO |
 | `components/homepage/KudosPromoSection.tsx` | Full redesign — D1/D2/D2.1 layout (`#0F0F0F` bg, two-column, gold CTA) | 📋 TODO |
 | `components/shared/Header.tsx` | Add `<NotificationBell unreadCount={0} />`; user prop ✅ DONE | 📋 TODO |
-| `components/shared/Footer.tsx` | Change namespace `"auth"` → `"footer"`; add logo + 4 nav links (E.2) + `activeNav` prop; copyright font Montserrat Alternates 700 | 📋 TODO |
+| `components/shared/Footer.tsx` | Change namespace `"auth"` → `"footer"`; fix container `padding: 40px 90px`, `border-top: 1px solid #2E3940`, `height: 144px`; add logo (69×64px E.1); nav 4 links gap 48px (E.2) with active state gold-glow; add `activeNav` prop; copyright Montserrat Alternates 700 16px (E.3) | 📋 TODO |
 | `data/awards.ts` | Add `imageSrc: "/assets/awards/award-{slug}.png"` per category | 📋 TODO |
 | `types/awards.ts` | Add `imageSrc: string` to `AwardCategory` interface | 📋 TODO |
 | `app/globals.css` | Add CSS vars (see Phase 1); profile dropdown vars ✅ DONE | 📋 TODO |
@@ -314,21 +314,58 @@ In `Header.tsx` right group:
 3. Right group order: LanguageSelector → NotificationBell → UserProfileButton
 4. Pass `session` from server components — ✅ DONE
 
-### Phase 6b: Footer Update
+### Phase 6b: Footer Update [US7 — P3]
 
-Full fix of `Footer.tsx`:
-- Add `activeNav?: string` prop (same convention as Header)
+Full fix of `Footer.tsx` based on Figma node `5001:14800` (spec [design-style.md § E](./design-style.md)):
+
+**Container:**
+- Height: `144px`; full-bleed width
+- Padding: `py-[40px] px-[90px]` (Tailwind: `px-[90px] py-[40px]`)
+- Border top: `border-t border-[var(--color-divider)]` → `1px solid #2E3940`
+- Layout: `flex flex-row items-center justify-between`
+
+**Left group (E.0 — Frame 488, `w-[971px] h-[64px]`):**
+- `flex flex-row items-center gap-[80px]`
+- Children: Logo (E.1) + Nav group (E.2)
+
+**E.1 Logo (`I5001:14800;342:1408`):**
+- `<Image src="/assets/homepage/saa-2025-logo.png" width={69} height={64} alt="SAA 2025" />`
+- Click → `router.push(ROUTES.HOME)` (scroll-to-top via navigate to `/`)
+- (Note: Figma uses `MM_MEDIA_Logo` 69×64px — same asset as header but correct size here is 69×64)
+
+**E.2 Nav group (`I5001:14800;342:1409`):**
+- `<nav>` — `flex flex-row items-center gap-[48px]`
+- 4 links, each: `h-[56px] px-[16px] flex items-center`
+- Link text style: `font-[family-name:var(--font-montserrat)] font-bold text-[16px] leading-[24px] tracking-[0.15px] text-[var(--color-text-primary)]`
+
+| Link | i18n Key | Route | Active check |
+|------|----------|-------|-------------|
+| `footer.nav.aboutSaa` | "About SAA 2025" | `/` | `activeNav === "home"` |
+| `footer.nav.awardInfo` | "Award Information" | `/awards` | `activeNav === "awards"` |
+| `footer.nav.kudos` | "Sun* Kudos" | `/kudos` | `activeNav === "kudos"` |
+| `footer.nav.generalStandards` | "Tiêu chuẩn chung" | `/general-standards` | `activeNav === "general-standards"` |
+
+State classes per link:
+- Default: no bg
+- Hover: `hover:bg-[rgba(255,234,158,0.10)]`
+- Active (when `activeNav` matches): `bg-[rgba(255,234,158,0.10)]` + inline `textShadow: "0 4px 4px rgba(0,0,0,0.25), 0 0 6px #FAE287"`
+- Focus: `focus-visible:outline-2 focus-visible:outline-[var(--color-accent-gold)]`
+
+**E.3 Copyright (`I5001:14800;342:1413`):**
+- `<p>` tag: `font-[family-name:var(--font-montserrat-alt)] font-bold text-[16px] leading-[24px] text-center text-[var(--color-text-primary)]`
+- Text: `t("copyright")`
+
+**Props:**
+- Add `activeNav?: "home" | "awards" | "kudos" | "general-standards"` prop
 - Change `useTranslations("auth")` → `useTranslations("footer")`
-- Layout: `flex flex-row justify-between items-center`
-- Add logo `<Image src="/assets/auth/logos/mm-media-logo.png" width={52} height={48} />`
-- Add `<nav>` with 4 links (from `footer.nav.*` i18n keys):
-  - `footer.nav.aboutSaa` → `/`
-  - `footer.nav.awardInfo` → `/awards`
-  - `footer.nav.kudos` → `/kudos`
-  - `footer.nav.generalStandards` → `#` (TBD route)
-- Footer nav link active state: gold text-shadow when `activeNav` matches
-- Update copyright: `t("copyright")`, `font-[family-name:var(--font-montserrat-alt)] font-bold text-[16px]`, center
-- Pass `activeNav` from `HomePage`, `AwardsPage`, `KudosPage` to `<Footer>`
+- Pass `activeNav` from `HomePage` (`"home"`), `AwardsPage` (`"awards"`), `KudosPage` (`"kudos"`)
+
+**i18n keys required** (check `vi.json` + `en.json` `footer` namespace):
+- `footer.copyright` ✓
+- `footer.nav.aboutSaa` ✓
+- `footer.nav.awardInfo` ✓
+- `footer.nav.kudos` ✓
+- `footer.nav.generalStandards` ✓
 
 ### Phase 7: Polish
 

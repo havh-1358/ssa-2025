@@ -20,9 +20,9 @@
     "ariaLabel": "Countdown timer"
   },
   "homepage": {
-    "ctaAboutSaa": "About SAA 2025",
-    "ctaKudos": "Sun* Kudos",
-    "comingSoon": "Event starts in",
+    "ctaAboutSaa": "ABOUT AWARDS",
+    "ctaKudos": "ABOUT KUDOS",
+    "comingSoon": "Coming soon",
     "tagline": "The biggest Sun* talent recognition event of the year",
     "eventTimeLabel": "Time:",
     "eventDate": "26/12/2025",
@@ -54,6 +54,7 @@
   },
   "footer": {
     "copyright": "Copyright belongs to Sun* © 2025",
+    "logoLabel": "SSA 2025 — go to homepage",
     "nav": {
       "aboutSaa": "About SAA 2025",
       "awardInfo": "Award Information",
@@ -63,12 +64,24 @@
   },
   "awards": {
     "sectionTitle": "Sun* Annual Awards 2025",
+    "mainHeading": "SAA 2025 Award System",
     "navAriaLabel": "Award categories",
     "loadingLabel": "Loading award information",
     "errorMessage": "Unable to load award information.",
     "retryLabel": "Retry",
     "ctaLabel": "Details",
     "recipients": "recipients",
+    "recipientCountLabel": "Number of awards",
+    "prizeAmountLabel": "Prize value",
+    "perPrize": "per award",
+    "perIndividualPrize": "per individual prize",
+    "perTeamPrize": "per team prize",
+    "orSeparator": "Or",
+    "units": {
+      "individual": "Individual",
+      "team": "Team",
+      "individual_or_team": "Individual or Team"
+    },
     "categories": {
       "top-talent": "Top Talent",
       "top-project": "Top Project",
@@ -78,12 +91,12 @@
       "mvp": "MVP (Most Valuable Person)"
     },
     "descriptions": {
-      "top-talent": "Recognizing the top individual who excels across all dimensions",
-      "top-project": "Recognizing the outstanding project across all dimensions with remarkable revenue",
-      "top-project-leader": "Recognizing the inspiring manager who leads projects to breakthrough results",
-      "best-manager": "Recognizing the manager with strong management skills who leads their team effectively",
-      "signature-2025": "Recognizing the manager with strong management skills who leads their team effectively",
-      "mvp": "Recognizing the manager with strong management skills who leads their team effectively"
+      "top-talent": "The Top Talent award honors all-around outstanding individuals — those who consistently demonstrate strong expertise, exceptional work performance, and always deliver value beyond expectations, highly regarded by clients and teammates. With a spirit of readiness to take on any mission entrusted by the organization, they are a source of inspiration, driving motivation and creating a positive influence on the entire team.",
+      "top-project": "Recognizing the outstanding project that excels across all dimensions with remarkable revenue, delivering exceptional value to clients and the organization.",
+      "top-project-leader": "Recognizing the inspiring manager who leads projects to breakthrough results that exceed expectations.",
+      "best-manager": "Recognizing the manager with strong management skills who leads their team effectively, builds a positive work environment, and drives sustainable growth.",
+      "signature-2025": "Recognizing the individual or team with the most distinctive creative contribution in 2025, leaving a unique mark and making an outstanding contribution to the Sun* community.",
+      "mvp": "Recognizing the individual with the greatest contribution to the organization — someone who creates comprehensive impact, excels in capability, spirit, and real-world results."
     },
     "prizes": {
       "first": "1st Place",
@@ -91,6 +104,17 @@
       "third": "3rd Place",
       "winner": "Winner"
     }
+  },
+  "theLeModal": {
+    "title": "Rules",
+    "sectionATitle": "Recipients",
+    "sectionABody": "Receive Kudos from colleagues to accumulate Hero badges:\n- New Hero: 1–4 Kudos\n- Rising Hero: 5–9 Kudos\n- Super Hero: 10–19 Kudos\n- Legend Hero: 20+ Kudos",
+    "sectionBTitle": "Senders",
+    "sectionBBody": "Send Kudos to unlock 6 mystery boxes. Collect all 6 mystery icons to receive a special gift from the organizing committee.",
+    "sectionCTitle": "Kudos Quốc Dân",
+    "sectionCBody": "The top 5 most-liked Kudos (most hearts received) will receive a special prize from SAA 2025.",
+    "closeBtn": "Close",
+    "writeKudosBtn": "Write KUDOS"
   },
   "auth": {
     "tagline": "Start your journey with SAA 2025.\nSign in to explore!",

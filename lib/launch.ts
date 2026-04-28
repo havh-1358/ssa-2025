@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-const launchSchema = z.string().datetime();
+const datetimeSchema = z.string().datetime();
 
 export function parseAndValidateLaunchDatetime(env: string | undefined): Date {
-  const validated = launchSchema.parse(env);
+  const validated = datetimeSchema.parse(env);
   return new Date(validated);
 }
 
-export function isPrelaunch(now: Date, launchAt: Date): boolean {
-  return now.getTime() < launchAt.getTime();
+export function isPrelaunch(now: Date, prelaunchAt: Date): boolean {
+  return now.getTime() < prelaunchAt.getTime();
 }
