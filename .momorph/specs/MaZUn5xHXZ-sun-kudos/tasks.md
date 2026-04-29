@@ -1,7 +1,10 @@
-# Tasks: Sun* Kudos Live Board
+# Tasks: Sun* Kudos — Live Board
 
 **Frame**: `MaZUn5xHXZ-sun-kudos`
-**Prerequisites**: plan.md (required), spec.md (required)
+**Prerequisites**: plan.md ✅, spec.md ✅, design-style.md ✅
+
+> **Context**: Page scaffolding, UI components, and API route handlers are **already implemented**.
+> Tasks focus on: Supabase repository wiring, D3 Spotlight Board, Like/Unlike end-to-end, filters, sidebar stats, Secret Box dialog, auth re-enable, and tests.
 
 ---
 
@@ -11,149 +14,208 @@
 - [ ] T### [P?] [Story?] Description | file/path.ts
 ```
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this belongs to (US1–US7)
-- **|**: File path affected by this task
+- **[P]**: Parallelizable (different files, no blocking dependencies)
+- **[Story]**: User story label (US1–US7b)
 
 ---
 
-## Phase 0: Asset Preparation
+## Phase 1: Setup
 
-**Purpose**: Prepare all static assets, environment config, and database schema before any code is written
+**Purpose**: Re-enable auth, install new dependencies, verify CSS tokens
 
-- [x] T001 Add Kudos CSS tokens to globals.css (`--color-kudos-card-bg`, `--color-kudos-msg-bg`, `--color-kudos-text`, `--color-hashtag`, `--color-timestamp`, `--radius-kudos-card`, `--feed-gap`, `--sidebar-gap`, `--highlight-gap`) | app/globals.css
-- [x] T002 [P] Place Kudos page banner (1440×512px) exported from Figma | public/assets/kudos/keyvisual.jpg
-- [x] T003 [P] Verify `.env.local` contains `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- [x] T004 Write Supabase migration: create `kudos` table (`id`, `senderId`, `recipientId`, `title`, `message`, `hashtags`, `imageUrls text[]`, `heartCount`, `isAnonymous`, `createdAt`); `imageUrls` is non-nullable text array
-- [x] T005 Write Supabase migration: create `likes` table (`kudosId`, `userId`, `heartsGiven`, `createdAt`); add unique constraint on `(kudosId, userId)`
-- [x] T006 [P] Write Supabase RLS policies: `kudos` public SELECT; `kudos` INSERT requires auth; `likes` SELECT own rows only; `likes` INSERT/DELETE requires auth + ownership
-- [x] T007 [P] Install dependencies: `@supabase/ssr`, `@supabase/supabase-js`, `dompurify`, `@types/dompurify`
-
-**Checkpoint**: Assets, env vars, DB schema, and RLS all ready — foundation work can begin
+- [ ] T001 Re-enable `/kudos` auth guard (un-comment block) | `proxy.ts`
+- [ ] T002 Install D3 dependencies: `npm install d3 d3-cloud` | `package.json`
+- [ ] T003 [P] Verify CSS tokens in globals.css match design-style.md (add missing if any) | `app/globals.css`
+- [ ] T004 [P] Add `SpotlightNode` type to kudos types | `types/kudos.ts`
 
 ---
 
-## Phase 1: Foundation — Types, Repository, Service, Contexts, Hooks
+## Phase 2: Foundation (Blocking Prerequisites)
 
-**Purpose**: Core infrastructure required by ALL user stories
+**Purpose**: Supabase repository layer — blocks ALL user stories that need real data
 
-**CRITICAL**: No user story UI work can begin until this phase is complete
+**⚠️ CRITICAL**: No story API wiring can begin until this phase is complete
 
-- [x] T008 Define TypeScript interfaces: `Kudos` (`imageUrls: string[]`, `isAnonymous: boolean`), `Like`, `User`, `KudosLocalState` — fields must match spec Data Requirements exactly | types/kudos.ts
-- [x] T009 Implement Zod schemas for DB response validation (`kudosRowSchema`, `likeRowSchema`, `userRowSchema`) | lib/kudos-repository.ts
-- [x] T010 Implement repository functions: `findKudosFeed`, `findKudosHighlights`, `findSpotlightBoards`, `findKudosStats`, `findTopSunners`, `findHashtags`, `insertLike`, `deleteLike` using Supabase client | lib/kudos-repository.ts
-- [x] T011 Implement service layer: `getKudosFeed`, `getHighlights`, `getSpotlightBoards`, `getStats`, `getTopSunners`, `getHashtags`; anonymous redaction (`senderId`/`senderName`/`senderAvatar` omitted when `isAnonymous=true`); `imageUrls` always returned as `string[]` (never null) | lib/kudos-service.ts
-- [x] T012 Implement like validation in service: auth check, not-own-kudos guard, not-already-liked guard; `unlikeKudos` validation: auth + like exists; hearts-given = 1 normally, 2 on special day | lib/kudos-service.ts
-- [x] T013 [P] Implement `LikeStateContext`: provides `Map<kudosId, KudosLocalState>` (heartCount, likedByMe, isLiking) and dispatch to update individual entries; shared between `HighlightKudos` and `KudosFeed` | components/shared/LikeStateContext.tsx
-- [x] T014 [P] Implement `SpecialDayContext`: provides `isSpecialDay: boolean`; fetched once at page mount via SSR, passed as initial value | components/shared/SpecialDayContext.tsx
-- [x] T015 Implement `useLike` hook: reads/writes `LikeStateContext`; on click — optimistic update Map entry → call `POST /api/kudos/:id/like` or `DELETE /api/kudos/:id/like` → sync confirmed count; rollback Map entry on failure; blocks second click while `isLiking=true`; does nothing when kudos is own | hooks/useLike.ts
-- [x] T016 Implement `useKudosFeed` hook: fetches paginated feed; `loadMore` appends next page; `setInterval(60000)` polling — on poll fetch page 1 and merge with existing list (dedup by `id`, do NOT reset `currentPage`); pause polling on `visibilitychange` hidden; resume on visible; expose `isRefreshing`, `feedError`, `kudosList`, `loadMore`, `setFilterHashtag`, `setFilterDepartment` | hooks/useKudosFeed.ts
-- [x] T017 [P] Add `/kudos` route auth guard to middleware: unauthenticated requests redirect to login path from SCREENFLOW.md | middleware.ts
+- [ ] T005 Implement `findKudosFeed()` Supabase query with pagination + hashtag/department filter | `lib/kudos-repository.ts`
+- [ ] T006 Implement `findKudosHighlights()` — top 5 by heartCount | `lib/kudos-repository.ts`
+- [ ] T007 [P] Implement `findKudosStats()` — totalKudosSent, totalHeartsGiven, totalParticipants | `lib/kudos-repository.ts`
+- [ ] T008 [P] Implement `findTopSunners(limit)` | `lib/kudos-repository.ts`
+- [ ] T009 [P] Implement `findHashtags()` | `lib/kudos-repository.ts`
+- [ ] T010 Implement `insertLike()`, `deleteLike()`, `findUserLike()` | `lib/kudos-repository.ts`
+- [ ] T011 [P] Implement `insertKudos()` | `lib/kudos-repository.ts`
+- [ ] T012 [P] Implement `findSpotlightData()` — recipient names + counts for word cloud | `lib/kudos-repository.ts`
+- [ ] T013 Add `getUserStats(userId)` to service — kudos sent/received, hearts, secret box counts | `lib/kudos-service.ts`
+- [ ] T014 [P] Add `getRecentGifts(limit)` to service — 10 most recent gift recipients | `lib/kudos-service.ts`
+- [ ] T015 Replace mock data imports with real service calls in page route | `app/kudos/page.tsx`
 
-**Checkpoint**: Foundation complete — all user story phases can now begin
-
----
-
-## Phase 2: API Routes
-
-**Purpose**: REST endpoints that serve all user story data; route handlers must be thin (delegate to service layer)
-
-- [x] T018 Implement `GET /api/kudos`: paginated feed; query params `limit`, `page`, `hashtag`, `department`; Zod input validation; delegates to `kudos-service.getKudosFeed`; returns `ApiResponse<Kudos[]>` with `meta` (total, page, limit) | app/api/kudos/route.ts
-- [x] T019 [P] Implement `GET /api/kudos/hashtags`: returns full hashtag list; delegates to `kudos-service.getHashtags`; shared with Viet Kudos modal | app/api/kudos/hashtags/route.ts
-- [x] T020 Implement `POST /api/kudos/[id]/like`: auth required; delegates like validation + hearts-given to `kudos-service.likeKudos`; returns updated `heartCount`; returns 409 if already liked; returns 403 if own kudos | app/api/kudos/[id]/like/route.ts
-- [x] T021 Implement `DELETE /api/kudos/[id]/like`: auth required; delegates to `kudos-service.unlikeKudos`; returns updated `heartCount`; returns 404 if like not found | app/api/kudos/[id]/like/route.ts
-- [x] T022 [P] Implement `GET /api/kudos/highlights`: returns top 5 kudos by `heartCount DESC`; delegates to `kudos-service.getHighlights` | app/api/kudos/highlights/route.ts
-- [x] T023 [P] Implement `GET /api/kudos/spotlight`: returns spotlight boards; delegates to `kudos-service.getSpotlightBoards` | app/api/kudos/spotlight/route.ts
-- [x] T024 [P] Implement `GET /api/kudos/stats`: returns total kudos sent, total hearts given, total participants; delegates to `kudos-service.getStats` | app/api/kudos/stats/route.ts
-- [x] T025 [P] Implement `GET /api/kudos/top-sunners`: returns top 10 recipients by hearts received; delegates to `kudos-service.getTopSunners` | app/api/kudos/top-sunners/route.ts
-- [x] T026 [P] Implement `GET /api/admin/special-days`: returns `{ isSpecialDay: boolean }` for today's date; auth required (admin or service role) | app/api/admin/special-days/route.ts
-
-**Checkpoint**: All API routes implemented and returning correct shapes
+**Checkpoint**: Foundation ready — real data flows through the page
 
 ---
 
-## Phase 3: Core UI — Kudos Feed + Like (US3 + US4)
+## Phase 3: User Story 1 — View Highlight Kudos (P1) 🎯
 
-**Goal**: Paginated Kudos feed with load more, 60s polling, message truncation, image gallery, anonymous display, and optimistic like/unlike
+**Goal**: Highlight carousel shows real top-5 most-liked kudos from Supabase
 
-**Independent Test**: Navigate to `/kudos`; feed renders cards; like button increments count; unlike decrements; own kudos button is disabled
+**Independent Test**: Navigate to `/kudos` → Highlight section shows up to 5 kudos cards from DB → carousel prev/next works → dot/number indicator updates
 
-### Presentational Components (US3)
+- [ ] T016 [US1] Wire `getHighlights()` result into `KudosPage` highlights prop (verify after T015) | `app/kudos/page.tsx`
+- [ ] T017 [US1] Verify `HighlightKudos` carousel renders real data — prev/next cycle through 5 cards | `components/kudos/HighlightKudos.tsx`
+- [ ] T018 [P] [US1] Verify highlight Kudos card renders with `variant="highlight"` styling (528px, 4px gold border, radius 16px) | `components/kudos/KudosCard.tsx`
 
-- [x] T027 [US3] Implement `<KudosMessage />`: wraps message content with `DOMPurify.sanitize` before `dangerouslySetInnerHTML`; no raw HTML ever rendered without sanitization | components/kudos/KudosMessage.tsx
-- [x] T028 [US3] Implement `<HashtagList />`: renders red hashtag chip list; each chip is clickable and calls `onHashtagClick(tag)` callback; active chip highlighted | components/kudos/HashtagList.tsx
-- [x] T029 [US3] Implement `<ImageGallery />`: accepts `imageUrls: string[]`; renders up to 5 thumbnails at 88×88px; renders nothing (no wrapper) when array is empty | components/kudos/ImageGallery.tsx
-- [x] T030 [US3] Implement `<KudosCard />`: cream bg (`var(--color-kudos-card-bg)`); renders sender/recipient names and avatars; when `isAnonymous=true` — derive display object with `senderName='Ẩn danh'` and placeholder avatar (immutable, no mutation of prop); actual `senderId`/`senderName` must NOT appear in DOM; renders `<KudosMessage />`; CSS `line-clamp: 3` truncation with "Xem thêm" toggle that expands to full message in-place; renders `<HashtagList />` with click callback; renders `<ImageGallery imageUrls={kudos.imageUrls} />`; renders `<LikeButton />` and `<CopyLinkButton />` | components/kudos/KudosCard.tsx
-- [x] T031 [P] [US4] Implement `<CopyLinkButton />`: writes `{origin}/kudos#{kudosId}` to clipboard; `aria-label` toggles to confirm after copy; on page load if `window.location.hash` matches kudosId, scrolls card into view | components/kudos/CopyLinkButton.tsx
-
-### Like Button (US4)
-
-- [x] T032 [US4] Implement `<LikeButton />`: uses `useLike` hook; reads heart count and `likedByMe` from `LikeStateContext`; `aria-pressed` reflects `likedByMe`; `aria-live="polite"` on count span; `min-height: 44px` via padding; disabled when `isOwnKudos=true` or `isLiking=true`; shows "x2" badge when `isSpecialDay=true` (from `SpecialDayContext`); heart bounce animation (scale 1→1.3→1, 300ms); respects `prefers-reduced-motion`; formats count via `Intl.NumberFormat('vi-VN')` | components/kudos/LikeButton.tsx
-
-### Feed (US3)
-
-- [x] T033 [US3] Implement `<KudosFeed />`: uses `useKudosFeed` hook; renders list of `<KudosCard />`; "Load more" button appends next page; renders empty state "Be the first to send a Kudos!" with Write Kudos CTA when `kudosList` is empty; shows `isRefreshing` indicator; shows error state with retry when `feedError` is non-null | components/kudos/KudosFeed.tsx
-
-**Checkpoint**: US3 and US4 complete — feed renders, like/unlike works optimistically
+**Checkpoint**: Highlight Kudos shows real data from Supabase ✓
 
 ---
 
-## Phase 4: Highlight Kudos + Spotlight Boards (US1 + US2)
+## Phase 4: User Story 3 — Browse Recent Kudos Feed (P1)
 
-**Goal**: Top-5 liked kudos carousel with shared like state; spotlight boards with 4 UI states
+**Goal**: All Kudos feed shows real paginated data; load-more and 60s polling work
 
-**Independent Test**: Carousel renders top 5; like in feed reflects in carousel; spotlight shows boards or appropriate empty/error/loading state
+**Independent Test**: Scroll "All Kudos" section → cards show real sender/recipient/message → scroll to bottom → "Load more" fetches next page → wait 60s → new kudos appear without reload
 
-### Highlight Kudos (US1)
+- [ ] T019 [US3] Verify `/api/kudos` route handler returns paginated Supabase data | `app/api/kudos/route.ts`
+- [ ] T020 [US3] Test `useKudosFeed` — verify SSR skip works correctly, filter re-fetch calls API | `hooks/useKudosFeed.ts`
+- [ ] T021 [P] [US3] Verify `KudosFeed` pagination ("Load more") against real API | `components/kudos/KudosFeed.tsx`
+- [ ] T022 [P] [US3] Verify 60s polling — tab hidden pauses, tab focus resumes | `hooks/useKudosFeed.ts`
+- [ ] T023 [US3] Verify anonymous kudos: sender name/avatar hidden when `isAnonymous=true` | `components/kudos/KudosCard.tsx`
+- [ ] T024 [P] [US3] Verify long message line-clamp + "Xem thêm" expand | `components/kudos/KudosCard.tsx`
+- [ ] T025 [P] [US3] Verify image gallery renders up to 5 thumbnails; empty array = no gallery | `components/kudos/ImageGallery.tsx`
+- [ ] T026 [US3] Deep-link: `/kudos#{kudosId}` scrolls to correct card on load | `components/kudos/KudosFeed.tsx`
 
-- [x] T034 [US1] Implement `<HighlightKudos />`: carousel of top 5 kudos by heartCount; owns `activeSlide` state; dot indicators; renders `<KudosCard />` inside carousel; `<LikeButton />` inside carousel reads `LikeStateContext` so like count stays in sync with feed; renders empty state "No highlighted Kudos yet" when `highlights.length === 0` (no crash); carousel slide animation disabled when `prefers-reduced-motion` is set | components/kudos/HighlightKudos.tsx
-
-### Spotlight Boards (US2)
-
-- [x] T035 [US2] Implement `<SpotlightBoards />`: manages `isLoadingSpotlight: boolean` and `spotlightError: string | null` local state; four states — loading: skeleton placeholder; error: non-sensitive message + retry button (no stack trace exposed); empty: "No spotlights yet" message (no blank gap in layout); populated: board list; retry handler calls `GET /api/kudos/spotlight` | components/kudos/SpotlightBoards.tsx
-
-### Page Assembly (US1 + US2)
-
-- [x] T036 [US1] [US2] Implement `app/kudos/page.tsx` Server Component: auth check (redirect to login if unauthenticated); fetch `highlights`, first feed page, stats, top-10, and `isSpecialDay` in parallel via `Promise.all`; catch spotlight fetch failure and surface as `spotlightError` prop (do NOT crash page); wrap content in `<SpecialDayContext.Provider>` and `<LikeStateContext.Provider initialState={initialLikeMap}>` | app/kudos/page.tsx
-- [x] T037 [US1] [US2] Implement `<WriteKudosButton />`: Client Component; opens Viet Kudos modal (or renders placeholder button if modal not yet available); accepts `onSuccess` callback to prepend new Kudos to feed | components/kudos/WriteKudosButton.tsx
-- [x] T038 [US1] [US2] Implement `<KudosPage />` Client Component: composes `<HighlightKudos />`, `<SpotlightBoards />`, `<KudosFeed />`, `<StatsPanel />`; receives SSR initial data as props; renders `<WriteKudosButton onSuccess={prependKudos} />`; owns `<SearchSunnerInput />` | components/kudos/KudosPage.tsx
-
-**Checkpoint**: US1 and US2 complete — carousel and spotlight boards render with correct states
+**Checkpoint**: Kudos feed shows real paginated data from Supabase ✓
 
 ---
 
-## Phase 5: Filters + Stats (US5 + US6 + US7)
+## Phase 5: User Story 4 — Like a Kudos (P1)
 
-**Goal**: Hashtag and department filters wire to feed; stats panel with Top 10 Sunners
+**Goal**: Heart button likes/unlikes with optimistic UI; special day doubles hearts; own kudos disabled
 
-**Independent Test**: Click hashtag chip → feed narrows; clear → all kudos return; stats panel shows correct totals and leaderboard
+**Independent Test**: Login as USER_A → find KUDOS_1 (sent by USER_B) → click heart → count +1 → click again → count -1 → find own kudos (KUDOS_2) → heart disabled. On special day: click → count +2.
 
-### Filters (US5 + US6)
+- [ ] T027 [US4] Verify `POST /api/kudos/:id/like` server-side: auth check, not-own-kudos check, no-duplicate check | `app/api/kudos/[id]/route.ts`
+- [ ] T028 [US4] Verify `DELETE /api/kudos/:id/like` server-side: auth check, like exists check | `app/api/kudos/[id]/route.ts`
+- [ ] T029 [US4] Wire `GET /api/admin/special-days` into `app/kudos/page.tsx` → `SpecialDayProvider` | `app/kudos/page.tsx`
+- [ ] T030 [US4] Verify `useLike` optimistic update: count +1 immediately, server confirm | `hooks/useLike.ts`
+- [ ] T031 [US4] Verify `useLike` rollback: count reverts + toast error on API failure | `hooks/useLike.ts`
+- [ ] T032 [P] [US4] Verify `LikeButton` disabled state when `isOwnKudos=true` (opacity 0.4, cursor not-allowed) | `components/kudos/LikeButton.tsx`
+- [ ] T033 [P] [US4] Verify special day visual: "x2" badge shown on LikeButton when `isSpecialDay=true` | `components/kudos/LikeButton.tsx`
+- [ ] T034 [P] [US4] Verify unauthenticated like attempt redirects to `/login` | `app/api/kudos/[id]/route.ts`
+- [ ] T035 [US4] Like in Highlight carousel updates count in both Highlight and Feed via `LikeStateContext` | `components/shared/LikeStateContext.tsx`
 
-- [x] T039 [US5] Implement hashtag filter: clicking a hashtag chip in `<HashtagList />` calls `setFilterHashtag(tag)` from `useKudosFeed`; active chip displayed in filter bar with clear button that calls `setFilterHashtag(null)`; triggers page-1 refetch with `hashtag` param | components/kudos/KudosFeed.tsx
-- [x] T040 [US6] Implement `<SearchSunnerInput />`: renders search bar UI; includes department filter — dropdown or button group; calls `setFilterDepartment(dept)` from `useKudosFeed`; triggers page-1 refetch with `department` param; clear button resets to all kudos | components/kudos/SearchSunnerInput.tsx
-- [x] T041 [US5] [US6] Connect both hashtag and department filters to `useKudosFeed`: when either filter changes reset to page 1 and refetch; preserve other filter when one changes | hooks/useKudosFeed.ts
-
-### Stats (US7)
-
-- [x] T042 [US7] Implement `<StatsPanel />`: displays total kudos sent, total hearts given, total participants using data from `GET /api/kudos/stats`; renders Top 10 Sunners leaderboard using data from `GET /api/kudos/top-sunners`; formats numbers with `Intl.NumberFormat('vi-VN')` | components/kudos/StatsPanel.tsx
-
-**Checkpoint**: US5, US6, and US7 complete — filters and stats sidebar fully functional
+**Checkpoint**: Like/unlike works end-to-end with optimistic UI ✓
 
 ---
 
-## Phase 6: Polish and Cross-Cutting Concerns
+## Phase 6: User Story 2 — Spotlight Board Word Cloud (P1)
 
-**Purpose**: Responsive layout, accessibility, animations, toast notifications, and final wiring
+**Goal**: D3 word cloud renders recipient names; hover tooltip; click opens kudos detail; pan/zoom toggle; search filters
 
-- [x] T043 [P] Responsive layout: sidebar (`<StatsPanel />`) moves below feed on tablet (768px) and mobile (320px); feed and sidebar stack vertically; verify at 320/768/1280 breakpoints | components/kudos/KudosPage.tsx
-- [x] T044 [P] Toast notifications: show error toast on like failure (after rollback); show success toast on copy link; use project toast utility (or implement minimal toast) | components/kudos/LikeButton.tsx
-- [x] T045 [P] Deep-link scroll: on page load, if `window.location.hash` matches a Kudos `id`, scroll that card into view via `scrollIntoView({ behavior: 'smooth' })` after feed renders | components/kudos/KudosFeed.tsx
-- [x] T046 [P] `isSpecialDay` visual: render "x2" badge on `<LikeButton />` when `isSpecialDay=true`; badge must be visible and accessible (`aria-label` includes "x2 hearts") | components/kudos/LikeButton.tsx
-- [x] T047 [P] Verify all `href` navigation values (login redirect, etc.) are sourced from `.momorph/contexts/SCREENFLOW.md` — no hardcoded paths | middleware.ts
-- [x] T048 [P] Confirm Viet Kudos modal `onSuccess` callback wires into `<KudosFeed />` to prepend newly submitted Kudos to list | components/kudos/WriteKudosButton.tsx
+**Independent Test**: Scroll to Spotlight Board → word cloud renders → hover a name → tooltip shows name + time → click → navigate to kudos detail → click B7.2 → pan/zoom toggles → type in B7.3 search → matching nodes highlighted
 
-**Checkpoint**: All user stories polished — responsive, accessible, toasts, deep-link, special-day badge
+- [ ] T036 [US2] Create `hooks/useSpotlight.ts` — fetch `/api/kudos/spotlight`, loading/error state | `hooks/useSpotlight.ts`
+- [ ] T037 [US2] Implement `/api/kudos/spotlight` route using `findSpotlightData()` | `app/api/kudos/spotlight/route.ts`
+- [ ] T038 [US2] Create `components/kudos/SpotlightBoard.tsx` — D3 word cloud layout via `d3-cloud` | `components/kudos/SpotlightBoard.tsx`
+- [ ] T039 [US2] Add `d3-zoom` pan/zoom to SpotlightBoard canvas | `components/kudos/SpotlightBoard.tsx`
+- [ ] T040 [US2] Add hover tooltip overlay (name + latest kudos time) | `components/kudos/SpotlightBoard.tsx`
+- [ ] T041 [US2] Add click handler → navigate to kudos detail (pending Q5 — stub href for now) | `components/kudos/SpotlightBoard.tsx`
+- [ ] T042 [P] [US2] Add B7.2 pan/zoom toggle button with `aria-pressed` | `components/kudos/SpotlightBoard.tsx`
+- [ ] T043 [P] [US2] Add B7.3 search input — filter/highlight matching nodes; dim non-matching | `components/kudos/SpotlightBoard.tsx`
+- [ ] T044 [US2] Add empty ("Chưa có dữ liệu") and loading skeleton states | `components/kudos/SpotlightBoard.tsx`
+- [ ] T045 [US2] Replace stub `SpotlightBoards.tsx` with real `SpotlightBoard` component | `components/kudos/SpotlightBoards.tsx`
+- [ ] T046 [P] [US2] Cleanup: `useEffect` removes all D3 event listeners on unmount | `components/kudos/SpotlightBoard.tsx`
+
+**Checkpoint**: Spotlight Board word cloud renders with D3, pan/zoom, tooltip, search ✓
+
+---
+
+## Phase 7: User Story 5 — Filter Kudos (P2)
+
+**Goal**: Hashtag + Phòng ban dropdowns filter both Highlight carousel and All Kudos feed simultaneously
+
+**Independent Test**: Click "Hashtag" filter → select "#teamwork" → feed shows only matching kudos → Highlight section also filters → pagination resets to 1 → clear filter → all kudos return
+
+- [ ] T047 [US5] Build `FilterDropdown` component reusable for Hashtag + Phòng ban | `components/kudos/FilterDropdown.tsx`
+- [ ] T048 [US5] Wire Hashtag filter dropdown to `/api/kudos/hashtags` for dynamic options | `components/kudos/KudosPage.tsx`
+- [ ] T049 [US5] Wire Phòng ban dropdown options (CEVC1–4, OPD, Infra) | `components/kudos/KudosPage.tsx`
+- [ ] T050 [US5] Lift filter state to `KudosPage` — pass `filterHashtag` + `filterDepartment` to both `HighlightKudos` and `KudosFeed` | `components/kudos/KudosPage.tsx`
+- [ ] T051 [US5] Reset pagination to page 1 on filter change in `useKudosFeed` | `hooks/useKudosFeed.ts`
+- [ ] T052 [P] [US5] Sync filter state to URL params (`?hashtag=X&department=Y`) on change | `components/kudos/KudosPage.tsx`
+- [ ] T053 [P] [US5] Read filter URL params on mount and set `filterSynced=true` | `hooks/useKudosFeed.ts`
+
+**Checkpoint**: Hashtag and department filters update feed + highlights simultaneously ✓
+
+---
+
+## Phase 8: User Story 6 — View Statistics (P2)
+
+**Goal**: Sidebar stats panel shows real total counts from Supabase
+
+**Independent Test**: Navigate to `/kudos` → right sidebar shows accurate totalKudosSent, totalHeartsGiven, totalParticipants from DB
+
+- [ ] T054 [US6] Verify `/api/kudos/stats` returns real Supabase aggregates | `app/api/kudos/stats/route.ts`
+- [ ] T055 [P] [US6] Wire `KudosPage` to pass real `stats` to `StatsPanel` (already in page.tsx — verify after T015) | `app/kudos/page.tsx`
+
+**Checkpoint**: Sidebar stats show real DB totals ✓
+
+---
+
+## Phase 9: User Story 7b — Open Secret Box (P2)
+
+**Goal**: "Mở quà" button opens Secret Box dialog; after opening, unopened count decreases
+
+**Independent Test**: Have ≥1 unopened box → "Mở quà" button enabled → click → dialog opens → open box → count decreases → if 0 boxes → button disabled
+
+- [ ] T056 [US7b] Create `/api/secret-boxes/route.ts` — `POST /open` opens one secret box | `app/api/secret-boxes/route.ts`
+- [ ] T057 [US7b] Wire user stats panel: fetch `/api/kudos/user-stats` for authenticated user | `app/kudos/page.tsx`
+- [ ] T058 [US7b] Add `app/api/kudos/user-stats/route.ts` route handler | `app/api/kudos/user-stats/route.ts`
+- [ ] T059 [US7b] Create `components/kudos/SecretBoxDialog.tsx` (frame `1466:7676`) | `components/kudos/SecretBoxDialog.tsx`
+- [ ] T060 [US7b] Wire "Mở quà" button → open `SecretBoxDialog` → on success: decrement `secretBoxesUnopened` count | `components/kudos/StatsPanel.tsx`
+
+**Checkpoint**: Secret Box flow works end-to-end ✓
+
+---
+
+## Phase 10: User Story 7 — View Top 10 Sunners / Recent Gift Recipients (P2)
+
+**Goal**: C3 list shows 10 most recent Secret Box gift recipients with name + gift description
+
+**Independent Test**: View right sidebar → list shows up to 10 names each with gift description → empty state if no gifts yet
+
+- [ ] T061 [US7] Add `/api/kudos/recent-gifts/route.ts` route handler | `app/api/kudos/recent-gifts/route.ts`
+- [ ] T062 [P] [US7] Wire `KudosPage` to fetch recent gifts and pass to `StatsPanel` | `app/kudos/page.tsx`
+- [ ] T063 [P] [US7] Verify C3 list renders gift descriptions; "Chưa có dữ liệu" when empty | `components/kudos/StatsPanel.tsx`
+
+**Checkpoint**: Recent gift recipients list shows real data ✓
+
+---
+
+## Phase 11: User Story 3 (cont.) — Write + Prepend Kudos
+
+**Goal**: Viet Kudos modal submits real kudos; new kudos prepends to feed
+
+**Independent Test**: Login → click Write Kudos button → modal opens → fill form → submit → new kudos appears at top of feed without page reload
+
+- [ ] T064 [US3] Verify `WriteKudosModal` POST to `/api/kudos` with auth | `app/api/kudos/route.ts`
+- [ ] T065 [US3] Verify `handleKudosSuccess` prepends new kudos via `prependFnRef` | `components/kudos/KudosPage.tsx`
+- [ ] T066 [P] [US3] Verify CopyLink copies `{origin}/kudos#{kudosId}` to clipboard | `components/kudos/CopyLinkButton.tsx`
+
+**Checkpoint**: Write kudos flow works end-to-end ✓
+
+---
+
+## Phase 12: Polish & Cross-Cutting Concerns
+
+**Purpose**: Accessibility, security hardening, tests, performance
+
+- [ ] T067 [P] Accessibility audit: verify all ARIA labels from spec (heart `aria-pressed`, carousel `aria-label`, filter `aria-haspopup`) | `components/kudos/`
+- [ ] T068 [P] Security review: verify RLS policies on `kudos` + `likes` tables; own-kudos server check | `lib/kudos-repository.ts`
+- [ ] T069 Write unit tests for `useLike` hook — optimistic update + rollback scenarios | `hooks/useLike.ts`
+- [ ] T070 [P] Write unit tests for `useKudosFeed` — SSR skip, filter change, pagination | `hooks/useKudosFeed.ts`
+- [ ] T071 [P] Write unit tests for `KudosCard` — anonymous, long message, image gallery | `components/kudos/KudosCard.tsx`
+- [ ] T072 Write integration test: like/unlike with real Supabase (USER_A likes KUDOS_1) | `tests/integration/kudos-like.spec.ts`
+- [ ] T073 [P] Write E2E Playwright: like flow, write kudos flow, filter flow | `tests/e2e/kudos.spec.ts`
+- [ ] T074 Performance: cap SpotlightBoard max rendered nodes; add min font-size threshold | `components/kudos/SpotlightBoard.tsx`
+- [ ] T075 [P] Error states: feed fetch fail → retry button; like fail → toast; polling fail → silent | `components/kudos/KudosFeed.tsx`
+- [ ] T076 Code cleanup: remove `data/kudos-mock.ts` and all mock imports | `data/kudos-mock.ts`
 
 ---
 
@@ -161,64 +223,75 @@
 
 ### Phase Dependencies
 
-- **Phase 0 (Asset Prep)**: No dependencies — start immediately
-- **Phase 1 (Foundation)**: Depends on Phase 0 (env vars, DB tables, CSS tokens) — BLOCKS all phases
-- **Phase 2 (API Routes)**: Depends on Phase 1 (types, repository, service) — BLOCKS UI phases
-- **Phase 3 (Feed + Like)**: Depends on Phase 2 (API routes) and Phase 1 (hooks, contexts)
-- **Phase 4 (Highlight + Spotlight)**: Depends on Phase 3 (`<KudosCard />`, `<LikeButton />`, `LikeStateContext`)
-- **Phase 5 (Filters + Stats)**: Depends on Phase 3 (`useKudosFeed`) and Phase 4 (`<KudosPage />`)
-- **Phase 6 (Polish)**: Depends on all prior phases complete
+```
+Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Phase 12 (Polish)
+```
 
-### Within Each Phase
+- **Phase 1**: No dependencies — start immediately
+- **Phase 2**: Depends on Phase 1 — BLOCKS all API-wired stories
+- **Phases 3–5** (US1, US3, US4): Depend on Phase 2; can run in parallel after T015
+- **Phase 6** (US2 Spotlight): Depends on T036–T037; D3 work is independent of feed
+- **Phases 7–11** (P2 stories): Depend on Phase 2; can start after foundation
+- **Phase 12**: Depends on all desired stories being complete
 
-- Types before repository schemas
-- Repository before service layer
-- Service layer before API routes
-- API routes before UI components
-- Contexts before hooks that read them
-- Hooks before components that use them
-- `<KudosCard />` + `<LikeButton />` before `<KudosFeed />` and `<HighlightKudos />`
-- `<KudosFeed />` before filter wiring
+### Parallel Opportunities Per Phase
 
-### Parallel Opportunities (within phases)
-
-- T004 + T005 + T006 + T007 (Phase 0 migrations and installs)
-- T013 + T014 (LikeStateContext and SpecialDayContext are independent)
-- T018–T026 (all API routes are independent once service is ready)
-- T027 + T028 + T029 (KudosMessage, HashtagList, ImageGallery are independent leaf components)
-- T031 (CopyLinkButton) parallel with T030 (KudosCard)
-- T022–T026 (highlight, spotlight, stats, top-sunners, special-days routes)
-- T043–T048 (all polish tasks target different concerns)
+| Phase | Parallelizable Tasks |
+|-------|---------------------|
+| Phase 2 | T007, T008, T009, T010, T011, T012 in parallel after T005–T006 |
+| Phase 3 | T017, T018 in parallel |
+| Phase 4 | T021, T022, T024, T025, T026 in parallel after T019–T020 |
+| Phase 5 | T030, T032, T033, T034 in parallel after T027–T029 |
+| Phase 6 | T038–T046 after T036–T037; T042, T043, T046 in parallel |
+| Phase 12 | T067–T071, T074, T075 all in parallel |
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (Recommended)
+### MVP Scope (P1 only — Phases 1–6)
 
-1. Complete Phase 0 + 1 + 2
-2. Complete Phase 3 (US3 + US4 — Feed + Like)
-3. **STOP and VALIDATE**: feed renders, like works optimistically
-4. Complete Phase 4 (US1 + US2 — Highlight + Spotlight)
-5. Complete Phase 5 (US5 + US6 + US7 — Filters + Stats)
-6. Complete Phase 6 (Polish)
+1. Complete Phase 1 + 2 (auth + repository)
+2. Complete Phase 3 (Highlight Kudos with real data)
+3. Complete Phase 4 (Kudos Feed with pagination + polling)
+4. Complete Phase 5 (Like/Unlike end-to-end)
+5. Complete Phase 6 (Spotlight Board D3)
+6. **STOP and VALIDATE**: all P1 stories working
 
-### Key Invariants to Enforce Throughout
+### Full Delivery (add P2 — Phases 7–11)
 
-- Route handlers in `route.ts` MUST delegate to `kudos-service.ts` — never call Supabase directly from routes
-- `imageUrls` is always `string[]`, never `string | null`; `<ImageGallery />` renders nothing on empty array
-- Anonymous kudos: derive immutable display object; actual sender data must not appear in DOM
-- DOMPurify is mandatory in `<KudosMessage />` — no exceptions
-- `LikeStateContext` is the single source of truth for heart state across `<HighlightKudos />` and `<KudosFeed />`
-- 60s polling uses `setInterval`, NOT Supabase Realtime; polling pauses on `visibilitychange` hidden
-- Heart count formatted with `Intl.NumberFormat('vi-VN')`
+7. Phases 7–11 in priority order
+8. Phase 12 (polish + tests)
+
+---
+
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Total tasks | 76 |
+| Phase 1 Setup | 4 |
+| Phase 2 Foundation | 11 |
+| US1 Highlight | 3 |
+| US3 Feed + Write | 11 |
+| US4 Like | 9 |
+| US2 Spotlight | 11 |
+| US5 Filter | 7 |
+| US6 Stats | 2 |
+| US7b Secret Box | 5 |
+| US7 Recent Gifts | 3 |
+| Polish | 10 |
+| Parallel tasks | ~35 |
+
+**MVP (P1 only)**: T001–T046 (46 tasks)
+**Full delivery**: T001–T076 (76 tasks)
 
 ---
 
 ## Notes
 
-- Mark tasks complete as you go: `[x]`
-- Commit after each phase checkpoint
-- If Viet Kudos modal is not yet available, `<WriteKudosButton />` renders a placeholder; wire modal in Phase 6
-- Spotlight fetch failure on SSR must be caught and surfaced as `spotlightError` prop — the page must NOT crash
-- All navigation paths (login redirect) must come from `.momorph/contexts/SCREENFLOW.md`
+- Resolve open questions Q1–Q5 (in plan.md) before starting Phase 6 (Spotlight click) and Phase 9 (SecretBox)
+- Profile page route (Q2) needed for Spotlight Board click nav — stub href until confirmed
+- `data/kudos-mock.ts` removed in T076 (Polish phase) — do NOT remove earlier
+- Run `npm run build` after T002 (D3 install) to verify no type errors
+- Mark tasks `[x]` as you complete them

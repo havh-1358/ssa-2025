@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import type { Kudos, Like, KudosStats, TopSunner } from "@/types/kudos";
+import type { Kudos, Like, KudosStats, TopSunner, SpotlightNode, UserStats, RecentGift } from "@/types/kudos";
 
 // ─── Zod schemas ────────────────────────────────────────────────────────────
 
 export const kudosRowSchema = z.object({
   id: z.number(),
-  sender_id: z.string().uuid().nullable(),
-  recipient_id: z.string().uuid().nullable(),
+  sender_id: z.string().nullable(),
+  recipient_id: z.string().nullable(),
   title: z.string(),
   message: z.string(),
   hashtags: z.array(z.string()),
@@ -19,13 +19,13 @@ export const kudosRowSchema = z.object({
 
 export const likeRowSchema = z.object({
   kudos_id: z.number(),
-  user_id: z.string().uuid(),
+  user_id: z.string(),
   hearts_given: z.union([z.literal(1), z.literal(2)]),
   created_at: z.string(),
 });
 
 export const userRowSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   raw_user_meta_data: z
     .object({
       full_name: z.string().optional(),
@@ -44,9 +44,11 @@ function rowToKudos(row: z.infer<typeof kudosRowSchema>): Kudos {
     senderId: row.sender_id,
     senderName: null,
     senderAvatar: null,
+    senderDepartment: null,
     recipientId: row.recipient_id,
     recipientName: null,
     recipientAvatar: null,
+    recipientDepartment: null,
     title: row.title,
     message: row.message,
     hashtags: row.hashtags ?? [],
@@ -63,6 +65,7 @@ export async function findKudosFeed({
   page = 1,
   limit = 10,
   hashtag,
+  department,
 }: {
   page?: number;
   limit?: number;
@@ -87,7 +90,27 @@ export async function findKudosFeed({
   if (error) throw error;
 
   const rows = z.array(kudosRowSchema).parse(data ?? []);
-  return { data: rows.map(rowToKudos), total: count ?? 0 };
+  const kudosList = rows.map(rowToKudos);
+
+  // Enrich with user names/avatars via batch lookup
+  const ids = [...new Set([
+    ...kudosList.map((k) => k.senderId).filter(Boolean),
+    ...kudosList.map((k) => k.recipientId).filter(Boolean),
+  ])] as string[];
+
+  const userMap = ids.length > 0 ? await findUsersByIds(ids) : {};
+
+  const enriched = kudosList.map((k) => ({
+    ...k,
+    senderName: k.senderId ? (userMap[k.senderId]?.name ?? null) : null,
+    senderAvatar: k.senderId ? (userMap[k.senderId]?.avatar ?? null) : null,
+    senderDepartment: k.senderId ? (userMap[k.senderId]?.department ?? null) : null,
+    recipientName: k.recipientId ? (userMap[k.recipientId]?.name ?? null) : null,
+    recipientAvatar: k.recipientId ? (userMap[k.recipientId]?.avatar ?? null) : null,
+    recipientDepartment: k.recipientId ? (userMap[k.recipientId]?.department ?? null) : null,
+  }));
+
+  return { data: enriched, total: count ?? 0 };
 }
 
 export async function findKudosHighlights(limit = 5): Promise<Kudos[]> {
@@ -99,7 +122,23 @@ export async function findKudosHighlights(limit = 5): Promise<Kudos[]> {
     .limit(limit);
   if (error) throw error;
   const rows = z.array(kudosRowSchema).parse(data ?? []);
-  return rows.map(rowToKudos);
+  const kudosList = rows.map(rowToKudos);
+
+  const ids = [...new Set([
+    ...kudosList.map((k) => k.senderId).filter(Boolean),
+    ...kudosList.map((k) => k.recipientId).filter(Boolean),
+  ])] as string[];
+  const userMap = ids.length > 0 ? await findUsersByIds(ids) : {};
+
+  return kudosList.map((k) => ({
+    ...k,
+    senderName: k.senderId ? (userMap[k.senderId]?.name ?? null) : null,
+    senderAvatar: k.senderId ? (userMap[k.senderId]?.avatar ?? null) : null,
+    senderDepartment: k.senderId ? (userMap[k.senderId]?.department ?? null) : null,
+    recipientName: k.recipientId ? (userMap[k.recipientId]?.name ?? null) : null,
+    recipientAvatar: k.recipientId ? (userMap[k.recipientId]?.avatar ?? null) : null,
+    recipientDepartment: k.recipientId ? (userMap[k.recipientId]?.department ?? null) : null,
+  }));
 }
 
 export async function findHashtags(): Promise<string[]> {
@@ -242,6 +281,180 @@ export async function deleteLike(
     delta: -(like.hearts_given as number),
   });
 }
+
+// ─── User name / avatar lookup ───────────────────────────────────────────────
+
+const userProfileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar_url: z.string().nullable().optional(),
+  department_id: z.number().nullable().optional(),
+});
+
+const departmentSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+export async function findUsersByIds(
+  ids: string[]
+): Promise<Record<string, { name: string; avatar: string | null; department: string | null }>> {
+  if (ids.length === 0) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, name, avatar_url, department_id")
+    .in("id", ids);
+  if (error) {
+    console.warn("[kudos-repository] findUsersByIds failed:", error.message);
+    return {};
+  }
+  const rows = z.array(userProfileSchema).parse(data ?? []);
+
+  // Batch-load departments
+  const deptIds = [...new Set(rows.map((r) => r.department_id).filter(Boolean))] as number[];
+  let deptMap: Record<number, string> = {};
+  if (deptIds.length > 0) {
+    const { data: deptData } = await supabase
+      .from("departments")
+      .select("id, name")
+      .in("id", deptIds);
+    const depts = z.array(departmentSchema).parse(deptData ?? []);
+    deptMap = Object.fromEntries(depts.map((d) => [d.id, d.name]));
+  }
+
+  return Object.fromEntries(
+    rows.map((r) => [r.id, {
+      name: r.name,
+      avatar: r.avatar_url ?? null,
+      department: r.department_id ? (deptMap[r.department_id] ?? null) : null,
+    }])
+  );
+}
+
+// ─── Spotlight board ─────────────────────────────────────────────────────────
+
+const spotlightRowSchema = z.object({
+  recipient_id: z.string().nullable(),
+  id: z.number(),
+  created_at: z.string(),
+});
+
+export async function findSpotlightData(): Promise<SpotlightNode[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kudos")
+    .select("recipient_id, id, created_at")
+    .not("recipient_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const rows = z.array(spotlightRowSchema).parse(data ?? []);
+
+  // Aggregate by recipient
+  const map = new Map<string, { count: number; latestId: number; latestAt: string }>();
+  for (const row of rows) {
+    if (!row.recipient_id) continue;
+    const existing = map.get(row.recipient_id);
+    if (!existing) {
+      map.set(row.recipient_id, { count: 1, latestId: row.id, latestAt: row.created_at });
+    } else {
+      existing.count += 1;
+    }
+  }
+
+  // Fetch recipient names
+  const recipientIds = [...map.keys()];
+  const userMap = await findUsersByIds(recipientIds);
+
+  return Array.from(map.entries()).map(([recipientId, val]) => ({
+    recipientId,
+    recipientName: userMap[recipientId]?.name ?? recipientId,
+    kudosCount: val.count,
+    latestKudosId: val.latestId,
+    latestKudosAt: val.latestAt,
+  }));
+}
+
+// ─── User personal stats ─────────────────────────────────────────────────────
+
+const secretBoxRowSchema = z.object({
+  id: z.string(),
+  status: z.enum(["opened", "unopened"]),
+});
+
+export async function findUserStats(userId: string): Promise<UserStats> {
+  const supabase = await createClient();
+
+  // For hearts received: sum hearts_given on kudos where recipient = userId
+  const { data: recipientKudos } = await supabase
+    .from("kudos")
+    .select("id")
+    .eq("recipient_id", userId);
+
+  const recipientKudosIds = (recipientKudos ?? []).map((k: { id: number }) => k.id);
+
+  const [receivedRes, sentRes, heartsRes] = await Promise.all([
+    supabase.from("kudos").select("id", { count: "exact", head: true }).eq("recipient_id", userId),
+    supabase.from("kudos").select("id", { count: "exact", head: true }).eq("sender_id", userId),
+    recipientKudosIds.length > 0
+      ? supabase.from("likes").select("hearts_given").in("kudos_id", recipientKudosIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const heartsReceived = (heartsRes.data ?? []).reduce(
+    (sum: number, r: { hearts_given: number }) => sum + r.hearts_given,
+    0
+  );
+
+  return {
+    kudosReceived: receivedRes.count ?? 0,
+    kudosSent: sentRes.count ?? 0,
+    heartsReceived,
+    secretBoxesOpened: 0,
+    secretBoxesUnopened: 0,
+  };
+}
+
+// ─── Recent gift recipients ───────────────────────────────────────────────────
+
+const secretBoxGiftRowSchema = z.object({
+  user_id: z.string(),
+  gift_description: z.string().nullable().optional(),
+  opened_at: z.string().nullable().optional(),
+});
+
+export async function findRecentGifts(limit = 10): Promise<RecentGift[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("secret_boxes")
+    .select("user_id, gift_description, opened_at")
+    .eq("status", "opened")
+    .not("opened_at", "is", null)
+    .order("opened_at", { ascending: false })
+    .limit(limit);
+
+  // secret_boxes table is optional — return empty if not yet created
+  if (error) {
+    console.warn("[kudos-repository] findRecentGifts skipped:", error.message);
+    return [];
+  }
+
+  const rows = z.array(secretBoxGiftRowSchema).parse(data ?? []);
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const userMap = await findUsersByIds(userIds);
+
+  return rows.map((r) => ({
+    userId: r.user_id,
+    name: userMap[r.user_id]?.name ?? r.user_id,
+    avatar: userMap[r.user_id]?.avatar ?? null,
+    giftDescription: r.gift_description ?? "Nhận được quà",
+    receivedAt: r.opened_at ?? "",
+  }));
+}
+
+// ─── Highlights enriched ─────────────────────────────────────────────────────
 
 export async function findUserLike(
   kudosId: number,

@@ -4,12 +4,15 @@ import {
   findHashtags,
   findKudosStats,
   findTopSunners,
+  findSpotlightData,
+  findUserStats,
+  findRecentGifts,
   insertLike,
   deleteLike,
   findUserLike,
   insertKudos,
 } from "./kudos-repository";
-import type { Kudos, KudosFeedMeta, KudosStats, TopSunner } from "@/types/kudos";
+import type { Kudos, KudosFeedMeta, KudosStats, TopSunner, SpotlightNode, UserStats, RecentGift } from "@/types/kudos";
 
 const ANONYMOUS_DISPLAY = {
   senderName: "Ẩn danh",
@@ -81,6 +84,18 @@ export async function likeKudos(
   const { data } = await findKudosFeed({ page: 1, limit: 1 });
   const updated = data.find((k) => k.id === kudosId);
   return { heartCount: updated?.heartCount ?? 0 };
+}
+
+export async function getSpotlightData(): Promise<SpotlightNode[]> {
+  return findSpotlightData();
+}
+
+export async function getUserStats(userId: string): Promise<UserStats> {
+  return findUserStats(userId);
+}
+
+export async function getRecentGiftRecipients(limit = 10): Promise<RecentGift[]> {
+  return findRecentGifts(limit);
 }
 
 export async function unlikeKudos(

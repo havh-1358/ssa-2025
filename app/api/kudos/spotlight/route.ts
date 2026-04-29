@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
+import { getSpotlightData } from "@/lib/kudos-service";
 
-// Spotlight boards are a future feature — returns empty array until implemented
 export async function GET() {
-  return NextResponse.json({ success: true, data: [] });
+  try {
+    const data = await getSpotlightData();
+    return NextResponse.json({ success: true, data });
+  } catch {
+    return NextResponse.json({ success: false, error: "Failed to fetch spotlight data" }, { status: 500 });
+  }
 }

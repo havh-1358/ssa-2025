@@ -8,6 +8,8 @@ const POLL_INTERVAL_MS = 60_000;
 
 export function useKudosFeed(initialKudos: Kudos[] = []) {
   const [kudosList, setKudosList] = useState<Kudos[]>(initialKudos);
+  // Skip the first filter-change fetch when SSR already provided data
+  const isFirstFilterRun = useRef(initialKudos.length > 0);
   // Track current page via ref — avoids synchronous setState in filter-change effect
   const currentPageRef = useRef(1);
   const [total, setTotal] = useState(0);
@@ -95,8 +97,12 @@ export function useKudosFeed(initialKudos: Kudos[] = []) {
     };
   }, [pollFeed]);
 
-  // Re-fetch page 1 when filters change — use ref mutation instead of setState
+  // Re-fetch page 1 when filters change — skip first run if SSR data was provided
   useEffect(() => {
+    if (isFirstFilterRun.current) {
+      isFirstFilterRun.current = false;
+      return;
+    }
     currentPageRef.current = 1;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchPage(1, true);

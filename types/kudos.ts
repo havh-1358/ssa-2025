@@ -3,9 +3,11 @@ export interface Kudos {
   senderId: string | null;
   senderName: string | null;
   senderAvatar: string | null;
+  senderDepartment: string | null;
   recipientId: string | null;
   recipientName: string | null;
   recipientAvatar: string | null;
+  recipientDepartment: string | null;
   title: string;
   message: string;
   hashtags: string[];
@@ -53,4 +55,28 @@ export interface TopSunner {
   avatar: string | null;
   heartsReceived: number;
   rank: number;
+}
+
+export interface SpotlightNode {
+  recipientId: string;
+  recipientName: string;
+  kudosCount: number;
+  latestKudosId: number;
+  latestKudosAt: string;
+}
+
+export interface UserStats {
+  kudosReceived: number;
+  kudosSent: number;
+  heartsReceived: number;
+  secretBoxesOpened: number;
+  secretBoxesUnopened: number;
+}
+
+export interface RecentGift {
+  userId: string;
+  name: string;
+  avatar: string | null;
+  giftDescription: string;
+  receivedAt: string;
 }

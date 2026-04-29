@@ -50,32 +50,47 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 
 ---
 
-### US2: View Spotlight Boards [P1]
+### US2: View Spotlight Board (Word Cloud) [P1]
 
 **As a** SSA 2025 participant  
-**I want to** see the Spotlight Boards section  
-**So that** I can discover featured recognitions organized by board
+**I want to** see the Spotlight Board word cloud showing Kudos recipients  
+**So that** I can visually discover who has received the most recognition
 
-**Why this priority**: Second engagement section; showcases curated content.
+**Why this priority**: Visually distinctive feature; showcases community recognition at a glance.
 
-**Independent Test**: Scroll to Spotlight section on `/kudos` → verify spotlight boards render with board name and associated Kudos.
+**Independent Test**: Scroll to Spotlight Board on `/kudos` → verify word cloud renders with recipient names → hover on a name → tooltip shows name + time → click a name → kudos detail opens → pan/zoom button toggles interaction mode.
 
 #### Acceptance Scenarios
 
-**Scenario 1: Spotlight Boards render**
-- Given: spotlight boards exist
-- When: user scrolls to the Spotlight section
-- Then: boards render with titles and featured Kudos content
+**Scenario 1: Spotlight Board renders with total count**
+- Given: Kudos exist in the system
+- When: user scrolls to the Spotlight Board section
+- Then: word cloud canvas renders; "388 KUDOS" (dynamic count from DB) displayed in header; recipient names visible as nodes
 
-**Scenario 2: No spotlight boards available (empty state)**
-- Given: no spotlight boards have been configured by admin
-- When: user scrolls to the Spotlight section
-- Then: an empty state message is shown (e.g., "No spotlights yet"); the section MUST NOT crash or leave a blank gap with no context
+**Scenario 2: Hover shows tooltip**
+- Given: Spotlight Board is visible
+- When: user hovers over a recipient name node
+- Then: tooltip appears with recipient name and time of latest kudos received
 
-**Scenario 3: Spotlight data fails to load (error state)**
-- Given: the API call to fetch spotlight boards fails (network error or server error)
-- When: user scrolls to the Spotlight section
-- Then: a non-sensitive error message is displayed; a retry option SHOULD be available; no raw error or stack trace is exposed to the user
+**Scenario 3: Click node opens kudos detail**
+- Given: Spotlight Board is visible
+- When: user clicks a name node
+- Then: navigates to kudos detail page for the corresponding kudos
+
+**Scenario 4: Pan/Zoom toggle**
+- Given: Spotlight Board is visible
+- When: user clicks the Pan/Zoom button (B7.2)
+- Then: canvas mode toggles between pan and zoom; mouse drag behavior changes accordingly
+
+**Scenario 5: Search filters word cloud**
+- Given: Spotlight Board is visible
+- When: user types a sunner name in the search field (B7.3, max 100 chars)
+- Then: matching nodes are highlighted in the word cloud; non-matching nodes are dimmed
+
+**Scenario 6: Empty state**
+- Given: no Kudos exist
+- When: user scrolls to Spotlight Board
+- Then: "Chưa có dữ liệu" message displayed; section does not crash
 
 ---
 
@@ -225,20 +240,56 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 
 ---
 
-### US7: View Top 10 Sunners [P2]
+### US7b: Open Secret Box [P2]
 
 **As a** SSA 2025 participant  
-**I want to** see who are the top 10 Kudos recipients  
-**So that** I know who is getting the most recognition
+**I want to** open my Secret Boxes from the sidebar  
+**So that** I can unlock my reward for sending Kudos
 
-**Independent Test**: View right sidebar → verify "Top 10 sunners" list shows 10 names with their gift/Kudos counts.
+**Why this priority**: Gamification mechanic — each 6 kudos sent unlocks a secret box.
+
+**Independent Test**: View sidebar stats → "Số Secret Box chưa mở" > 0 → click "Mở quà" → Secret Box dialog opens (frame `1466:7676`) → after opening, unopened count decreases.
 
 #### Acceptance Scenarios
 
-**Scenario 1: Top 10 list renders**
-- Given: at least 10 users have received Kudos
+**Scenario 1: Open Secret Box**
+- Given: user has ≥ 1 unopened secret box (`Số Secret Box chưa mở > 0`)
+- When: user clicks "Mở quà"
+- Then: dialog `1466:7676` opens; user can open their secret box
+
+**Scenario 2: No unopened boxes**
+- Given: all secret boxes are opened (`Số Secret Box chưa mở = 0`)
+- When: user views sidebar
+- Then: "Mở quà" button is disabled
+
+---
+
+### US7: View Top 10 Sunners — Latest Gift Recipients [P2]
+
+**As a** SSA 2025 participant  
+**I want to** see the 10 most recent Sunners who received a Secret Box gift  
+**So that** I can discover who has been recently rewarded
+
+> ⚠️ **Note for clarification**: The Figma design title is "10 SUNNER NHẬN QUÀ MỚI NHẤT" ("10 most recent gift receivers"), and each entry shows the gift received (e.g., "Nhận được 1 áo phông SAA"). This is about **Secret Box gift recipients ordered by recency**, NOT the top kudos recipients by count. See open question Q1.
+
+**Independent Test**: View right sidebar → verify "10 Sunner Nhận Quà Mới Nhất" list shows up to 10 names with the gift they received and their avatar.
+
+#### Acceptance Scenarios
+
+**Scenario 1: Recent gift recipients list renders**
+- Given: at least 1 user has opened a Secret Box and received a gift
 - When: user views the right sidebar
-- Then: a ranked list of the top 10 Kudos recipients renders with names and counts
+- Then: a list of up to 10 most recent Secret Box gift recipients renders, each showing: avatar, name, gift description (e.g., "Nhận được 1 áo phông SAA")
+
+**Scenario 2: Fewer than 10 recipients**
+- Given: fewer than 10 users have opened a Secret Box
+- When: user views the right sidebar
+- Then: list shows however many are available (no empty rows)
+
+**Scenario 3: Empty state**
+- Given: no user has opened a Secret Box yet
+- When: user views the right sidebar
+- Then: "Chưa có dữ liệu" placeholder is shown instead of the list
 
 ---
 
@@ -253,6 +304,8 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 - **Own Kudos in Highlight**: If user's own Kudos appears in Highlight carousel, the like button is still disabled.
 - **`isSpecialDay` changes mid-session** (e.g., midnight crosses into special day): The `isSpecialDay` value is fetched once at page mount. If the day changes while the user is on the page, they will use the stale value until next reload. This is acceptable for MVP; add a periodic check in a later iteration.
 - **Unauthenticated like attempt**: If cookie expires mid-session and user tries to like, the API returns 401; show toast "Please log in again" and redirect to `/login`.
+- **Pagination/load-more API failure**: If the "load more" request fails mid-scroll, show an inline retry button below the last card; do NOT discard already-loaded cards.
+- **Spotlight Board large dataset**: D3 word cloud degrades gracefully if recipient count is very high (>500 nodes) — implement a minimum font threshold so small nodes remain readable; cap max rendered nodes if performance degrades.
 
 ---
 
@@ -267,7 +320,8 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 | B1 | Write Kudos CTA | `2940:13449` | button | "Ghi nhan" button → opens Viet Kudos modal |
 | B2 | Search Sunner | `2940:13450` | input | Search sunner by name |
 | B3 | Highlight Kudos | `2940:13451` | section | Top 5 most-liked Kudos carousel |
-| B4 | Spotlight Boards | `2940:14174` | section | Curated spotlight boards |
+| B6 | Spotlight Board header | `2940:13476` | section_header | "SPOTLIGHT BOARD" title |
+| B7 | Spotlight Board canvas | `2940:14174` | interactive | Word cloud of Kudos recipients; pan/zoom; search (B7.3: `2940:14833`) |
 | C1 | All Kudos Feed | `2940:13482` | list | Scrollable feed; 680px wide; gap 24px |
 | C1.card | Kudos Card | `3127:21871` | card | 680px cream card; user info + message + action bar |
 | C1.card.user | Sender → Recipient row | `I3127:21871;256:4857` | row | Avatar + name of sender, arrow icon, avatar + name of recipient |
@@ -279,26 +333,36 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 | **C1.card.heart** | **Heart (Like) button** | **`I3127:21871;256:5175`** | **button** | **101×32px; MM_MEDIA_Heart icon 32×32px + count Montserrat 700 24px; toggles like/unlike** |
 | C2 | Stats Sidebar | `2940:13489` | panel | Total stats widget; 422px wide right sidebar |
 | C2.hearts | Heart count stat | `3241:14882` | widget | Heart image + "x2" badge + count `#FFEA9E` 32px + label |
-| C3 | Top 10 Sunners | `2940:13510` | list | Top 10 recipients widget in right sidebar |
+| C3 | Recent Gift Recipients | `2940:13510` | list | 10 most recent Secret Box gift recipients widget in right sidebar (design: "10 Sunner Nhận Quà Mới Nhất") |
 | D | Footer | `2940:13522` | footer | Shared footer |
 
 **Visual specs**: See [`design-style.md`](./design-style.md).
 
 ### Navigation Flow
 
-- **From**: Homepage (via CTA or nav link) → `/kudos`
-- **From**: Awards page (via nav) → `/kudos`
-- **To**: Viet Kudos modal — "Ghi nhan" button opens the Viet Kudos form
+- **From**: Homepage (via CTA "Sun* Kudos" or nav link) → `/kudos`
+- **From**: Awards page (via nav link) → `/kudos`
+- **From**: Any page (nav header "Sun* Kudos") → `/kudos`
+- **To**: Viet Kudos modal (`ihQ26W78P2`) — "Ghi nhận" button (A.1) opens write kudos dialog (overlay on `/kudos`)
+- **To**: Kudos detail page — "Xem chi tiết" button on any card or click on Spotlight node
+- **To**: User profile page — click avatar or name in any kudos card or C3 list (profile route TBD — see open question Q2)
+- **To**: Secret Box dialog (`1466:7676`) — "Mở quà" button in C2 stats sidebar
 - **To**: `/login` — unauthenticated user tries to like or write kudos
+- **Deep link**: `/kudos#{kudosId}` — scrolls to the specific kudos card on load
 
 Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 ### Accessibility Requirements
 
-- **Heart button ARIA**: `aria-label="Like this kudos"` / `aria-label="Unlike this kudos"` depending on state
-- **aria-pressed**: `true` when liked, `false` when not liked
-- **Screen reader**: Heart count change announced via `aria-live="polite"`
-- **Keyboard**: Heart button and Write Kudos button fully keyboard-accessible
+- **Heart button**: `aria-label="Like this kudos"` / `aria-label="Unlike this kudos"`; `aria-pressed="true|false"`; count change announced via `aria-live="polite"`
+- **Write Kudos button (B1)**: `role="button"`, `aria-label="Ghi nhận kudos"`, fully keyboard-accessible (Enter/Space)
+- **Search Sunner input (B2, B7.3)**: `role="search"`, `aria-label="Tìm kiếm Sunner"`, `aria-live="polite"` on word cloud filter results
+- **Filter dropdowns (B.1.1, B.1.2)**: `aria-haspopup="listbox"`, `aria-expanded`, `role="listbox"` on dropdown; options have `role="option"`, `aria-selected`
+- **Highlight Carousel**: `aria-label="Highlight Kudos"`, prev/next buttons have descriptive `aria-label`; dot indicators have `aria-label="Slide N of M"`; active slide has `aria-current="true"`
+- **Copy Link button**: `aria-label="Copy link to this kudos"`; success feedback via `aria-live="polite"` (e.g., "Link copied!")
+- **"Mở quà" button**: `aria-disabled="true"` when `secretBoxUnopened === 0`
+- **Spotlight Board**: Keyboard-focusable nodes with `role="button"`, `aria-label="{name} — click to view kudos"`. Pan/zoom toggle button has `aria-pressed` for toggle state
+- **Keyboard**: All interactive elements navigable with Tab; dropdowns closable with Escape; carousel navigable with arrow keys
 
 ---
 
@@ -330,6 +394,25 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 | `heartsGiven` | 1 \| 2 | 1 normally, 2 on special days |
 | `createdAt` | ISO8601 | Like timestamp |
 
+### SecretBox Object
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | Box identifier |
+| `userId` | UUID | Owner |
+| `status` | `"opened" \| "unopened"` | Whether the box has been opened |
+| `openedAt` | ISO8601 \| null | When opened; null if not yet opened |
+
+### UserStats Object (sidebar D.1)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `kudosReceived` | number | Total kudos received by current user |
+| `kudosSent` | number | Total kudos sent by current user |
+| `heartsReceived` | number | Total hearts received on user's kudos |
+| `secretBoxesOpened` | number | Secret boxes already opened |
+| `secretBoxesUnopened` | number | Secret boxes not yet opened |
+
 ---
 
 ## API Requirements (Predicted)
@@ -342,6 +425,8 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 | `GET /api/kudos/stats` | Load general statistics | Page mount |
 | `GET /api/kudos/top-sunners?limit=10` | Load top 10 recipients | Page mount |
 | `GET /api/kudos/hashtags` | Load available hashtag list (for filter chips and filter UI) | Page mount |
+| `GET /api/users/me/stats` | Load current user's personal stats (kudos received/sent, hearts, secret box counts) | Page mount (authenticated) |
+| `GET /api/users/gifts/recent?limit=10` | Load 10 most recent Secret Box gift recipients for the sidebar list | Page mount |
 | `POST /api/kudos/:id/like` | Like a Kudos | Heart button click (not liked) |
 | `DELETE /api/kudos/:id/like` | Unlike a Kudos | Heart button click (already liked) |
 | `GET /api/admin/special-days` | Check if today is a special day | Page mount (SSR) |
@@ -356,15 +441,22 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 |-------|------|---------|-------------|
 | `kudosList` | `Kudos[]` | `[]` | All Kudos feed |
 | `highlights` | `Kudos[]` | `[]` | Top 5 highlight Kudos |
+| `spotlightData` | `SpotlightNode[]` | `[]` | Word cloud nodes for Spotlight Board |
 | `activeSlide` | `number` | `0` | Current Highlight carousel index |
 | `filterHashtag` | `string \| null` | `null` | Active hashtag filter |
 | `filterDepartment` | `string \| null` | `null` | Active department filter |
 | `isSpecialDay` | `boolean` | `false` | Admin-configured special day (fetched once at page load) |
 | `isLoadingFeed` | `boolean` | `true` | True while initial Kudos feed is loading |
+| `isLoadingHighlights` | `boolean` | `true` | True while highlight Kudos are loading |
+| `isLoadingSpotlight` | `boolean` | `true` | True while Spotlight Board word cloud data is loading |
+| `isLoadingStats` | `boolean` | `true` | True while sidebar stats are loading |
 | `isRefreshing` | `boolean` | `false` | True during 60s auto-refresh poll (shows subtle refresh indicator, not a full spinner) |
 | `feedError` | `string \| null` | `null` | Error message if feed load or refresh fails; shows retry UI |
 | `currentPage` | `number` | `1` | Current pagination page for feed |
 | `hasMore` | `boolean` | `true` | Whether more pages exist for "load more" |
+| `userStats` | `UserStats \| null` | `null` | Personal stats for sidebar (C2) |
+| `secretBoxUnopened` | `number` | `0` | Count of unopened secret boxes; drives "Mở quà" disabled state |
+| `filterSynced` | `boolean` | `false` | True after filter URL params are synced with state on mount |
 
 ### Per-Kudos State (via `Map<kudosId, KudosLocalState>`)
 
@@ -390,6 +482,11 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 - **FR-008**: Statistics sidebar MUST show accurate total counts.
 - **FR-009**: Hashtag and department filters MUST update the feed without a full page reload.
 - **FR-010**: Unauthenticated users MUST be redirected to `/login` on any interactive action.
+- **FR-011**: Sidebar MUST display 6 personal stats: Kudos received, sent, hearts, Secret Boxes opened/unopened, with "Mở quà" button (disabled when unopened = 0).
+- **FR-012**: "Mở quà" button opens Secret Box dialog (`1466:7676`); after opening, stats update.
+- **FR-013**: Spotlight Board MUST show word cloud of Kudos recipients; hover shows tooltip (name + time); click opens kudos detail; pan/zoom and search (`B7.3`) supported.
+- **FR-014**: Filters (Hashtag / Phòng ban) MUST update BOTH the Highlight Kudos carousel AND the All Kudos feed simultaneously; pagination resets to 1.
+- **FR-015**: Star count (hoa thị) rules: 1★ = 10 kudos received, 2★ = 20, 3★ = 50. Hover on stars shows tooltip with rule description.
 
 ### Technical Requirements
 
@@ -401,7 +498,8 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 - **TR-006**: All kudos, likes, and user tables in Supabase MUST have Row-Level Security (RLS) enabled (Constitution Principle VI). Kudos feed is publicly readable; like/write operations require authenticated RLS policies.
 - **TR-007**: Copy Link button copies the URL `{origin}/kudos#{kudosId}` to clipboard. Deep link to a specific Kudos via hash ID SHOULD scroll to that card on load.
 - **TR-008**: All design token values MUST be CSS variables from `app/globals.css` — no hardcoded hex in component files (Constitution Principle II).
-- **TR-009**: Kudos message content MUST be stored as plain text or sanitized HTML. If rich text is stored as HTML, DOMPurify MUST be applied on render (Constitution Principle VI — XSS prevention).
+- **TR-009**: Kudos message content MUST be stored as plain text or sanitized HTML.
+- **TR-010**: Spotlight Board (`B7`) dùng **D3.js** (`d3-cloud` + `d3-zoom`). `<SpotlightBoard />` là Client Component; D3 quản lý toàn bộ DOM subtree bên trong SVG qua `useRef` + `useEffect`. React không render trực tiếp vào SVG này. Cleanup `useEffect` phải xóa event listener khi unmount. If rich text is stored as HTML, DOMPurify MUST be applied on render (Constitution Principle VI — XSS prevention).
 
 ---
 

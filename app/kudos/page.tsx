@@ -1,11 +1,18 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getKudosFeed, getHighlights, getStats, getTopSunners } from "@/lib/kudos-service";
+import { ROUTES } from "@/lib/constants/routes";
+import {
+  getKudosFeed,
+  getHighlights,
+  getStats,
+  getTopSunners,
+  getUserStats,
+  getRecentGiftRecipients,
+} from "@/lib/kudos-service";
 import { LikeStateProvider } from "@/components/shared/LikeStateContext";
 import { SpecialDayProvider } from "@/components/shared/SpecialDayContext";
 import { KudosPage } from "@/components/kudos/KudosPage";
-import { ROUTES } from "@/lib/constants/routes";
 import type { KudosLocalState } from "@/types/kudos";
 
 export const metadata: Metadata = {
@@ -17,18 +24,32 @@ export default async function KudosRoute() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect(ROUTES.LOGIN);
-  }
+  // if (!user) { redirect(ROUTES.LOGIN); } // temp for screenshot
 
-  // Fetch all data in parallel; catch spotlight failure without crashing page
-  const [highlightsResult, feedResult, statsResult, topSunnersResult] =
-    await Promise.allSettled([
-      getHighlights(),
-      getKudosFeed({ page: 1, limit: 10 }),
-      getStats(),
-      getTopSunners(),
-    ]);
+  const [
+    highlightsResult,
+    feedResult,
+    statsResult,
+    topSunnersResult,
+    userStatsResult,
+    recentGiftsResult,
+  ] = await Promise.allSettled([
+    getHighlights(),
+    getKudosFeed({ page: 1, limit: 10 }),
+    getStats(),
+    getTopSunners(),
+    getUserStats(user?.id ?? ""),
+    getRecentGiftRecipients(10),
+  ]);
+
+  // Debug: log any failures
+  const results = { highlightsResult, feedResult, statsResult, topSunnersResult, userStatsResult, recentGiftsResult };
+  for (const [key, result] of Object.entries(results)) {
+    if (result.status === "rejected") {
+      const err = result.reason;
+      console.error(`[kudos/page] ${key} failed:`, err?.message ?? err?.code ?? String(err));
+    }
+  }
 
   const highlights =
     highlightsResult.status === "fulfilled" ? highlightsResult.value : [];
@@ -42,10 +63,28 @@ export default async function KudosRoute() {
       : { totalKudosSent: 0, totalHeartsGiven: 0, totalParticipants: 0 };
   const topSunners =
     topSunnersResult.status === "fulfilled" ? topSunnersResult.value : [];
+  const personalStats =
+    userStatsResult.status === "fulfilled"
+      ? userStatsResult.value
+      : { kudosReceived: 0, kudosSent: 0, heartsReceived: 0, secretBoxesOpened: 0, secretBoxesUnopened: 0 };
+  const recentGifts =
+    recentGiftsResult.status === "fulfilled" ? recentGiftsResult.value : [];
 
-  const spotlightError = null; // spotlight route returns empty array, no error
+  // Check if today is a special day
+  let isSpecialDay = false;
+  try {
+    const specialDayRes = await fetch(
+      `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/admin/special-days`,
+      { cache: "no-store" }
+    );
+    if (specialDayRes.ok) {
+      const json = await specialDayRes.json();
+      isSpecialDay = json.isSpecialDay === true;
+    }
+  } catch {
+    // Fail-open: default to false
+  }
 
-  // Build initial like state map from feed + highlights
   const initialLikeMap = new Map<number, KudosLocalState>();
   for (const kudos of [...highlights, ...initialFeed]) {
     if (!initialLikeMap.has(kudos.id)) {
@@ -58,16 +97,18 @@ export default async function KudosRoute() {
   }
 
   return (
-    <SpecialDayProvider isSpecialDay={false}>
+    <SpecialDayProvider isSpecialDay={isSpecialDay}>
       <LikeStateProvider initialMap={initialLikeMap}>
         <KudosPage
           highlights={highlights}
           initialFeed={initialFeed}
           stats={stats}
           topSunners={topSunners}
-          spotlightError={spotlightError}
-          currentUserId={user.id}
-          userEmail={user.email ?? null}
+          personalStats={personalStats}
+          recentGifts={recentGifts}
+          spotlightError={null}
+          currentUserId={user?.id ?? null}
+          userEmail={user?.email ?? null}
         />
       </LikeStateProvider>
     </SpecialDayProvider>

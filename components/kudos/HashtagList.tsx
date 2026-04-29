@@ -13,11 +13,11 @@ export function HashtagList({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {hashtags.map((tag) => {
+      {hashtags.map((tag, i) => {
         const isActive = tag === activeHashtag;
         return (
           <button
-            key={tag}
+            key={`${tag}-${i}`}
             type="button"
             onClick={() => onHashtagClick(tag)}
             className={[

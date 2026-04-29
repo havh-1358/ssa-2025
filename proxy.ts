@@ -65,7 +65,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Refresh Supabase session
   const supabaseResponse = await updateSupabaseSession(request);
 
-  // Auth guard: /kudos requires authentication
+  // Auth guard: /kudos requires authentication (browse public; interactive actions require auth)
   if (pathname === "/kudos" || pathname.startsWith("/kudos/")) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

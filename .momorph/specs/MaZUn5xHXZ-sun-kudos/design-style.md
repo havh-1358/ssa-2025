@@ -107,13 +107,32 @@
 
 | Property | Value |
 |----------|-------|
-| Width | 738px |
-| Height | 72px |
-| Border | `1px solid #998C5F` |
+| Width | `738px` |
+| Height | `72px` |
+| Position | `absolute`, `left: 144px`, `top: 0px` |
 | Padding | `24px 16px` |
 | Gap | `8px` |
 | Background | `rgba(255, 234, 158, 0.1)` |
-| Display | flex, row, align-items: center |
+| Border | `1px solid #998C5F` |
+| Border-radius | `68px` (pill shape) |
+| Display | flex row, align-items center |
+
+**Inner Frame 483** (513×24px, gap 16px):
+| Sub-element | Size | Style |
+|------------|------|-------|
+| MM_MEDIA_Pen icon | 24×24px | fill `#FFFFFF` |
+| Placeholder text | 473×24px | Montserrat 700, 16px, lh 24px, ls `0.15px`, `#FFFFFF` |
+| Placeholder value | — | `"Hôm nay, bạn muốn gửi lời cảm ơn và ghi nhận đến ai?"` |
+
+**Interaction**: Click → mở dialog Viet Kudos (`ihQ26W78P2`). Toàn bộ component là một button, không phải input thực sự.
+
+**States:**
+| State | Background | Border | Cursor |
+|-------|-----------|--------|--------|
+| Default | `rgba(255,234,158,0.1)` | `1px solid #998C5F` | pointer |
+| Hover | `rgba(255,234,158,0.15)` | `1px solid #998C5F` | pointer |
+| Active/Pressed | `rgba(255,234,158,0.2)` | `1px solid #FFEA9E` | pointer |
+| Focus | `rgba(255,234,158,0.1)` | `1px solid #998C5F`, outline `2px solid #FFEA9E` | pointer |
 
 ---
 
@@ -127,6 +146,16 @@
 | Padding | `24px 16px` |
 | Gap | `8px` |
 | Background | `rgba(255, 234, 158, 0.1)` |
+| Placeholder text | "Tìm kiếm Sunner" |
+| Icon | Magnifier (search) icon, left-aligned, 24×24px |
+
+**States:**
+| State | Background | Border | Outline |
+|-------|-----------|--------|---------|
+| Default | `rgba(255,234,158,0.1)` | `1px solid #998C5F` | none |
+| Hover | `rgba(255,234,158,0.15)` | `1px solid #998C5F` | none |
+| Focus | `rgba(255,234,158,0.1)` | `1px solid #998C5F` | `2px solid #FFEA9E` |
+| Has value | `rgba(255,234,158,0.1)` | `1px solid #FFEA9E` | none |
 
 ---
 
@@ -150,6 +179,72 @@
 | Height | `525px` |
 | Full width | 1440px |
 
+**Filter Buttons — B.1.1 Hashtag / B.1.2 Phòng ban (Nodes: `2940:13459`, `2940:13460`)**:
+| Property | Value |
+|----------|-------|
+| Height | 40px |
+| Padding | `8px 16px` |
+| Border | `1px solid #998C5F` |
+| Border-radius | `4px` |
+| Background (default) | `rgba(255, 234, 158, 0.1)` |
+| Font | Montserrat 700 14px, `#FFFFFF` |
+| Icon | Chevron-down 16×16px, right-aligned |
+| Gap | `4px` (between label and chevron) |
+
+| State | Background | Border | Text |
+|-------|-----------|--------|------|
+| Default | `rgba(255,234,158,0.1)` | `#998C5F` | `#FFFFFF` |
+| Hover | `rgba(255,234,158,0.2)` | `#998C5F` | `#FFFFFF` |
+| Open/Active | `rgba(255,234,158,0.2)` | `#FFEA9E` | `#FFEA9E` |
+| Has selection | `rgba(255,234,158,0.15)` | `#FFEA9E` | `#FFEA9E` |
+| Focus | outline `2px solid #FFEA9E` | — | — |
+
+**Filter Dropdown Panel — Phòng ban (A_Dropdown-List)**:
+| Property | Value |
+|----------|-------|
+| Width | `147px` |
+| Height | `348px` (6 items × 56px + 2 × 6px padding) |
+| Padding | `6px` |
+| Background | `#00070C` |
+| Border | `1px solid #998C5F` |
+| Border-radius | `8px` |
+| Position | `absolute`, `left: 36px`, `top: 14px` |
+
+**Phòng ban options** (6 items, từ DB):
+`CEVC1`, `CEVC2`, `CEVC3`, `CEVC4`, `OPD`, `Infra`
+
+---
+
+**Filter Dropdown Panel — Hashtag (A_Dropdown-List)**:
+| Property | Value |
+|----------|-------|
+| Width | `103px` |
+| Height | `348px` (6 items × 56px + 2 × 6px padding) |
+| Padding | `6px` |
+| Background | `#00070C` |
+| Border | `1px solid #998C5F` |
+| Border-radius | `8px` |
+| Position | `absolute`, `left: calc(50% - 51.5px)` (centered below trigger) |
+
+**Hashtag options** (dynamic từ DB, ví dụ):
+`#Dedicated`, `#Inspiring` *(và các hashtag khác được thêm qua Viet Kudos form)*
+
+---
+
+**Each dropdown option item** (áp dụng cho cả 2 dropdown):
+| Property | Value |
+|----------|-------|
+| Height | `56px` |
+| Padding | `16px` |
+| Border-radius | `4px` |
+| Font | Montserrat 700, 16px, lh 24px, ls `0.5px`, `#FFFFFF` |
+
+| State | Background | Text-shadow |
+|-------|-----------|-------------|
+| Default | transparent | none |
+| Hover | `rgba(255,234,158,0.1)` | none |
+| Selected (active) | `rgba(255,234,158,0.1)` | `0px 4px 4px rgba(0,0,0,0.25), 0px 0px 6px #FAE287` |
+
 **B3.3 Slide indicators (Node: `2940:13471`)**:
 | Property | Value |
 |----------|-------|
@@ -159,23 +254,66 @@
 
 ---
 
-### B4 — Spotlight Boards (Node: `2940:14174`)
+### B6 — Spotlight Board Header (Node: `2940:13476`)
+
+| Property | Value |
+|----------|-------|
+| Display | flex, column |
+| Supertitle | "Sun* Annual Awards 2025" — Montserrat 700, 24px, `#FFFFFF` |
+| Title | "SPOTLIGHT BOARD" — large heading, gold `#FFEA9E` |
+
+---
+
+### B7 — Spotlight Board Canvas (Node: `2940:14174`)
+
+Interactive word cloud showing names of Kudos recipients.
 
 | Property | Value |
 |----------|-------|
 | Width | 1157px |
-| Height | 548px (variable by content) |
-| Display | flex, column |
-| Gap | — (open question: exact inner gap not extracted from Figma) |
+| Height | 548px |
+| Display | canvas / SVG interactive area |
+
+**B7.1 — Total KUDOS count (Node: `3007:17482`)**:
+| Property | Value |
+|----------|-------|
+| Text | "388 KUDOS" — dynamic from DB total |
+| Font | Montserrat 700, 32px, lh 40px |
+| Color | `#FFFFFF` |
+| Note | Number portion ("388") may be larger than "KUDOS" label — see frame for visual hierarchy |
+
+**B7.2 — Pan/Zoom button (Node: `3007:17479`)**:
+| Property | Value |
+|----------|-------|
+| Type | Icon button (toggle) |
+| Tooltip | "Pan/Zoom" on hover |
+| Function | Toggles between pan and zoom mode on canvas |
+| Size | 40×40px minimum touch target |
+
+**States:**
+| State | Background | Border | aria-pressed |
+|-------|-----------|--------|-------------|
+| Default (pan mode) | `rgba(255,234,158,0.1)` | `1px solid #998C5F` | `false` |
+| Active (zoom mode) | `rgba(255,234,158,0.2)` | `1px solid #FFEA9E` | `true` |
+| Hover | `rgba(255,234,158,0.15)` | `1px solid #998C5F` | — |
+
+**B7.3 — Search Sunner input (Node: `2940:14833`)**:
+| Property | Value |
+|----------|-------|
+| Width | 381px |
+| Height | 72px |
+| Border | `1px solid #998C5F` |
+| Background | `rgba(255, 234, 158, 0.1)` |
+| Placeholder | "Tìm kiếm profile Sunner" |
+| Icon | Magnifier (search) icon, left-aligned |
+| Validation | Max 100 chars, not required |
 
 **States:**
 | State | Description |
 |-------|-------------|
-| Loading | Skeleton placeholder matching section height |
-| Empty | "No spotlights yet" message; section collapses gracefully — does NOT leave blank gap |
-| Error | Non-sensitive error message + retry button |
-
-> **Open question**: Spotlight board card internal layout (board title typography, card dimensions, border/radius) not extracted from Figma node `2940:14174`. Verify against Figma before implementation.
+| Loading | Skeleton or spinner overlay |
+| Empty | "Chưa có dữ liệu" text |
+| Interactive | Word cloud nodes clickable/hoverable; tooltip shows name + time on hover |
 
 ---
 
@@ -345,45 +483,75 @@ Same as first divider: 600×1px, `#FFEA9E`
 
 ---
 
-### C2 — Stats Sidebar (Node: `2940:13489`)
+### D — Right Sidebar (Node: `2940:13488`)
 
 | Property | Value |
 |----------|-------|
 | Width | 422px |
-| Gap | `24px` (between widgets) |
 | Display | flex, column |
-
-**D.1.4 — Heart count stat widget (Node: `3241:14882`)**:
-| Property | Value |
-|----------|-------|
-| Width | 374px |
-| Height | 40px |
-| Display | flex, row, gap 8px, align-items center |
-
-| Sub-element | Size | Style |
-|------------|------|-------|
-| Heart image + "x2" badge | 34×40px | Heart image; "x2" label white on top-right |
-| Count number | 80×40px | Montserrat 700 32px, `#FFEA9E` (gold) — e.g., "25" |
-| Label | 260×28px | Montserrat 700 22px, `#FFFFFF` — "So tim ban nhan duoc:" |
+| Gap | `24px` |
+| Sticky | Yes — scrolls independently |
 
 ---
 
-### C3 — Top 10 Sunners (Node: `2940:13510`)
+### D1 — Stats Overview Block (Node: `2940:13489`)
+
+6 stat rows + "Mở quà" button.
+
+| Row ID | Label (vi) | Value style |
+|--------|-----------|-------------|
+| D.1.2 | Số Kudos bạn nhận được | Number, Montserrat 700 32px `#FFEA9E` |
+| D.1.3 | Số Kudos bạn đã gửi | Number, Montserrat 700 32px `#FFEA9E` |
+| D.1.4 | Số tim bạn nhận được 🔥 | Number, Montserrat 700 32px `#FFEA9E` |
+| D.1.5 | — | Horizontal divider `#2E3940` |
+| D.1.6 | Số Secret Box bạn đã mở | Number, Montserrat 700 32px `#FFEA9E` |
+| D.1.7 | Số Secret Box chưa mở | Number, Montserrat 700 32px `#FFEA9E` |
+
+**D.1.8 — "Mở quà" button (Node: `2940:13497`)**:
+| Property | Value |
+|----------|-------|
+| Label | "Mở Secret Box" |
+| Width | full-width of sidebar (fits 422px container) |
+| Height | 56px |
+| Background | `#FFEA9E` (gold) |
+| Border-radius | `4px` |
+| Font | Montserrat 700 16px, `#00101A` |
+| Display | flex row, align-items center, justify-content center, gap 8px |
+| Navigates to | Frame `1466:7676` (Open secret box dialog) |
+
+**States:**
+| State | Background | Cursor |
+|-------|-----------|--------|
+| Default | `#FFEA9E` | pointer |
+| Hover | `rgba(255,234,158,0.9)` | pointer |
+| Disabled (0 boxes) | `rgba(255,234,158,0.3)` | not-allowed |
+
+---
+
+### C3 — 10 Sunner Nhận Quà Mới Nhất (Node: `2940:13510`)
 
 | Property | Value |
 |----------|-------|
-| Width | 422px (in sidebar) |
+| Title (D.3.1) | "10 SUNNER NHẬN QUÀ MỚI NHẤT" — Montserrat 700, uppercase, `#FFFFFF` |
+| Width | 422px |
 | Display | flex, column |
-| Gap | `24px` (between rank items, consistent with sidebar gap token) |
+| Gap | `8px` (between list items) |
 
-**Each rank item:**
+**Each list item (D.3.2–D.3.6, Node: `2940:13516`–`2940:13520`)**:
 | Sub-element | Size | Style |
 |------------|------|-------|
-| Rank number | — | Montserrat 700 16px, `#FFFFFF` |
-| Sunner name | — | Montserrat 400 14px, `#FFFFFF` |
-| Kudos/gift count | — | Montserrat 700 14px, `#FFEA9E` (gold accent) |
+| Avatar | 40×40px circular | Gmail profile image |
+| Name | — | Montserrat 700 14px, `#FFFFFF`, clickable |
+| Description | — | Montserrat 400 12px, `rgba(255,255,255,0.7)` — e.g., "Nhận được 1 áo phông SAA" |
+| Row layout | flex row, gap 8px, align-items center | — |
 
-> **Open question**: Exact item height, avatar presence, and internal layout for Top 10 Sunners row not extracted from Figma node `2940:13510`. Verify against Figma before implementation. Typography values above are derived from the `--text-top10-rank` / `--text-top10-name` tokens in this document.
+**States:**
+| State | Effect |
+|-------|--------|
+| Default | Name: `#FFFFFF` |
+| Hover name/avatar | Name underline + preview profile tooltip |
+| Click name/avatar | Navigate to profile page |
+| Empty list | "Chưa có dữ liệu" Montserrat 400 14px `rgba(255,255,255,0.5)` |
 
 ---
 
@@ -402,7 +570,7 @@ Same as first divider: 600×1px, `#FFEA9E`
 │  Carousel of top 5 most-liked Kudos                   │
 │  [dot indicators row]                                 │
 ├───────────────────────────────────────────────────────┤
-│  [B4 Spotlight Boards section]                        │
+│  [B6/B7 Spotlight Boards section]                         │
 ├───────────────────────────────────────────────────────┤
 │  padding: 0 144px                                     │
 │  ┌── C1 Feed (680px) ──┐  ┌── Sidebar (422px) ──┐    │
@@ -488,10 +656,17 @@ Same as first divider: 600×1px, `#FFEA9E`
 | `I3127:21871;256:5175` | `<LikeButton kudosId liked count />` | `w-[101px] min-h-[44px] flex items-center gap-1 cursor-pointer py-[6px]` — 44px touch target, 32px visual height |
 | Heart icon | `<HeartIcon filled={bool} />` | `w-8 h-8` — `MM_MEDIA_Heart` asset, hollow/filled states |
 | Heart count | `<span>` inside LikeButton | `font-montserrat font-bold text-[24px] text-[#00101A]` — VN format "1.000" |
+| `2940:13476` | `<SpotlightHeader />` | `flex flex-col gap-4` with gold `#FFEA9E` heading |
+| `2940:14174` | `<SpotlightBoard />` | `w-[1157px] h-[548px] canvas/svg` — D3 word cloud |
+| `2940:14833` | `<SpotlightSearch />` | `w-[381px] h-[72px] border border-[#998C5F] bg-[rgba(255,234,158,0.1)] px-4 py-6 flex items-center gap-2` |
+| `2940:13459` | `<FilterButton label="Hashtag" />` | `h-10 px-4 border border-[#998C5F] bg-[rgba(255,234,158,0.1)] rounded flex items-center gap-1` |
+| `2940:13460` | `<FilterButton label="Phòng ban" />` | Same as above |
 | `2940:13489` | `<StatsPanel />` | `w-[422px] flex flex-col gap-6` |
 | `3241:14882` | `<HeartStatWidget />` | `w-[374px] h-10 flex items-center gap-2` |
 | Heart stat count | `<span>` | `font-montserrat font-bold text-[32px] text-[#FFEA9E]` |
-| `2940:13510` | `<Top10Sunners />` | `w-[422px]` |
+| `2940:13497` | `<OpenSecretBoxButton />` | `w-full h-[56px] rounded bg-[#FFEA9E] font-bold text-[16px] text-[#00101A] flex items-center justify-center gap-2` |
+| `2940:13510` | `<RecentGiftRecipientsPanel />` (C3) | `w-[422px] flex flex-col gap-2` |
+| `2940:13516` | `<SunnerListItem />` | `flex flex-row items-center gap-2` with 40px circular avatar |
 
 ---
 

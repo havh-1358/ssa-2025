@@ -11,6 +11,7 @@ type KudosFeedProps = {
   onRegisterPrepend?: (fn: (k: Kudos) => void) => void;
   onHashtagClick?: (tag: string) => void;
   activeHashtag?: string | null;
+  activeDepartment?: string | null;
 };
 
 export function KudosFeed({
@@ -19,6 +20,7 @@ export function KudosFeed({
   onRegisterPrepend,
   onHashtagClick,
   activeHashtag,
+  activeDepartment,
 }: KudosFeedProps) {
   const {
     kudosList,
@@ -27,6 +29,7 @@ export function KudosFeed({
     hasMore,
     filterHashtag,
     setFilterHashtag,
+    setFilterDepartment,
     loadMore,
     prependKudos,
   } = useKudosFeed(initialKudos);
@@ -36,12 +39,14 @@ export function KudosFeed({
     onRegisterPrepend?.(prependKudos);
   }, [prependKudos, onRegisterPrepend]);
 
-  // Sync external hashtag filter
+  // Sync external filters from parent
   useEffect(() => {
-    if (activeHashtag !== undefined) {
-      setFilterHashtag(activeHashtag ?? null);
-    }
+    if (activeHashtag !== undefined) setFilterHashtag(activeHashtag ?? null);
   }, [activeHashtag, setFilterHashtag]);
+
+  useEffect(() => {
+    if (activeDepartment !== undefined) setFilterDepartment(activeDepartment ?? null);
+  }, [activeDepartment, setFilterDepartment]);
 
   // Deep-link scroll (T045)
   useEffect(() => {
