@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Kudos, KudosStats, TopSunner } from "@/types/kudos";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
@@ -13,9 +14,9 @@ import { StatsPanel } from "./StatsPanel";
 import { WriteKudosButton } from "./WriteKudosButton";
 import { SearchSunnerInput } from "./SearchSunnerInput";
 import { FilterDropdown } from "./FilterDropdown";
+import { useHashtagOptions } from "@/hooks/useHashtagOptions";
 
 const DEPARTMENT_OPTIONS = ["CEVC1", "CEVC2", "CEVC3", "CEVC4", "OPD", "Infra"];
-const DEFAULT_HASHTAG_OPTIONS = ["Dedicated", "Inspiring", "Teamwork", "Creative", "Leadership"];
 
 type PersonalStats = {
   kudosReceived: number;
@@ -55,10 +56,30 @@ export function KudosPage({
   currentUserId,
   userEmail,
 }: KudosPageProps) {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterHashtag, setFilterHashtag] = useState<string | null>(null);
   const [filterDepartment, setFilterDepartment] = useState<string | null>(null);
   const prependFnRef = useRef<((k: Kudos) => void) | null>(null);
+  const hashtagOptions = useHashtagOptions();
+
+  // T057a — read initial filter values from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hashtag = params.get("hashtag");
+    const department = params.get("department");
+    if (hashtag) setFilterHashtag(hashtag);
+    if (department) setFilterDepartment(department);
+  }, []);
+
+  // T057b — write filter changes to URL (shallow replace, no scroll)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filterHashtag) params.set("hashtag", filterHashtag);
+    if (filterDepartment) params.set("department", filterDepartment);
+    const qs = params.toString();
+    router.replace(qs ? `/kudos?${qs}` : "/kudos", { scroll: false });
+  }, [filterHashtag, filterDepartment, router]);
 
   function handleRegisterPrepend(fn: (k: Kudos) => void) {
     prependFnRef.current = fn;
@@ -133,7 +154,8 @@ export function KudosPage({
                 <div className="flex flex-row items-center" style={{ gap: "8px" }}>
                   <FilterDropdown
                     label="Hashtag"
-                    options={DEFAULT_HASHTAG_OPTIONS}
+                    prefix="#"
+                    options={hashtagOptions}
                     value={filterHashtag}
                     width={136}
                     dropdownWidth={103}
@@ -141,6 +163,7 @@ export function KudosPage({
                   />
                   <FilterDropdown
                     label="Phòng ban"
+                    prefix=""
                     options={DEPARTMENT_OPTIONS}
                     value={filterDepartment}
                     width={158}

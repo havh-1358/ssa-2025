@@ -136,15 +136,38 @@
 
 **Independent Test**: Click "Hashtag" filter → select "#teamwork" → feed shows only matching kudos → Highlight section also filters → pagination resets to 1 → clear filter → all kudos return
 
-- [ ] T050 [US5] Build `FilterDropdown` component reusable for Hashtag + Phòng ban | `components/kudos/FilterDropdown.tsx`
-- [ ] T051 [US5] Wire Hashtag filter dropdown to `/api/kudos/hashtags` for dynamic options | `components/kudos/KudosPage.tsx`
-- [ ] T052 [US5] Wire Phòng ban dropdown options (CEVC1–4, OPD, Infra) | `components/kudos/KudosPage.tsx`
-- [ ] T053 [US5] Lift filter state to `KudosPage` — pass `filterHashtag` + `filterDepartment` to both `HighlightKudos` and `KudosFeed` | `components/kudos/KudosPage.tsx`
-- [ ] T054 [US5] Reset pagination to page 1 on filter change in `useKudosFeed` | `hooks/useKudosFeed.ts`
-- [ ] T055 [P] [US5] Sync filter state to URL params (`?hashtag=X&department=Y`) on change | `components/kudos/KudosPage.tsx`
-- [ ] T056 [P] [US5] Read filter URL params on mount and set `filterSynced=true` | `hooks/useKudosFeed.ts`
+> **Codebase status (2026-04-29)**: Infrastructure is partially done — 4 gaps remain. See plan.md Phase 5.
 
-**Checkpoint**: Hashtag and department filters update feed + highlights simultaneously ✓
+- [x] T050 [US5] `FilterDropdown` component — keyboard nav, ARIA, open/close ✅ | `components/kudos/FilterDropdown.tsx`
+- [x] T052 [US5] Phòng ban dropdown options (CEVC1–4, OPD, Infra) wired ✅ | `components/kudos/KudosPage.tsx`
+- [x] T053 [US5] Filter state lifted to `KudosPage`; passed to `HighlightKudos` + `KudosFeed` ✅ | `components/kudos/KudosPage.tsx`
+- [x] T054 [US5] Pagination resets to page 1 on filter change in `useKudosFeed` ✅ | `hooks/useKudosFeed.ts`
+
+**Gap 3 — `#` prefix wrong for Phòng ban options (plan.md KUDOS_FILTER_PREFIX_01)**
+
+- [x] T050a [US5] Add `prefix?: string` prop to `FilterDropdown`; replace hardcoded `#${value}` trigger text and option labels with `${prefix}${value}` | `components/kudos/FilterDropdown.tsx`
+- [x] T050b [US5] Pass `prefix="#"` to Hashtag dropdown and `prefix=""` to Phòng ban dropdown in `KudosPage` | `components/kudos/KudosPage.tsx`
+
+**Gap 1 — Hashtag list is hardcoded (plan.md KUDOS_HASHTAGS_01)**
+
+- [x] T051a [US5] Create `hooks/useHashtagOptions.ts` — fetch `GET /api/kudos/hashtags` on mount; fallback to static list while loading | `hooks/useHashtagOptions.ts`
+- [x] T051b [US5] Wire `useHashtagOptions` in `KudosPage`; replace `DEFAULT_HASHTAG_OPTIONS` constant | `components/kudos/KudosPage.tsx`
+
+**Gap 2a — `HighlightKudos` dept filter is a no-op (plan.md KUDOS_HIGHLIGHT_DEPT_01)**
+
+- [x] T055 [US5] Fix `HighlightKudos` client-side dept filter: replace `void filterDepartment` with `k.recipientDepartment !== filterDepartment && k.senderDepartment !== filterDepartment` guard | `components/kudos/HighlightKudos.tsx`
+
+**Gap 2b — Feed dept filter ignored at DB level (plan.md KUDOS_FEED_DEPT_01)**
+
+- [x] T056 [US5] Fix `findKudosFeed` dept filter in repository: add subquery `departments → user IDs → .or(recipient_id.in, sender_id.in)` so pagination counts are accurate | `lib/kudos-repository.ts`
+
+**Gap 4 — URL param sync missing (plan.md KUDOS_FILTER_URL_01)**
+
+- [x] T057a [P] [US5] Read initial filter values from `useSearchParams()` on mount in `KudosPage` (`?hashtag=` / `?department=`) | `components/kudos/KudosPage.tsx`
+- [x] T057b [P] [US5] Write filter changes to URL via `router.replace` (shallow, no scroll) when `filterHashtag` or `filterDepartment` changes | `components/kudos/KudosPage.tsx`
+- [x] T057c [P] [US5] Pass pre-filtered `initialFeed` from SSR: read `searchParams` in `app/kudos/page.tsx` and forward `hashtag`/`department` to `getKudosFeed()` | `app/kudos/page.tsx`
+
+**Checkpoint**: Hashtag and department filters update feed + highlights simultaneously; URL reflects filter state; dept filtering accurate at DB level ✓
 
 ---
 
@@ -246,6 +269,7 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 | Phase 4 | T021, T022, T024, T025, T026 in parallel after T019–T020 |
 | Phase 5 | T030, T032, T033, T034 in parallel after T027–T029 |
 | Phase 6 | T041–T049 after T039–T040; T045, T046, T049 in parallel |
+| Phase 7 | T050a+T050b in parallel; T051a→T051b sequential; T055+T056 independent; T057a+T057b+T057c in parallel |
 | Phase 12 | T070–T074, T077, T078 all in parallel |
 
 ---
@@ -279,7 +303,7 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 | US3 Feed + Write | 11 |
 | US4 Like | 12 (+3 new tasks for like gaps from spec review) |
 | US2 Spotlight | 11 |
-| US5 Filter | 7 |
+| US5 Filter | 4 done ✅ + 9 remaining |
 | US6 Stats | 2 |
 | US7b Secret Box | 5 |
 | US7 Recent Gifts | 3 |

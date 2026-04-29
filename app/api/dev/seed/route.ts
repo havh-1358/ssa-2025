@@ -1,12 +1,15 @@
 /**
  * DEV-ONLY seed endpoint. Remove before production.
- * Call: GET /api/dev/seed
- * Inserts 10 kudos using the currently authenticated user.
+ * Call: GET /api/dev/seed?department=CEVC1
+ * Inserts kudos using the currently authenticated user.
+ * Pass ?department=CEVC1|CEVC2|CEVC3|CEVC4|OPD|Infra to assign department.
  */
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
+const VALID_DEPARTMENTS = ["CEVC1", "CEVC2", "CEVC3", "CEVC4", "OPD", "Infra"];
+
+export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
   }
@@ -19,12 +22,24 @@ export async function GET() {
 
   const userId = user.id;
   const userName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email ?? "Sunner";
+  const deptParam = request.nextUrl.searchParams.get("department");
+  const departmentName = deptParam && VALID_DEPARTMENTS.includes(deptParam) ? deptParam : "CEVC1";
 
-  // Ensure user profile exists
+  // Resolve department ID
+  const { data: deptRow } = await supabase
+    .from("departments")
+    .select("id")
+    .eq("name", departmentName)
+    .single();
+
+  const departmentId = (deptRow as { id: number } | null)?.id ?? null;
+
+  // Upsert user profile with department
   await supabase.from("users").upsert({
     id: userId,
     name: userName,
     avatar_url: user.user_metadata?.avatar_url ?? null,
+    department_id: departmentId,
   }, { onConflict: "id" });
 
   const messages = [
@@ -65,7 +80,7 @@ export async function GET() {
 
   return NextResponse.json({
     success: true,
-    message: `Inserted ${inserted.length} kudos for user ${userName}`,
+    message: `Inserted ${inserted.length} kudos for user ${userName} (department: ${departmentName})`,
     kudosIds: inserted,
     errors,
   });

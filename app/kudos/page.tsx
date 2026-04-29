@@ -20,9 +20,14 @@ export const metadata: Metadata = {
   description: "Send and receive recognition in the SSA 2025 Kudos board",
 };
 
-export default async function KudosRoute() {
+export default async function KudosRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ hashtag?: string; department?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const { hashtag, department } = await searchParams;
 
   // if (!user) { redirect(ROUTES.LOGIN); } // temp for screenshot
 
@@ -35,7 +40,7 @@ export default async function KudosRoute() {
     recentGiftsResult,
   ] = await Promise.allSettled([
     getHighlights(),
-    getKudosFeed({ page: 1, limit: 10 }),
+    getKudosFeed({ page: 1, limit: 10, hashtag, department }),
     getStats(),
     getTopSunners(),
     getUserStats(user?.id ?? ""),

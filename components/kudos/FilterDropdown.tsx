@@ -9,6 +9,7 @@ type FilterDropdownProps = {
   width: number;
   dropdownWidth: number;
   onChange: (val: string | null) => void;
+  prefix?: string;
 };
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -39,6 +40,7 @@ export function FilterDropdown({
   width,
   dropdownWidth,
   onChange,
+  prefix = "",
 }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +115,7 @@ export function FilterDropdown({
     }
   }
 
-  const triggerText = hasValue ? `#${value}` : label;
+  const triggerText = hasValue ? `${prefix}${value}` : label;
 
   return (
     <div ref={containerRef} className="relative">
@@ -237,7 +239,7 @@ export function FilterDropdown({
                     color: "#FFFFFF",
                   }}
                 >
-                  #{opt}
+                  {prefix}{opt}
                 </span>
               </div>
             );

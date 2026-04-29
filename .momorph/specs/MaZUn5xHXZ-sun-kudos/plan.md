@@ -165,11 +165,197 @@ The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 partic
 3. Implement `SecretBoxDialog.tsx` (requires Q3 resolution)
 4. Wire "Mở quà" → Secret Box dialog → `POST /api/secret-boxes/open`
 
-### Phase 5: Filters + Polish (US5) — P2
-1. Wire Hashtag + Phòng ban dropdowns → filter state → URL params
-2. `filterSynced` state: sync URL params on mount
-3. 60s polling pause/resume on `visibilitychange`
-4. Deep-link scroll: `/kudos#{kudosId}`
+### Phase 5: Filters — Lọc Kudos theo Hashtag & Phòng ban (US5) — P2
+
+**Codebase analysis (2026-04-29):** Filter infrastructure is partially wired but has 4 known gaps.
+
+#### Current state
+
+| Component / File | Status | Notes |
+|-----------------|--------|-------|
+| `FilterDropdown.tsx` | ✅ Done | Accessible dropdown; keyboard nav; ARIA; open/close |
+| `useKudosFeed` filter state | ✅ Done | `filterHashtag` + `filterDepartment` state; re-fetches on change; polling respects filters |
+| `KudosFeed` prop sync | ✅ Done | Accepts `activeHashtag` / `activeDepartment` props; `useEffect` syncs to hook |
+| `KudosPage` filter state | ✅ Done | `filterHashtag` / `filterDepartment` state; passes to both `HighlightKudos` and `KudosFeed` |
+| `GET /api/kudos` | ✅ Done | Supports `hashtag` + `department` query params; Zod-validated |
+| `GET /api/kudos/hashtags` | ✅ Done | Returns dynamic hashtag list (requires auth) |
+| **Hashtag options in KudosPage** | ❌ Hardcoded | `DEFAULT_HASHTAG_OPTIONS` constant — must fetch from `/api/kudos/hashtags` |
+| **HighlightKudos dept filter** | ❌ No-op | `void filterDepartment` — department filter silently skipped for highlights |
+| **`FilterDropdown` `#` prefix for dept** | ❌ Wrong | Trigger shows `#CEVC1` instead of `CEVC1` for Phòng ban options |
+| **URL param sync** | ❌ Missing | Filter state lost on refresh; no shareable filter URL |
+
+#### Gap 1 — Dynamic hashtag list (KUDOS_HASHTAGS_01)
+
+**File**: `components/kudos/KudosPage.tsx`
+
+`DEFAULT_HASHTAG_OPTIONS` is a hardcoded constant. This violates spec FR-009 (feed must reflect actual hashtags in the system).
+
+**Fix**:
+1. Add `useEffect` in `KudosPage` (or a dedicated `useHashtags` hook) to fetch `GET /api/kudos/hashtags` on mount.
+2. Store result in `hashtagOptions: string[]` state, initialized with `DEFAULT_HASHTAG_OPTIONS` as fallback while loading.
+3. Pass `hashtagOptions` to `<FilterDropdown label="Hashtag" options={hashtagOptions} .../>`.
+4. Note: `/api/kudos/hashtags` currently requires auth — confirm if this is intentional or should be public (see Q6).
+
+```typescript
+// hooks/useHashtagOptions.ts
+export function useHashtagOptions(fallback: string[]): string[] {
+  const [options, setOptions] = useState<string[]>(fallback);
+  useEffect(() => {
+    fetch("/api/kudos/hashtags")
+      .then((r) => r.json())
+      .then((j) => { if (Array.isArray(j.data)) setOptions(j.data as string[]); })
+      .catch(() => {}); // fallback stays
+  }, []);
+  return options;
+}
+```
+
+#### Gap 2a — HighlightKudos department filter (KUDOS_HIGHLIGHT_DEPT_01)
+
+**File**: `components/kudos/HighlightKudos.tsx` (lines 41-44)
+
+```typescript
+if (filterDepartment) {
+  void filterDepartment; // TODO: skip client-side for now
+}
+```
+
+The comment assumed department was not available client-side. **This is wrong** — `types/kudos.ts` already has `senderDepartment: string | null` and `recipientDepartment: string | null`, and the repository (`findKudosHighlights`) already enriches these fields from the `users` table. Department lives on `users`, not `kudos`, but the enrich step already resolves it.
+
+**Fix**: Simple client-side filter — no server re-fetch needed:
+
+```typescript
+const filtered = highlights.filter((k) => {
+  if (filterHashtag && !k.hashtags.includes(filterHashtag)) return false;
+  if (filterDepartment &&
+      k.recipientDepartment !== filterDepartment &&
+      k.senderDepartment !== filterDepartment) return false;
+  return true;
+});
+```
+
+#### Gap 2b — Feed department filter not applied at DB level (KUDOS_FEED_DEPT_01)
+
+**File**: `lib/kudos-repository.ts` — `findKudosFeed` (line 88)
+
+The `department` param is accepted but never used in the Supabase query. This means `GET /api/kudos?department=CEVC1` returns ALL kudos regardless. The department is stored on `users`, so DB-level filtering requires a two-step subquery.
+
+**Fix** — subquery approach (accurate pagination counts):
+
+```typescript
+if (department) {
+  // Step 1: resolve department name → department_id
+  const { data: deptRow } = await supabase
+    .from("departments")
+    .select("id")
+    .eq("name", department)
+    .single();
+
+  if (!deptRow) {
+    return { data: [], total: 0 };
+  }
+
+  // Step 2: get user IDs in that department
+  const { data: userRows } = await supabase
+    .from("users")
+    .select("id")
+    .eq("department_id", deptRow.id);
+
+  const userIds = (userRows ?? []).map((r: { id: string }) => r.id);
+  if (userIds.length === 0) {
+    return { data: [], total: 0 };
+  }
+
+  // Step 3: filter kudos by recipient OR sender in that department
+  query = query.or(
+    `recipient_id.in.(${userIds.join(",")}),sender_id.in.(${userIds.join(",")})`
+  );
+}
+```
+
+This keeps pagination counts accurate (total reflects filtered results). The same pattern applies to `findKudosHighlights` if server-side dept filtering is ever needed there.
+
+#### Gap 3 — FilterDropdown `#` prefix for Phòng ban (KUDOS_FILTER_PREFIX_01)
+
+**File**: `components/kudos/FilterDropdown.tsx` (line 116)
+
+```typescript
+const triggerText = hasValue ? `#${value}` : label;
+```
+
+This hardcodes the `#` prefix, which is correct for hashtags but wrong for department names (`#CEVC1` ≠ `CEVC1`).
+
+**Fix**: Add a `prefix?: string` prop to `FilterDropdown`; default `""`.
+```typescript
+type FilterDropdownProps = {
+  ...
+  prefix?: string; // e.g. "#" for hashtags, "" for departments
+};
+const triggerText = hasValue ? `${prefix ?? ""}${value}` : label;
+```
+
+Update `KudosPage`:
+```tsx
+<FilterDropdown label="Hashtag" prefix="#" options={hashtagOptions} ... />
+<FilterDropdown label="Phòng ban" prefix="" options={DEPARTMENT_OPTIONS} ... />
+```
+
+Also fix the option item label inside the dropdown:
+```tsx
+// Currently: `#{opt}` — should use prefix prop too
+<span>#{opt}</span>  →  <span>{prefix}{opt}</span>
+```
+
+#### Gap 4 — URL param sync (KUDOS_FILTER_URL_01)
+
+**File**: `components/kudos/KudosPage.tsx` and `hooks/useKudosFeed.ts`
+
+Filters are not persisted to the URL. Per spec FR-009 (feed updates without reload), users expect a filter URL to be shareable and survive page refresh.
+
+**Fix**:
+1. In `KudosPage`, read initial filter values from `useSearchParams()` on mount:
+   ```typescript
+   const searchParams = useSearchParams();
+   const [filterHashtag, setFilterHashtag] = useState<string | null>(
+     searchParams.get("hashtag")
+   );
+   const [filterDepartment, setFilterDepartment] = useState<string | null>(
+     searchParams.get("department")
+   );
+   ```
+2. When filter changes, update URL with `router.replace` (shallow, no scroll):
+   ```typescript
+   const router = useRouter();
+   useEffect(() => {
+     const params = new URLSearchParams();
+     if (filterHashtag) params.set("hashtag", filterHashtag);
+     if (filterDepartment) params.set("department", filterDepartment);
+     const qs = params.toString();
+     router.replace(qs ? `/kudos?${qs}` : "/kudos", { scroll: false });
+   }, [filterHashtag, filterDepartment, router]);
+   ```
+3. `useKudosFeed` already skips the first fetch when `initialKudos` is provided (`isFirstFilterRun` ref). The SSR page (`app/kudos/page.tsx`) should read `searchParams` and pass pre-filtered `initialFeed` data to avoid a double-fetch on mount.
+
+#### Implementation steps (ordered)
+
+1. **Add `prefix` prop to `FilterDropdown`** — tiny isolated change; no other files affected.
+2. **Fix `HighlightKudos` client-side dept filter** — remove `void filterDepartment`; add `recipientDepartment !== filterDepartment && senderDepartment !== filterDepartment` check. No API changes needed — data is already there.
+3. **Fix `findKudosFeed` dept filter** — add subquery in `lib/kudos-repository.ts`: departments → user IDs → filter kudos. Pagination counts become accurate.
+4. **Create `useHashtagOptions` hook** — fetch `/api/kudos/hashtags` on mount; fallback to hardcoded list while loading.
+5. **Wire `useHashtagOptions` in `KudosPage`** — replace `DEFAULT_HASHTAG_OPTIONS`.
+6. **URL sync in `KudosPage`** — read from `useSearchParams` on mount; write via `router.replace` on filter change.
+7. **SSR pre-filter in `app/kudos/page.tsx`** — read `searchParams`; pass pre-filtered `initialFeed` to avoid double-fetch.
+8. **Tests** — unit: `FilterDropdown` (prefix prop), `useHashtagOptions`, `findKudosFeed` dept subquery; integration: filter → feed; E2E: full filter flow.
+
+#### Functional requirements covered
+
+| Req | Description | Fix(es) |
+|-----|-------------|---------|
+| FR-009 | Filters update feed without full reload | Gap 4 (URL), existing hook |
+| FR-014 | Filters update BOTH Highlight AND feed simultaneously | Gap 2 (HighlightKudos dept) |
+| US5 Scenario 1 | Filter by hashtag | Gap 1 (dynamic list) + existing |
+| US5 Scenario 2 | Clear filter | Existing (`onChange(null)` in dropdown) |
+| US5 Scenario 3 | Filter by department | Gap 2 (HighlightKudos) + existing feed |
 
 ### Phase 6: Testing + Security — Constitution III + VI
 1. Unit: `useLike`, `useKudosFeed`, `KudosCard`, `LikeButton`
@@ -222,6 +408,8 @@ The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 partic
 | Secret Box frame `1466:7676` not yet spec'd | Med | Med | Analyze frame via momorph before Phase 4 |
 | `isSpecialDay` stale mid-session | Low | Low | Document as MVP; acceptable per spec |
 | Profile page route unknown | Med | Low | Block navigation until Q2 answered; stub href |
+| Hashtag list auth gate | Med | Med | `/api/kudos/hashtags` requires auth — dropdown empty for guests; resolve Q6 |
+| HighlightKudos dept filter double-fetch | Low | Low | Debounce dept filter change to avoid rapid API calls on quick dropdown selections |
 
 ---
 
@@ -232,6 +420,7 @@ The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 partic
 - [ ] **Q3**: Secret Box dialog frame `1466:7676` — needs `/momorph.specify` before Phase 4
 - [ ] **Q4**: What triggers a "special day"? Admin UI or seed only?
 - [ ] **Q5**: Kudos detail page route? (`/kudos/{id}`?) — needed for Spotlight Board click + CopyLink
+- [ ] **Q6**: Should `GET /api/kudos/hashtags` be public (no auth)? Currently requires auth — this means the hashtag dropdown is empty for unauthenticated users. Confirm intent.
 
 ---
 

@@ -35,13 +35,14 @@ export function HighlightKudos({
 }: HighlightKudosProps) {
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Client-side filter on the passed highlights
+  // Client-side filter — senderDepartment/recipientDepartment already enriched by repository
   const filtered = highlights.filter((k) => {
     if (filterHashtag && !k.hashtags.includes(filterHashtag)) return false;
-    if (filterDepartment) {
-      // department filter would need server-side data; skip client-side for now
-      void filterDepartment;
-    }
+    if (
+      filterDepartment &&
+      k.recipientDepartment !== filterDepartment &&
+      k.senderDepartment !== filterDepartment
+    ) return false;
     return true;
   });
 

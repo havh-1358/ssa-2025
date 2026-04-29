@@ -86,6 +86,33 @@ export async function findKudosFeed({
     query = query.contains("hashtags", [hashtag]);
   }
 
+  if (department) {
+    // Resolve department name → user IDs → filter kudos
+    const { data: deptRow } = await supabase
+      .from("departments")
+      .select("id")
+      .eq("name", department)
+      .single();
+
+    if (!deptRow) {
+      return { data: [], total: 0 };
+    }
+
+    const { data: userRows } = await supabase
+      .from("users")
+      .select("id")
+      .eq("department_id", (deptRow as { id: number }).id);
+
+    const userIds = ((userRows ?? []) as { id: string }[]).map((r) => r.id);
+    if (userIds.length === 0) {
+      return { data: [], total: 0 };
+    }
+
+    query = query.or(
+      `sender_id.in.(${userIds.join(",")}),recipient_id.in.(${userIds.join(",")})`
+    );
+  }
+
   const { data, count, error } = await query;
   if (error) throw error;
 
