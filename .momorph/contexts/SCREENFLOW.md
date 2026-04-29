@@ -5,7 +5,7 @@
 - **Figma File Key**: 9ypp4enmFmdK3YAFJLIu6C
 - **MoMorph URL**: https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/GzbNeVGJHz
 - **Created**: 2026-04-22
-- **Last Updated**: 2026-04-29 (flow: /countdown → /login → / [homepage])
+- **Last Updated**: 2026-04-29 (flow: /countdown → /login → / [homepage]; Viết Kudo modal status updated to design; MaZUn5xHXZ Like Kudos feature added)
 
 ---
 
@@ -28,8 +28,8 @@
 | 2 | Login | GzbNeVGJHz | `/login` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/GzbNeVGJHz | specs-ready | `.momorph/specs/GzbNeVGJHz-login/spec.md` | `/` (post-login) |
 | 3 | Homepage SAA | i87tDx10uM | `/` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/i87tDx10uM | specs-ready | `.momorph/specs/i87tDx10uM-homepage-saa/spec.md` | `/awards`, `/kudos` |
 | 4 | Award System | zFYDgyj_pD | `/awards` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/zFYDgyj_pD | specs-ready | `.momorph/specs/zFYDgyj_pD-he-thong-giai/spec.md` | `/`, `/kudos` |
-| 5 | Sun* Kudos | MaZUn5xHXZ | `/kudos` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/MaZUn5xHXZ | specs-ready | `.momorph/specs/MaZUn5xHXZ-sun-kudos/spec.md` | `/login` (unauth), Viet Kudos modal |
-| 6 | Viet Kudos (modal) | ihQ26W78P2 | `/kudos` (modal overlay) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/ihQ26W78P2 | specs-ready | `.momorph/specs/ihQ26W78P2-viet-kudos/spec.md` | `/kudos` (close modal) |
+| 5 | Sun* Kudos | MaZUn5xHXZ | `/kudos` | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/MaZUn5xHXZ | specs-ready | `.momorph/specs/MaZUn5xHXZ-sun-kudos/spec.md` | `/login` (unauth), Viet Kudos modal; Like Kudos (heart toggle per card) |
+| 6 | Viết Kudo (Write Kudos Modal) | ihQ26W78P2 | `/kudos` (modal overlay) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/ihQ26W78P2 | design | `.momorph/specs/ihQ26W78P2-viet-kudos/spec.md` | `/kudos` (close modal) |
 | 7 | Language Selector (component) | hUyaaugye2 | N/A (shared component) | https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/hUyaaugye2 | specs-ready | `.momorph/specs/hUyaaugye2-da-ngon-ngu/spec.md` | No route change |
 | 8 | Dashboard | TBD | `/dashboard` | TBD | not-started | TBD | TBD |
 
@@ -170,13 +170,25 @@ flowchart TD
 | IN | `/awards` | Nav | Click |
 | IN | `/auth/callback` | Post-login redirect (if Kudos was the protected action) | Login success |
 
-### Viet Kudos Modal (overlay on `/kudos`)
+> **Like Kudos feature** (interactive, on each kudos card):
+> - Each card has a heart button (like/unlike toggle).
+> - **Like**: `POST /kudos/{id}/like` (auth required) — toggles to liked state.
+> - **Unlike**: `DELETE /kudos/{id}/like` (auth required) — toggles back to unliked state.
+> - **Special day rule**: When an admin-configured special day is active (`GET /api/admin/special-days`), each like counts as **2 hearts** instead of 1.
+> - **Own kudos**: Heart button is **disabled** — users cannot like their own kudos.
+> - Unauthenticated click → redirect to `/login`.
+
+### Viết Kudo Modal — `ihQ26W78P2` (overlay on `/kudos`)
+
+> **Type**: Modal dialog (overlay). **Status**: design. Triggered from Sun* Kudos page; does not change the URL.
+>
+> **Key APIs**: `GET /api/users/search`, `GET /api/kudos/hashtags`, `POST /api/kudos`, `POST /api/upload`
 
 | Direction | Target/Source | Trigger | Condition |
 |-----------|--------------|---------|-----------|
-| OUT (close) | `/kudos` (modal closes) | Cancel button OR Escape | N/A |
-| OUT (submit) | `/kudos` (modal closes + feed updates) | "Gui" button | Submit success |
-| IN | `/kudos` | "Ghi nhan" button click | User is authenticated |
+| IN | `/kudos` | "Ghi nhận kudos" button click | User is authenticated |
+| OUT (cancel) | `/kudos` (modal closes, no change) | Cancel button OR Escape key | N/A — user stays on `/kudos` |
+| OUT (submit) | `/kudos` (modal closes + new kudos appears in feed) | "Gửi" submit button | `POST /api/kudos` returns success |
 
 ### Language Selector (shared component)
 

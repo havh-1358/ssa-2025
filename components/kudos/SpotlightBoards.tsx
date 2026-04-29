@@ -204,21 +204,21 @@ export function SpotlightBoards({ initialError = null }: SpotlightBoardsProps) {
           {totalKudosFormatted} KUDOS
         </text>
 
-        {/* Connecting lines between nearby nodes */}
+        {/* Connecting lines between spatially nearby nodes */}
         {scattered.map((node, i) =>
-          scattered.slice(i + 1, i + 4).map((other) => {
+          scattered.slice(i + 1).map((other, j) => {
             const dx = other.x - node.x;
             const dy = other.y - node.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 200) return null;
+            if (dist > 220) return null;
             return (
               <line
-                key={`ln-${i}-${other.recipientId}`}
+                key={`ln-${i}-${j}`}
                 x1={node.x} y1={node.y}
                 x2={other.x} y2={other.y}
                 stroke="#FFFFFF"
-                strokeWidth="0.3"
-                strokeOpacity={Math.max(0.04, 0.18 - dist / 1400)}
+                strokeWidth="0.4"
+                strokeOpacity={Math.max(0.06, 0.25 - dist / 1000)}
               />
             );
           })

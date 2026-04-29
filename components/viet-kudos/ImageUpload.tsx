@@ -5,28 +5,28 @@ import { useRef } from "react";
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_MB = 5;
 const MAX_BYTES = MAX_MB * 1024 * 1024;
+const MAX_IMAGES = 5;
 
 type ImageUploadProps = {
-  previewUrl: string | null;
-  uploadedUrl: string | null;
+  previewUrls: string[];
+  uploadedUrls: string[];
   isUploading: boolean;
-  onFileSelect: (file: File, previewUrl: string) => void;
+  onFileAdd: (file: File, previewUrl: string) => void;
   onUploadComplete: (url: string) => void;
   onUploadError: (msg: string) => void;
-  onRemove: () => void;
+  onRemove: (index: number) => void;
 };
 
 export function ImageUpload({
-  previewUrl,
-  uploadedUrl,
+  previewUrls,
+  uploadedUrls,
   isUploading,
-  onFileSelect,
+  onFileAdd,
   onUploadComplete,
   onUploadError,
   onRemove,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const currentFileRef = useRef<File | null>(null);
 
   async function doUpload(file: File) {
     const controller = new AbortController();
@@ -58,6 +58,8 @@ export function ImageUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    e.target.value = "";
+
     if (!ALLOWED_MIME.includes(file.type)) {
       onUploadError("File type not allowed. Use JPEG, PNG, GIF, or WebP.");
       return;
@@ -68,80 +70,107 @@ export function ImageUpload({
     }
 
     const preview = URL.createObjectURL(file);
-    currentFileRef.current = file;
-    onFileSelect(file, preview);
+    onFileAdd(file, preview);
     doUpload(file);
   }
 
-  function handleRetry() {
-    if (currentFileRef.current) doUpload(currentFileRef.current);
-  }
-
-  if (previewUrl) {
-    return (
-      <div className="flex flex-col gap-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={previewUrl}
-          alt="Upload preview"
-          className="w-[120px] h-[120px] rounded-lg object-cover border border-[var(--color-input-border)]"
-        />
-        {isUploading && (
-          <p className="text-[12px] text-[var(--color-placeholder)] font-[family-name:var(--font-montserrat)]">
-            Uploading...
-          </p>
-        )}
-        {uploadedUrl && !isUploading && (
-          <p className="text-[12px] text-[var(--color-modal-text-dark)] font-[family-name:var(--font-montserrat)]">
-            ✓ Uploaded
-          </p>
-        )}
-        {!uploadedUrl && !isUploading && (
-          <button
-            type="button"
-            onClick={handleRetry}
-            className="self-start text-[12px] font-bold underline
-              text-[var(--color-modal-text-dark)]"
-          >
-            Retry upload
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="self-start text-[12px] font-bold text-[var(--color-error)]
-            underline focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
-        >
-          Remove image
-        </button>
-      </div>
-    );
-  }
+  const canAddMore = previewUrls.length < MAX_IMAGES;
 
   return (
-    <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ALLOWED_MIME.join(",")}
-        className="sr-only"
-        onChange={handleFileChange}
-        aria-label="Upload image"
-      />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="w-full py-8 rounded-[var(--border-input-radius)]
-          border-2 border-dashed border-[var(--color-input-border)]
-          bg-transparent
-          font-[family-name:var(--font-montserrat)] text-[14px]
-          text-[var(--color-placeholder)]
-          hover:border-[var(--color-modal-text-dark)] hover:text-[var(--color-modal-text-dark)]
-          transition-colors duration-150
-          focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
+    /* F row: flex-row, gap 16px, align-items center */
+    <div className="flex flex-row items-center" style={{ gap: "16px" }}>
+      {/* F.1_Title — 74px, "Image" (no asterisk — optional field) */}
+      <p
+        className="shrink-0 font-[family-name:var(--font-montserrat)] font-bold
+          text-[22px] leading-7 text-[var(--color-modal-text-dark)]"
+        style={{ whiteSpace: "nowrap" }}
       >
-        ＋ Thêm ảnh (tùy chọn, tối đa 5MB)
-      </button>
+        Image
+      </p>
+
+      {/* Thumbnails + add button */}
+      <div className="flex flex-row items-center flex-wrap gap-4">
+      {/* Thumbnails */}
+      {previewUrls.map((url, i) => (
+        <div key={url} className="relative shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={`Image ${i + 1}`}
+            className="object-cover"
+            style={{
+              width: "80px",
+              height: "80px",
+              borderRadius: "18px",
+              border: "1px solid var(--color-input-border)",
+            }}
+          />
+          {/* Uploading overlay */}
+          {isUploading && i === previewUrls.length - 1 && !uploadedUrls[i] && (
+            <div
+              className="absolute inset-0 flex items-center justify-center
+                bg-black/40 rounded-[18px]"
+            >
+              <span className="text-white text-[10px] font-bold">...</span>
+            </div>
+          )}
+          {/* Remove button */}
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            aria-label={`Remove image ${i + 1}`}
+            className="absolute -top-2 -right-2 flex items-center justify-center
+              focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
+            style={{
+              width: "20px",
+              height: "20px",
+              borderRadius: "50%",
+              backgroundColor: "#D4271D",
+              color: "white",
+              fontSize: "12px",
+              fontWeight: 700,
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      {/* Add image button — hidden when 5 images attached */}
+      {canAddMore && (
+        <div className="shrink-0 flex-shrink-0">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ALLOWED_MIME.join(",")}
+            className="sr-only"
+            onChange={handleFileChange}
+            aria-label="Upload image"
+          />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex flex-col items-center justify-center gap-0.5
+              font-[family-name:var(--font-montserrat)] font-bold
+              border border-[var(--color-input-border)]
+              bg-[var(--color-input-bg)]
+              hover:opacity-80 transition-opacity
+              focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
+            style={{
+              width: "80px",
+              height: "80px",
+              borderRadius: "8px",
+            }}
+          >
+            <span className="text-[20px] text-[var(--color-modal-text-dark)]">+</span>
+            <span className="text-[11px] text-[var(--color-modal-text-dark)]">Image</span>
+            <span className="text-[10px] text-[var(--color-placeholder)]">Tối đa {MAX_IMAGES}</span>
+          </button>
+        </div>
+      )}
+      </div>
     </div>
   );
 }

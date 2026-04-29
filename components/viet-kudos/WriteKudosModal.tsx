@@ -99,12 +99,16 @@ export function WriteKudosModal({
     }
   }
 
-  function handleImageSelect(file: File, previewUrl: string) {
-    patch({ image: file, imagePreviewUrl: previewUrl, isUploading: true });
+  function handleImageAdd(file: File, previewUrl: string) {
+    patch({
+      images: [...state.images, file],
+      imagePreviewUrls: [...state.imagePreviewUrls, previewUrl],
+      isUploading: true,
+    });
   }
 
   function handleUploadComplete(url: string) {
-    patch({ uploadedImageUrl: url, isUploading: false });
+    patch({ uploadedImageUrls: [...state.uploadedImageUrls, url], isUploading: false });
   }
 
   function handleUploadError(msg: string) {
@@ -114,11 +118,11 @@ export function WriteKudosModal({
     void msg;
   }
 
-  function handleImageRemove() {
+  function handleImageRemove(index: number) {
     patch({
-      image: null,
-      imagePreviewUrl: null,
-      uploadedImageUrl: null,
+      images: state.images.filter((_, i) => i !== index),
+      imagePreviewUrls: state.imagePreviewUrls.filter((_, i) => i !== index),
+      uploadedImageUrls: state.uploadedImageUrls.filter((_, i) => i !== index),
       isUploading: false,
     });
   }
@@ -128,7 +132,8 @@ export function WriteKudosModal({
     state.title.trim().length > 0 &&
     state.message.trim().length > 0 &&
     state.message.length <= 1000 &&
-    state.title.length <= 100;
+    state.title.length <= 100 &&
+    state.hashtags.length > 0;
 
   if (!isOpen) return null;
 
@@ -157,7 +162,7 @@ export function WriteKudosModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="write-kudos-title"
-          className="fixed inset-0 z-[20] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           style={{ pointerEvents: "none" }}
         >
           <div
@@ -167,26 +172,20 @@ export function WriteKudosModal({
               modal-slide-up"
             style={{ pointerEvents: "all" }}
           >
-            {/* Title */}
+            {/* Title — 32px 700 centered */}
             <h2
               id="write-kudos-title"
               className="font-[family-name:var(--font-montserrat)] font-bold
-                text-[32px] leading-10 text-[var(--color-modal-text-dark)]"
+                text-[32px] leading-10 text-[var(--color-modal-text-dark)] text-center"
             >
-              Viết Kudos
+              Gửi lời cảm ơn và ghi nhận đến đồng đội
             </h2>
 
-            {/* Recipient search */}
+            {/* Recipient dropdown */}
             <RecipientSearch
               value={state.recipient}
-              searchQuery={state.searchQuery}
-              searchResults={state.searchResults}
-              isSearching={state.isSearching}
-              searchError={state.searchError}
               error={state.errors.recipient}
-              onQueryChange={handleSearchQueryChange}
-              onSelect={handleRecipientSelect}
-              onRetrySearch={() => handleSearchQueryChange(state.searchQuery)}
+              onSelect={(r) => patch({ recipient: r })}
             />
 
             {/* Title input */}
@@ -206,14 +205,15 @@ export function WriteKudosModal({
             <HashtagChips
               selected={state.hashtags}
               onChange={(tags) => patch({ hashtags: tags })}
+              error={state.errors.hashtags}
             />
 
             {/* Image upload */}
             <ImageUpload
-              previewUrl={state.imagePreviewUrl}
-              uploadedUrl={state.uploadedImageUrl}
+              previewUrls={state.imagePreviewUrls}
+              uploadedUrls={state.uploadedImageUrls}
               isUploading={state.isUploading}
-              onFileSelect={handleImageSelect}
+              onFileAdd={handleImageAdd}
               onUploadComplete={handleUploadComplete}
               onUploadError={handleUploadError}
               onRemove={handleImageRemove}

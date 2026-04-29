@@ -222,6 +222,7 @@ export function KudosCard({
           kudosId={kudos.id}
           initialHeartCount={kudos.heartCount}
           isOwnKudos={isOwnKudos}
+          likedByMeInitial={kudos.likedByMe ?? false}
         />
 
         {/* Center: Copy Link */}

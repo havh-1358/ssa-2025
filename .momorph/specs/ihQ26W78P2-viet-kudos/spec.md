@@ -5,6 +5,7 @@
 **File Key**: `9ypp4enmFmdK3YAFJLIu6C`
 **Figma Link**: https://momorph.ai/files/9ypp4enmFmdK3YAFJLIu6C/screens/ihQ26W78P2
 **Created**: 2026-04-22
+**Last Updated**: 2026-04-29
 **Status**: Draft
 
 ---
@@ -120,6 +121,11 @@ The Viet Kudos screen is a modal form (overlay on top of the Sun* Kudos page) th
 - When: user tries to click another hashtag chip
 - Then: additional selection is blocked; unselected chips appear disabled; a hint message "Maximum 5 hashtags reached" appears below the chip row
 
+**Scenario 4: Validation — no hashtag selected**
+- Given: user fills all other required fields but leaves the hashtag section empty
+- When: user clicks "Gửi"
+- Then: an inline validation error "Please select at least 1 hashtag" appears below the hashtag row; submission is blocked
+
 ---
 
 ### US3: Add Image [P3]
@@ -206,8 +212,8 @@ The Viet Kudos screen is a modal form (overlay on top of the Sun* Kudos page) th
 | F | Modal container | `520:11647` | modal | 752×1012px cream bg modal, radius 24px |
 | F.A | Title | `I520:11647;520:9870` | label | "Gui loi cam on va ghi nhan den dong doi" — Montserrat 700 32px |
 | F.B | Recipient selector | `I520:11647;520:9871` | compound | Label + search input with suggestions |
-| F.C | Kudos Title input | `I520:11647;1688:10448` | compound | Label + text input; placeholder example text |
-| F.D | Kudos Message | `I520:11647;520:9874` | compound | Rich text editor area |
+| F.C | Danh hiệu (Kudos Title) | `I520:11647;1688:10448` | compound | Label "Danh hiệu *" + text input; placeholder "Ví dụ: Người truyền động lực..." |
+| F.D | Kudos Message | `I520:11647;520:9874` | compound | Rich text editor with toolbar (B/I/S/list/link/quote + "Tiêu chuẩn cộng đồng" link) |
 | F.E | Hashtag chips | `I520:11647;520:9890` | chips | Selectable hashtag chips row |
 | F.F | Image upload | `I520:11647;520:9896` | upload | Image attachment control |
 | F.G | Anonymous toggle | `I520:11647;520:14099` | checkbox | "Gui loi cam on va ghi nhan an danh" checkbox |
@@ -256,11 +262,11 @@ Source of truth: `.momorph/contexts/SCREENFLOW.md`
 
 | Field | Type | Validation | Notes |
 |-------|------|-----------|-------|
-| Recipient | Search + select | Required; must be an existing SSA user; cannot be self | Server-side validates user exists and is not current user |
-| Title | Text | Required; 1–100 chars | Character counter shown when > 80 chars used |
-| Message | Rich text | Required; 1–1000 chars (plain text equivalent) | Character counter shown when > 800 chars used |
-| Hashtags | Multi-select chips | Optional; max 5 per Kudos | Server validates tags exist in allowed list |
-| Image | File upload | Optional; MIME: image/jpeg, image/png, image/gif, image/webp; max 5MB | Extension check alone is insufficient — MIME type MUST be validated |
+| Recipient (Người nhận) | Search + select | Required; must be an existing SSA user; cannot be self | Server-side validates user exists and is not current user |
+| Danh hiệu (Title) | Text | Required; 1–100 chars | Input placeholder: "Dành tặng một danh hiệu cho đồng đội" — Hint below input: "Ví dụ: Người truyền động lực cho tôi. / Danh hiệu sẽ hiển thị làm tiêu đề Kudos." — Character counter shown when > 80 chars used |
+| Message (Lời cảm ơn) | Rich text | Required; 1–1000 chars (plain text equivalent) | Textarea placeholder: "Hãy gửi gắm lời cảm ơn và ghi nhận đến đồng đội tại đây nhé!" — Supports "@name" to mention a colleague — Character counter shown when > 800 chars used |
+| Hashtags | Multi-select chips | **Required**; min 1 tag; max 5 per Kudos | Click "+ Hashtag" to open suggestion dropdown; tags are pre-loaded via `GET /api/kudos/hashtags` |
+| Image | File upload | Optional; max 5 images; MIME: image/jpeg, image/png, image/gif, image/webp; max 5MB per image | After upload, thumbnails shown with `×` remove button; "+ Image" button hidden when 5 images attached — MIME type MUST be validated server-side |
 | Anonymous | Boolean checkbox | Optional; default `false` | Server stores `isAnonymous` flag; API never returns sender info if `true` |
 
 ---
@@ -283,10 +289,11 @@ All endpoints below require an authenticated session (Supabase Auth cookie). Una
   "title": "string",
   "message": "string (HTML or markdown)",
   "hashtags": ["string"],
-  "imageUrl": "string | null",
+  "imageUrls": ["string"],
   "isAnonymous": false
 }
 ```
+> `imageUrls`: array of 0–5 Supabase Storage public URLs; uploaded before `POST /api/kudos` is called.
 
 ---
 
@@ -308,11 +315,11 @@ All endpoints below require an authenticated session (Supabase Auth cookie). Una
 | `availableHashtags` | `string[]` | `[]` | Hashtag chip options loaded from `GET /api/kudos/hashtags` |
 | `isLoadingHashtags` | `boolean` | `false` | True while `GET /api/kudos/hashtags` is in flight (chips show skeleton) |
 | `hashtagsError` | `string \| null` | `null` | Error if hashtag list API fails; show retry option |
-| `image` | `File \| null` | `null` | Attached image file (local, before upload) |
-| `imagePreviewUrl` | `string \| null` | `null` | Local object URL for preview |
-| `uploadedImageUrl` | `string \| null` | `null` | CDN URL returned after Supabase Storage upload |
-| `isUploading` | `boolean` | `false` | True while image is uploading to Supabase Storage |
-| `uploadProgress` | `number` | `0` | Upload progress 0–100 (for progress indicator) |
+| `images` | `File[]` | `[]` | Attached image files (local, before upload); max 5 |
+| `imagePreviewUrls` | `string[]` | `[]` | Local object URLs for preview (one per file) |
+| `uploadedImageUrls` | `string[]` | `[]` | CDN URLs returned after Supabase Storage upload (one per file) |
+| `isUploading` | `boolean` | `false` | True while any image is uploading to Supabase Storage |
+| `uploadProgress` | `number` | `0` | Upload progress 0–100 for the currently uploading image |
 | `isAnonymous` | `boolean` | `false` | Anonymous toggle |
 | `isSubmitting` | `boolean` | `false` | True while `POST /api/kudos` request is in flight |
 | `errors` | `Record<string, string>` | `{}` | Per-field validation errors (keyed by field name) |
@@ -327,7 +334,7 @@ All endpoints below require an authenticated session (Supabase Auth cookie). Una
 - **FR-002**: Recipient search MUST query existing SSA users by name.
 - **FR-003**: Recipient MUST be selected before submission is allowed.
 - **FR-004**: User CANNOT send a Kudos to themselves.
-- **FR-005**: Title and message are required; submission blocked if either is empty.
+- **FR-005**: Recipient, Danh hiệu (title), message, and at least 1 hashtag are required; submission blocked if any are empty.
 - **FR-006**: "Gui" button MUST be disabled while API call is in flight.
 - **FR-007**: On success, modal closes and new Kudos appears at top of feed.
 - **FR-008**: On failure, modal stays open with error toast; button re-enabled.
@@ -351,7 +358,7 @@ All endpoints below require an authenticated session (Supabase Auth cookie). Una
 ## Success Criteria
 
 - **SC-001**: Kudos submitted successfully and visible on live board within 3s of submission.
-- **SC-002**: Validation prevents submission without required fields (recipient, title, message).
+- **SC-002**: Validation prevents submission without required fields (recipient, danh hiệu/title, message, and at least 1 hashtag).
 - **SC-003**: Anonymous kudos hides sender name on live board (verified by a third user).
 - **SC-004**: Image attachment uploads and displays correctly in the submitted Kudos.
 

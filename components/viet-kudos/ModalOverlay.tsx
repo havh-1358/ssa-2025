@@ -22,7 +22,7 @@ export function ModalOverlay({ isDirty, onClose, onConfirmDiscard }: ModalOverla
   return (
     <>
       <div
-        className="fixed inset-0 z-[10]"
+        className="fixed inset-0 z-[190]"
         style={{ background: "var(--color-overlay)" }}
         onClick={handleBackdropClick}
         aria-hidden="true"
@@ -30,7 +30,7 @@ export function ModalOverlay({ isDirty, onClose, onConfirmDiscard }: ModalOverla
 
       {showConfirm && (
         <div
-          className="fixed inset-0 z-[30] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="discard-dialog-title"

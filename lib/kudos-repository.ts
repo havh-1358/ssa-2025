@@ -454,6 +454,36 @@ export async function findRecentGifts(limit = 10): Promise<RecentGift[]> {
   }));
 }
 
+// ─── Single kudos heart count ─────────────────────────────────────────────────
+
+export async function findKudosHeartCount(kudosId: number): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kudos")
+    .select("heart_count")
+    .eq("id", kudosId)
+    .single();
+  if (error || !data) return 0;
+  return (data as { heart_count: number }).heart_count ?? 0;
+}
+
+// ─── Batch user likes lookup ─────────────────────────────────────────────────
+
+export async function findLikedKudosIds(
+  kudosIds: number[],
+  userId: string
+): Promise<Set<number>> {
+  if (kudosIds.length === 0) return new Set();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("likes")
+    .select("kudos_id")
+    .eq("user_id", userId)
+    .in("kudos_id", kudosIds);
+  if (error || !data) return new Set();
+  return new Set((data as { kudos_id: number }[]).map((r) => r.kudos_id));
+}
+
 // ─── Highlights enriched ─────────────────────────────────────────────────────
 
 export async function findUserLike(

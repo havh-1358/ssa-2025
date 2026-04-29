@@ -7,6 +7,7 @@ export interface FormErrors {
   recipient?: string;
   title?: string;
   message?: string;
+  hashtags?: string;
 }
 
 export interface RecipientOption {
@@ -27,9 +28,9 @@ export interface KudosFormState {
   availableHashtags: string[];
   isLoadingHashtags: boolean;
   hashtagsError: string | null;
-  image: File | null;
-  imagePreviewUrl: string | null;
-  uploadedImageUrl: string | null;
+  images: File[];
+  imagePreviewUrls: string[];
+  uploadedImageUrls: string[];
   isUploading: boolean;
   isAnonymous: boolean;
   isSubmitting: boolean;
@@ -55,9 +56,9 @@ function buildInitialState(): KudosFormState {
     availableHashtags: [],
     isLoadingHashtags: false,
     hashtagsError: null,
-    image: null,
-    imagePreviewUrl: null,
-    uploadedImageUrl: null,
+    images: [],
+    imagePreviewUrls: [],
+    uploadedImageUrls: [],
     isUploading: false,
     isAnonymous: false,
     isSubmitting: false,
@@ -97,6 +98,7 @@ export function useKudosForm(
     if (!state.recipient) errors.recipient = "Please select a recipient";
     if (!state.title.trim()) errors.title = "Title is required";
     if (!state.message.trim()) errors.message = "Message is required";
+    if (state.hashtags.length === 0) errors.hashtags = "Please select at least 1 hashtag";
 
     if (state.recipient?.id === currentUserId) {
       errors.recipient = "You cannot send a Kudos to yourself";
@@ -120,7 +122,7 @@ export function useKudosForm(
           title: state.title,
           message: state.message,
           hashtags: state.hashtags,
-          imageUrl: state.uploadedImageUrl ?? null,
+          imageUrls: state.uploadedImageUrls,
           isAnonymous: state.isAnonymous,
           idempotencyKey: state.idempotencyKey,
         }),

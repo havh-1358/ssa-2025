@@ -3,7 +3,7 @@
 **Frame ID**: `ihQ26W78P2`
 **Frame Name**: `Viet Kudo`
 **File Key**: `9ypp4enmFmdK3YAFJLIu6C`
-**Last Updated**: 2026-04-22
+**Last Updated**: 2026-04-29
 
 ---
 
@@ -31,6 +31,8 @@
 | `--color-toolbar-bg` | `#F5F5F5` | Rich text toolbar background |
 | `--color-suggestion-hover` | `rgba(255, 234, 158, 0.1)` | Recipient dropdown suggestion hover |
 | `--color-suggestion-selected` | `rgba(255, 234, 158, 0.2)` | Recipient dropdown suggestion selected |
+| `--color-required-star` | `rgba(207, 19, 34, 1)` = `#CF1322` | Required field `*` indicator (Noto Sans JP 700 16px) |
+| `--color-community-link` | `rgba(228, 96, 96, 1)` = `#E46060` | "Tiêu chuẩn cộng đồng" toolbar link text |
 
 ### Typography
 
@@ -39,28 +41,28 @@
 | `--font-body` | `"Montserrat", sans-serif` | All modal text |
 | `--text-modal-title-size` | `32px` | Modal heading font size |
 | `--text-modal-title-weight` | `700` | Modal heading font weight |
-| `--text-modal-title-line-height` | `TODO(value needed)` | Modal heading line-height |
+| `--text-modal-title-line-height` | `40px` | Modal heading line-height |
 | `--text-modal-title-color` | `#00101A` | Modal heading on cream bg |
 | `--text-input-size` | `16px` | Input/textarea text size |
 | `--text-input-weight` | `400` | Input/textarea text weight |
-| `--text-input-line-height` | `TODO(value needed)` | Input/textarea line-height |
+| `--text-input-line-height` | `24px` | Input/textarea line-height |
 | `--text-placeholder-size` | `16px` | Placeholder text size |
 | `--text-placeholder-weight` | `400` | Placeholder text weight |
 | `--text-placeholder-color` | `#999999` | Placeholder color |
-| `--text-label-size` | `14px` | Field labels (Title, Recipient labels) |
+| `--text-label-size` | `22px` | Field labels (Người nhận, Danh hiệu, Hashtag, Image) |
 | `--text-label-weight` | `700` | Field label weight |
-| `--text-label-line-height` | `TODO(value needed)` | Field label line-height |
-| `--text-anon-size` | `22px` | "Gui an danh" label size |
-| `--text-anon-weight` | `700` | "Gui an danh" label weight |
-| `--text-anon-line-height` | `TODO(value needed)` | Anonymous label line-height |
-| `--text-btn-size` | `TODO(value needed)` | Button text font size |
+| `--text-label-line-height` | `28px` | Field label line-height |
+| `--text-anon-size` | `22px` | "Gửi ẩn danh" label size |
+| `--text-anon-weight` | `700` | "Gửi ẩn danh" label weight |
+| `--text-anon-line-height` | `28px` | Anonymous label line-height |
+| `--text-btn-size` | `22px` | Button text font size (Montserrat 700 22px/28px) |
 | `--text-btn-weight` | `700` | Button text font weight |
 | `--text-counter-size` | `12px` | Character counter font size |
 | `--text-counter-weight` | `400` | Character counter font weight |
-| `--text-suggestion-size` | `14px` | Dropdown suggestion item text size |
-| `--text-suggestion-weight` | `400` | Dropdown suggestion item text weight |
-| `--text-chip-size` | `TODO(value needed)` | Hashtag chip text size |
-| `--text-chip-weight` | `TODO(value needed)` | Hashtag chip text weight |
+| `--text-suggestion-size` | `16px` | Dropdown suggestion item text size |
+| `--text-suggestion-weight` | `700` | Dropdown suggestion item text weight |
+| `--text-chip-size` | `16px` | Hashtag chip text size |
+| `--text-chip-weight` | `700` | Hashtag chip text weight |
 
 ### Spacing
 
@@ -80,7 +82,7 @@
 |-------|-------|-------|
 | `--border-modal` | `24px` | Modal container border radius |
 | `--border-input` | `1px solid #998C5F` | All input fields |
-| `--border-input-radius` | `8px` | Input border radius (consistent with button radius; confirm with Figma) |
+| `--border-input-radius` | `8px` | Input border radius — confirmed from Figma node `I520:11647;520:9873` |
 | `--border-btn-submit` | `8px` | Submit button radius |
 | `--border-checkbox` | `1px solid #999999` | Anonymous checkbox border |
 | `--checkbox-size` | `24px × 24px` | Checkbox dimensions |
@@ -168,28 +170,45 @@
 
 ---
 
-### F.C — Kudos Title Input (Node: `I520:11647;1688:10448`)
+### F.C — Kudos Title (Danh Hiệu) Input (Node: `I520:11647;1688:10448`)
 
 | Property | Value |
 |----------|-------|
 | Width | 672px |
 | Height | 104px |
-| Display | flex, column |
+| Display | flex, column, gap 0 |
+
+**Label "Danh hiệu *" (Node: `I520:11647;1688:10436`)**:
+| Property | Value |
+|----------|-------|
+| Width | 139px |
+| Font | Montserrat 700 22px, lineHeight 28px |
+| Color | `#00101A` |
+| Required asterisk | `*` in `#CF1322` (red), font Noto Sans JP 700 16px |
 
 **Title text input (Node: `I520:11647;1688:10437`)**:
 | Property | Value |
 |----------|-------|
-| Width | 514px (approx) |
+| Width | 514px |
 | Border | `1px solid #998C5F` |
 | Padding | `16px 24px` |
 | Background | `#FFFFFF` |
+| Border radius | `8px` |
+| Font | Montserrat 700 16px, placeholder color `#999999` |
 
-**Placeholder example text (Node: `I520:11647;1688:10447`)**:
+**Input placeholder text** (inside the text input):
+| Property | Value |
+|----------|-------|
+| Text | "Dành tặng một danh hiệu cho đồng đội" |
+| Color | `#999999` |
+| Font | Montserrat 700 16px |
+
+**Hint text below input (Node: `I520:11647;1688:10447`)**:
 | Property | Value |
 |----------|-------|
 | Font | Montserrat 700 16px |
 | Color | `#999999` |
-| Text | "Vi du: Nguoi truyen dong luc cho toi.\nDanh hieu se hien thi lam tieu de Kudos..." |
+| Text | "Ví dụ: Người truyền động lực cho tôi.\nDanh hiệu sẽ hiển thị làm tiêu đề Kudos của bạn." |
 
 ---
 
@@ -201,14 +220,28 @@
 | Height | 444px |
 | Display | flex, column, gap 24px |
 
-**Message editor (Node: `I520:11647;520:9875` — 672×268px)**:
+**Message editor container (Node: `I520:11647;520:9875` — 672×268px)**:
+
+> This is the wrapper for toolbar + textarea. The 268px = toolbar (40px) + gap + textarea (200px).
+
 | Property | Value |
 |----------|-------|
 | Width | 672px |
-| Height | 268px (fixed — content is scrollable inside; `overflow-y: auto`) |
+| Height | 268px (container; inner content scrolls if needed) |
+| Display | flex, column |
+
+**Actual textarea element (Node: `I520:11647;520:9886`)**:
+| Property | Value |
+|----------|-------|
+| Width | stretch (672px) |
+| Height | 200px |
+| Min-height | 120px |
 | Border | `1px solid #998C5F` |
+| Border-radius | `0 0 8px 8px` (bottom corners only — toolbar connects top) |
 | Background | `#FFFFFF` |
-| Padding | `16px 24px` |
+| Padding | `16px 24px` (left side only from Figma: `padding-left: 24px`) |
+| Placeholder | "Hãy gửi gắm lời cảm ơn và ghi nhận đến đồng đội tại đây nhé!" |
+| Placeholder color | `#999999` |
 
 **Character counter (below message editor)**:
 | Property | Value |
@@ -218,7 +251,7 @@
 | Position | Bottom-right of message editor area, `text-align: right` |
 | Format | `{current}/{max}` e.g. `"0/1000"` |
 
-> **Note**: Counter is hidden until the user starts typing, OR always visible — `TODO(confirm visibility behavior)`. Max for message is 1000 chars (per spec.md data requirements). Counter turns red at ≥ 800 chars (warning threshold). Submit blocked at > 1000 chars.
+> **Note**: Counter is visible once user starts typing. Max for message is 1000 chars (per spec.md data requirements). Counter turns red at ≥ 800 chars (warning threshold). Submit blocked at > 1000 chars.
 
 **Character counter (below title input)**:
 | Property | Value |
@@ -237,44 +270,75 @@
 | Border-bottom | `1px solid #998C5F` |
 | Display | flex, row, gap 8px, align-items center, padding 0 8px |
 
-Toolbar action buttons (Bold, Italic, Underline — minimum set):
+Toolbar action buttons (B, I, S/Strikethrough, Numbered list, Link, Quote — all from Figma):
+| Button | Node ID | Border-radius corner |
+|--------|---------|---------------------|
+| Bold (B) | `I520:11647;520:9881` | `8px 0 0 0` (top-left only) |
+| Italic (I) | `I520:11647;662:11119` | `0` |
+| Strikethrough (S) | `I520:11647;662:11213` | `0` |
+| Numbered list | `I520:11647;662:10376` | `0` |
+| Link | `I520:11647;662:10507` | `0` |
+| Quote | `I520:11647;662:10647` | `0` |
+
+Each button: `border: 1px solid #998C5F`, `padding: 10px 16px`, `height: 40px`, `background: transparent`.
+
+**"Tiêu chuẩn cộng đồng" link button** (Node: `I520:11647;3053:11619`):
 | Property | Value |
 |----------|-------|
-| Size | `24×24px` |
-| Icon color | `#00101A` |
-| Active state | `rgba(255, 234, 158, 0.3)` background |
-| Hover state | `rgba(255, 234, 158, 0.15)` background |
+| Width | `336px` |
+| Height | `40px` |
+| Border | `1px solid #998C5F` |
+| Padding | `10px 16px` |
+| Border-radius | `0 8px 0 0` (top-right only) |
+| Background | transparent |
+| Font | Montserrat 700 16px, `text-align: right` |
+| Color | `rgba(228, 96, 96, 1)` = `#E46060` |
+| Cursor | pointer (navigates to community standards page) |
 
-> **Implementation note**: Use Tiptap (preferred) or Quill. Sanitize output with DOMPurify before submission. Toolbar shows Bold / Italic / Underline at minimum; additional formatting as needed.
+> **Implementation note**: Use Tiptap (preferred) or Quill. Sanitize output with DOMPurify before submission. The toolbar is a horizontal flex row with all 6 formatting buttons + the "Tiêu chuẩn cộng đồng" link on the right.
 
-**Hashtag chips row (Node: `I520:11647;520:9890` — 672×48px)**:
+**Hashtag row container (Node: `I520:11647;520:9890` — 672×48px)**:
 | Property | Value |
 |----------|-------|
-| Display | flex, row, gap 16px, flex-wrap |
+| Display | flex, row, gap 16px, align-items flex-start |
+
+**"+ Hashtag" add button (Node: `I520:11647;662:8911`)**:
+| Property | Value |
+|----------|-------|
+| Height | `48px` |
+| Border | `1px solid #998C5F` |
+| Border-radius | `8px` |
+| Padding | `4px 8px` |
+| Background | `#FFFFFF` |
+| Font | Montserrat 700 16px |
+| Content | `+` icon + "Hashtag" + "Tối đa 5" note below |
+| Behavior | Opens hashtag suggestion dropdown |
+
+**Selected hashtag chips (Node: `I520:11647;662:8595` — Tag Group)**:
+| Property | Value |
+|----------|-------|
 | Chip height | `48px` |
-| Chip border radius | `24px` (pill shape) |
-| Chip padding | `TODO(value needed)` |
-| Chip font | Montserrat `TODO(weight needed)` `TODO(size needed)` |
+| Chip border radius | `8px` |
+| Chip padding | `4px 8px` |
+| Chip font | Montserrat 700 16px |
 
 **Hashtag chip states**:
 | State | Background | Border | Text color |
 |-------|-----------|--------|-----------|
-| Default (unselected) | `TODO(value needed)` | `1px solid #998C5F` | `#00101A` |
+| Default (unselected) | `#FFFFFF` | `1px solid #998C5F` | `#00101A` |
 | Selected | `#FFEA9E` | `1px solid #998C5F` | `#00101A` |
-| Disabled (max reached) | `TODO(value needed)` | `1px solid #999999` | `#999999` |
+| Disabled (max reached) | `rgba(255,255,255,0.5)` | `1px solid #999999` | `#999999` |
 | Hover (unselected) | `rgba(255, 234, 158, 0.15)` | `1px solid #998C5F` | `#00101A` |
-
-> `TODO(confirm chip default background and disabled state colors from Figma)`.
 
 **Image upload (Node: `I520:11647;520:9896` — 672×80px)**:
 | Property | Value |
 |----------|-------|
 | Display | flex, row, gap 16px |
-| Border | `1px solid #998C5F` (dashed) |
-| Border radius | `8px` |
-| Background | `#FFFFFF` |
-| Padding | `TODO(value needed)` |
-| Label text | `TODO(confirm upload label text from Figma, e.g., "Tap to upload image" or icon only)` |
+| Border | `none` (thumbnails use `1px solid #998C5F`) |
+| Border radius | `18px` (thumbnail border radius) |
+| Background | `#FFFFFF` (per thumbnail) |
+| Padding | `0px` (images displayed as flex row, gap 16px) |
+| Label text | `"Image"` label on left (22px 700), then thumbnail row + `"+ Image / Tối đa 5"` button |
 | Accepted formats shown | JPG, PNG, GIF, WebP — max 5MB |
 | Progress indicator | Linear progress bar or percentage text while uploading |
 | Preview state | Shows thumbnail image with an "×" remove button overlay |
@@ -303,7 +367,7 @@ Toolbar action buttons (Bold, Italic, Underline — minimum set):
 | Checked | Border radius | `4px` |
 | Focus | Outline | `2px solid #FFEA9E`, `outline-offset: 2px` |
 
-> **Note**: Checked state colors are derived from the design's gold accent system. `TODO(confirm checked background and checkmark color from Figma)`.
+> **Note**: Checked state uses `#FFEA9E` background matching the gold accent theme. Unchecked shows `1px solid #999` border with white bg.
 
 **Label text (Node: `I520:11647;520:14099;520:14095`)**:
 | State | Property | Value |
@@ -330,8 +394,8 @@ Toolbar action buttons (Bold, Italic, Underline — minimum set):
 | Padding | `16px 40px` |
 | Background | `rgba(255, 234, 158, 0.1)` |
 | Color | `#00101A` (dark text; modal is cream bg — do not use white) |
-| Border radius | `8px` |
-| Font | Montserrat 700, `TODO(size needed)` |
+| Border radius | `4px` (from Figma: `border-radius: 4px`) |
+| Font | Montserrat 700 16px |
 
 **H.2 Submit button (Node: `I520:11647;520:9907`)**:
 | Property | Value |
@@ -466,8 +530,9 @@ On mobile:
 | `520:11647` | `<WriteKudosModal />` | `w-[752px] rounded-[var(--border-modal)] bg-[var(--color-modal-bg)] p-[var(--modal-padding)] flex flex-col gap-[var(--modal-gap)] z-20` |
 | `I520:11647;520:9870` | `<h2 id="modal-title">` | `font-montserrat font-bold text-[var(--text-modal-title-size)] text-[var(--color-modal-text-dark)]` |
 | `I520:11647;520:9873` | `<RecipientSearch />` | `border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-6 py-4 rounded-[var(--border-input-radius)]` |
-| `I520:11647;1688:10437` | `<TitleInput />` | `border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-6 py-4 rounded-[var(--border-input-radius)]` |
-| `I520:11647;520:9875` | `<MessageEditor />` | Rich text editor; `border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-6 py-4 rounded-[var(--border-input-radius)] h-[268px]` |
+| `I520:11647;1688:10437` | `<DahnHieuInput />` | `border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-6 py-4 rounded-[var(--border-input-radius)] w-[514px]` |
+| `I520:11647;520:9875` | `<MessageEditorContainer />` | Container for toolbar + textarea; `flex flex-col h-[268px]` |
+| `I520:11647;520:9886` | `<MessageTextarea />` | Actual textarea; `border border-[var(--color-input-border)] bg-[var(--color-input-bg)] pl-6 py-4 rounded-[0_0_8px_8px] h-[200px] min-h-[120px]` |
 | `I520:11647;520:9890` | `<HashtagChips />` | `flex flex-wrap gap-4 h-[48px]` |
 | `I520:11647;520:9896` | `<ImageUpload />` | `flex gap-4 h-[80px] border border-dashed border-[var(--color-input-border)]` |
 | `I520:11647;520:14097` | `<input type="checkbox" />` | `w-6 h-6 border border-[var(--color-checkbox-border)] rounded bg-[var(--color-checkbox-bg)]` |
@@ -482,8 +547,8 @@ On mobile:
 
 - **Modal bg is cream (#FFF8E1)**: Different from the site's dark theme — the modal is a light overlay on a dark page. All text inside the modal must be dark-colored (not white).
 - **Submit button text**: Likely "Gui" (VN) / "Send" (EN). The gold button (H.2) is significantly wider (502px) than the cancel button, emphasizing it as the primary action.
-- **Anonymous label color**: The label uses `#999999` for the unchecked state and darkens to `#00101A` when checked (see F.G interactive states table). `TODO(confirm checked label and checkbox background colors from Figma)`.
-- **Submit button font size**: Button font size is not confirmed in Figma; `TODO(confirm --text-btn-size from Figma)`. Use Montserrat 700 at the confirmed size.
+- **Anonymous label color**: The label uses `#999999` for the unchecked state and darkens to `#00101A` when checked (see F.G interactive states table). Confirmed from Figma node `I520:11647;520:14099;520:14095`.
+- **Submit button font size**: Confirmed `22px` (Montserrat 700, lineHeight 28px) from Figma node `I520:11647;520:9907;186:1568`.
 - **Scroll behavior on tall content**: If the form content exceeds `1012px` (e.g., when hashtag chips wrap to multiple rows), the modal MUST scroll internally (`overflow-y: auto`) rather than expand beyond viewport height.
 - **Rich text editor**: Use a library like Tiptap or Quill that matches the design's textarea appearance. Ensure XSS sanitization server-side.
 - **Recipient search**: Debounce the search input (300ms) to avoid flooding the API.

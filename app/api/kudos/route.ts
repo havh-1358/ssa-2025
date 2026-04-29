@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getKudosFeed } from "@/lib/kudos-service";
-import { createKudos } from "@/lib/kudos-service";
+import { getKudosFeed, createKudos } from "@/lib/kudos-service";
+import { findLikedKudosIds } from "@/lib/kudos-repository";
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -17,7 +17,7 @@ const kudosCreateDto = z.object({
   title: z.string().min(1).max(100),
   message: z.string().min(1).max(1000),
   hashtags: z.array(z.string()).max(5).default([]),
-  imageUrl: z.string().url().nullable().optional(),
+  imageUrls: z.array(z.string().url()).max(5).default([]),
   isAnonymous: z.boolean().default(false),
   idempotencyKey: z.string().uuid(),
 });
@@ -27,6 +27,17 @@ export async function GET(request: NextRequest) {
     const params = Object.fromEntries(request.nextUrl.searchParams.entries());
     const parsed = querySchema.parse(params);
     const { data, meta } = await getKudosFeed(parsed);
+
+    // Annotate likedByMe per authenticated user
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && data.length > 0) {
+      const kudosIds = data.map((k) => k.id);
+      const likedSet = await findLikedKudosIds(kudosIds, user.id);
+      const annotated = data.map((k) => ({ ...k, likedByMe: likedSet.has(k.id) }));
+      return NextResponse.json({ success: true, data: annotated, meta });
+    }
+
     return NextResponse.json({ success: true, data, meta });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -83,7 +94,7 @@ export async function POST(request: NextRequest) {
       title: dto.title,
       message: dto.message,
       hashtags: dto.hashtags,
-      imageUrls: dto.imageUrl ? [dto.imageUrl] : [],
+      imageUrls: dto.imageUrls,
       isAnonymous: dto.isAnonymous,
       idempotencyKey: dto.idempotencyKey,
     });

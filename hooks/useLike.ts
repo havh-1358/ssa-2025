@@ -4,7 +4,11 @@ import { useCallback } from "react";
 import { useLikeState } from "@/components/shared/LikeStateContext";
 import { useSpecialDay } from "@/components/shared/SpecialDayContext";
 
-export function useLike(kudosId: number, isOwnKudos: boolean) {
+export function useLike(
+  kudosId: number,
+  isOwnKudos: boolean,
+  onError?: () => void
+) {
   const { getState, setState } = useLikeState();
   const isSpecialDay = useSpecialDay();
 
@@ -20,7 +24,6 @@ export function useLike(kudosId: number, isOwnKudos: boolean) {
     const prevLiked = likedByMe;
     const delta = isSpecialDay ? 2 : 1;
 
-    // Optimistic update
     setState(kudosId, {
       heartCount: likedByMe ? heartCount - delta : heartCount + delta,
       likedByMe: !likedByMe,
@@ -33,12 +36,8 @@ export function useLike(kudosId: number, isOwnKudos: boolean) {
       const res = await fetch(endpoint, { method });
 
       if (!res.ok) {
-        // Rollback on failure
-        setState(kudosId, {
-          heartCount: prevCount,
-          likedByMe: prevLiked,
-          isLiking: false,
-        });
+        setState(kudosId, { heartCount: prevCount, likedByMe: prevLiked, isLiking: false });
+        onError?.();
         return;
       }
 
@@ -49,13 +48,10 @@ export function useLike(kudosId: number, isOwnKudos: boolean) {
         isLiking: false,
       });
     } catch {
-      setState(kudosId, {
-        heartCount: prevCount,
-        likedByMe: prevLiked,
-        isLiking: false,
-      });
+      setState(kudosId, { heartCount: prevCount, likedByMe: prevLiked, isLiking: false });
+      onError?.();
     }
-  }, [kudosId, isOwnKudos, isLiking, heartCount, likedByMe, isSpecialDay, setState]);
+  }, [kudosId, isOwnKudos, isLiking, heartCount, likedByMe, isSpecialDay, setState, onError]);
 
   return { heartCount, likedByMe, isLiking, toggleLike };
 }

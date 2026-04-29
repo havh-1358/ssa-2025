@@ -1,175 +1,200 @@
 "use client";
 
-import { useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { RecipientOption } from "@/hooks/useKudosForm";
 
 type RecipientSearchProps = {
   value: RecipientOption | null;
-  searchQuery: string;
-  searchResults: RecipientOption[];
-  isSearching: boolean;
-  searchError: string | null;
   error?: string;
-  onQueryChange: (q: string) => void;
-  onSelect: (r: RecipientOption) => void;
-  onRetrySearch: () => void;
+  onSelect: (r: RecipientOption | null) => void;
 };
 
-export function RecipientSearch({
-  value,
-  searchQuery,
-  searchResults,
-  isSearching,
-  searchError,
-  error,
-  onQueryChange,
-  onSelect,
-  onRetrySearch,
-}: RecipientSearchProps) {
-  // Derive open state directly — no effect needed
-  const open = searchQuery.length >= 2;
+export function RecipientSearch({ value, error, onSelect }: RecipientSearchProps) {
+  const [allUsers, setAllUsers] = useState<RecipientOption[]>([]);
+  const [filter, setFilter] = useState("");
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleSelect = useCallback(
-    (r: RecipientOption) => {
-      onSelect(r);
-    },
-    [onSelect]
-  );
+  async function loadUsers() {
+    if (allUsers.length > 0) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/users/search");
+      const json = await res.json();
+      setAllUsers(json.data ?? []);
+    } catch {
+      // silent fail — list stays empty
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleOpen() {
+    setOpen(true);
+    setFilter("");
+    void loadUsers();
+  }
+
+  function handleSelect(r: RecipientOption) {
+    onSelect(r);
+    setOpen(false);
+    setFilter("");
+  }
+
+  function handleClear() {
+    onSelect(null);
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const filtered = filter.trim()
+    ? allUsers.filter((u) => u.name.toLowerCase().includes(filter.toLowerCase()))
+    : allUsers;
+
+  const inputClass = [
+    "w-full px-6 py-4 rounded-[var(--border-input-radius)]",
+    "border bg-[var(--color-input-bg)]",
+    "font-[family-name:var(--font-montserrat)] font-bold text-[16px]",
+    "text-[var(--color-modal-text-dark)]",
+    "placeholder:text-[var(--color-placeholder)] placeholder:font-bold",
+    "outline-none focus:border-[var(--color-modal-text-dark)]",
+    error ? "border-[var(--color-error)]" : "border-[var(--color-input-border)]",
+  ].join(" ");
 
   return (
-    <div className="flex flex-col gap-[var(--field-gap)] relative">
+    /* B row: flex-row, gap 16px, align-items center */
+    <div className="flex flex-row items-center relative" style={{ gap: "16px" }}>
+      {/* B.1_Title */}
       <label
-        className="font-[family-name:var(--font-montserrat)] font-bold
-          text-[14px] leading-5 text-[var(--color-modal-text-dark)]"
+        className="shrink-0 font-[family-name:var(--font-montserrat)] font-bold
+          text-[22px] leading-7 text-[var(--color-modal-text-dark)]"
+        style={{ whiteSpace: "nowrap", minWidth: "150px" }}
       >
-        Người nhận *
+        Người nhận <span style={{ color: "var(--color-required-star)" }}>*</span>
       </label>
 
-      {value ? (
-        <div
-          className="flex items-center justify-between
-            px-6 py-4 rounded-[var(--border-input-radius)]
-            border border-[var(--color-input-border)] bg-[var(--color-input-bg)]"
-        >
-          <span
-            className="font-[family-name:var(--font-montserrat)] font-bold
-              text-[16px] text-[var(--color-modal-text-dark)]"
-          >
-            {value.name}
-          </span>
+      {/* B.2 input + dropdown */}
+      <div className="flex-1 relative" ref={dropdownRef}>
+        {value ? (
+          /* Selected state */
+          <div className={[
+            "flex items-center justify-between px-6 py-4",
+            "rounded-[var(--border-input-radius)]",
+            "border border-[var(--color-input-border)] bg-[var(--color-input-bg)]",
+          ].join(" ")}>
+            <span className="font-[family-name:var(--font-montserrat)] font-bold text-[16px] text-[var(--color-modal-text-dark)]">
+              {value.name}
+            </span>
+            <button
+              type="button"
+              onClick={handleClear}
+              aria-label="Xoá người nhận"
+              className="text-[var(--color-placeholder)] hover:text-[var(--color-modal-text-dark)]
+                focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          /* Dropdown trigger */
           <button
             type="button"
-            onClick={() => onSelect({ id: "", name: "", avatarUrl: null })}
-            className="text-[var(--color-placeholder)] hover:text-[var(--color-modal-text-dark)]
-              focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
-            aria-label="Clear recipient"
-          >
-            ×
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* combobox wrapper carries aria-expanded (not the input) */}
-          <div
-            role="combobox"
-            aria-expanded={open}
+            onClick={handleOpen}
+            className={[
+              "w-full flex items-center justify-between px-6 py-4",
+              "rounded-[var(--border-input-radius)]",
+              "bg-[var(--color-input-bg)]",
+              "font-[family-name:var(--font-montserrat)] font-bold text-[16px]",
+              error ? "border border-[var(--color-error)]" : "border border-[var(--color-input-border)]",
+              "focus-visible:outline-2 focus-visible:outline-[var(--color-modal-text-dark)]",
+            ].join(" ")}
             aria-haspopup="listbox"
-            aria-controls="recipient-listbox"
-            aria-owns="recipient-listbox"
-            className="relative"
+            aria-expanded={open}
           >
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Tìm đồng nghiệp..."
-              aria-autocomplete="list"
-              aria-controls="recipient-listbox"
-              autoComplete="off"
-              className="w-full px-6 py-4 rounded-[var(--border-input-radius)]
-                border border-[var(--color-input-border)] bg-[var(--color-input-bg)]
-                font-[family-name:var(--font-montserrat)] text-[16px]
-                text-[var(--color-modal-text-dark)] placeholder:text-[var(--color-placeholder)]
-                outline-none focus:border-[var(--color-modal-text-dark)]"
-            />
-            {isSearching && (
-              <span
-                className="absolute right-4 top-1/2 -translate-y-1/2
-                  text-[var(--color-placeholder)] text-[14px]"
-                aria-hidden="true"
-              >
-                ⟳
-              </span>
+            <span className="text-[var(--color-placeholder)]">Tìm kiếm</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 9L12 15L18 9" stroke="#999999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+
+        {/* Dropdown panel */}
+        {open && (
+          <div
+            role="listbox"
+            className="absolute top-full left-0 right-0 mt-1 z-50
+              bg-[var(--color-input-bg)] border border-[var(--color-input-border)]
+              rounded-[var(--border-input-radius)] shadow-lg"
+            style={{ maxHeight: "240px", overflowY: "auto" }}
+          >
+            {/* Filter input */}
+            <div className="sticky top-0 bg-[var(--color-input-bg)] border-b border-[var(--color-input-border)] px-4 py-2">
+              <input
+                type="search"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Tìm kiếm..."
+                autoFocus
+                className="w-full bg-transparent outline-none
+                  font-[family-name:var(--font-montserrat)] text-[14px]
+                  text-[var(--color-modal-text-dark)] placeholder:text-[var(--color-placeholder)]"
+              />
+            </div>
+
+            {isLoading ? (
+              <p className="px-4 py-3 text-[14px] text-[var(--color-placeholder)] font-[family-name:var(--font-montserrat)]">
+                Đang tải...
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="px-4 py-3 text-center text-[14px] text-[var(--color-placeholder)] font-[family-name:var(--font-montserrat)]">
+                Không tìm thấy
+              </p>
+            ) : (
+              filtered.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  onClick={() => handleSelect(u)}
+                  className="w-full text-left px-4 py-3 flex items-center gap-3
+                    hover:bg-[var(--color-suggestion-hover)]
+                    font-[family-name:var(--font-montserrat)] font-bold text-[16px]
+                    text-[var(--color-modal-text-dark)]
+                    focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
+                >
+                  {u.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={u.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <span className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
+                      bg-[var(--color-accent-gold)] text-[var(--color-modal-text-dark)] font-bold text-[12px]">
+                      {u.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  {u.name}
+                </button>
+              ))
             )}
           </div>
+        )}
 
-          {open && (
-            <div
-              id="recipient-listbox"
-              role="listbox"
-              className="absolute top-full left-0 right-0 mt-1
-                max-h-[240px] overflow-y-auto
-                bg-[var(--color-input-bg)] border border-[var(--color-input-border)]
-                rounded-[var(--border-input-radius)] z-50 shadow-lg"
-            >
-              {searchError ? (
-                <div className="p-4 flex flex-col gap-2">
-                  <p className="text-[14px] text-[var(--color-error)] font-[family-name:var(--font-montserrat)]">
-                    Unable to search right now — try again
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onRetrySearch}
-                    className="self-start text-[14px] font-bold text-[var(--color-modal-text-dark)]
-                      underline focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : searchResults.length === 0 && !isSearching ? (
-                <p
-                  className="p-4 text-center text-[14px] text-[var(--color-placeholder)]
-                    font-[family-name:var(--font-montserrat)]"
-                >
-                  No results found
-                </p>
-              ) : (
-                searchResults.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    onClick={() => handleSelect(r)}
-                    className="w-full text-left px-4 py-3 flex items-center gap-3
-                      hover:bg-[var(--color-suggestion-hover)]
-                      font-[family-name:var(--font-montserrat)] text-[14px]
-                      text-[var(--color-modal-text-dark)]
-                      focus-visible:outline-2 focus-visible:outline-[var(--color-error)]"
-                  >
-                    <div
-                      className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center
-                        bg-[var(--color-accent-gold)] text-[var(--color-modal-text-dark)] font-bold text-[12px]"
-                    >
-                      {r.name.charAt(0).toUpperCase()}
-                    </div>
-                    {r.name}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {error && (
-        <p
-          className="font-[family-name:var(--font-montserrat)]
-            text-[12px] leading-4 text-[var(--color-error)]"
-        >
-          {error}
-        </p>
-      )}
+        {error && (
+          <p className="mt-1 font-[family-name:var(--font-montserrat)] text-[12px] leading-4 text-[var(--color-error)]">
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

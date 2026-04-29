@@ -15,6 +15,7 @@ export interface Kudos {
   heartCount: number;
   isAnonymous: boolean;
   createdAt: string;
+  likedByMe?: boolean;
 }
 
 export interface Like {

@@ -23,10 +23,10 @@
 
 **Purpose**: Re-enable auth, install new dependencies, verify CSS tokens
 
-- [ ] T001 Re-enable `/kudos` auth guard (un-comment block) | `proxy.ts`
-- [ ] T002 Install D3 dependencies: `npm install d3 d3-cloud` | `package.json`
-- [ ] T003 [P] Verify CSS tokens in globals.css match design-style.md (add missing if any) | `app/globals.css`
-- [ ] T004 [P] Add `SpotlightNode` type to kudos types | `types/kudos.ts`
+- [x] T001 Re-enable `/kudos` auth guard (un-comment block) | `proxy.ts`
+- [x] T002 Install D3 dependencies: `npm install d3 d3-cloud` | `package.json`
+- [x] T003 [P] Verify CSS tokens in globals.css match design-style.md (add missing if any) | `app/globals.css`
+- [x] T004 [P] Add `SpotlightNode` type to kudos types | `types/kudos.ts`
 
 ---
 
@@ -91,15 +91,18 @@
 
 **Independent Test**: Login as USER_A → find KUDOS_1 (sent by USER_B) → click heart → count +1 → click again → count -1 → find own kudos (KUDOS_2) → heart disabled. On special day: click → count +2.
 
-- [ ] T027 [US4] Verify `POST /api/kudos/:id/like` server-side: auth check, not-own-kudos check, no-duplicate check | `app/api/kudos/[id]/route.ts`
-- [ ] T028 [US4] Verify `DELETE /api/kudos/:id/like` server-side: auth check, like exists check | `app/api/kudos/[id]/route.ts`
+- [ ] T027 [US4] Verify `POST /api/kudos/:id/like` server-side: auth 401, own-kudos 400, duplicate no-op | `app/api/kudos/[id]/like/route.ts`
+- [ ] T028 [US4] Verify `DELETE /api/kudos/:id/like` server-side: auth 401, like-not-found 404 | `app/api/kudos/[id]/like/route.ts`
 - [ ] T029 [US4] Wire `GET /api/admin/special-days` into `app/kudos/page.tsx` → `SpecialDayProvider` | `app/kudos/page.tsx`
-- [ ] T030 [US4] Verify `useLike` optimistic update: count +1 immediately, server confirm | `hooks/useLike.ts`
-- [ ] T031 [US4] Verify `useLike` rollback: count reverts + toast error on API failure | `hooks/useLike.ts`
-- [ ] T032 [P] [US4] Verify `LikeButton` disabled state when `isOwnKudos=true` (opacity 0.4, cursor not-allowed) | `components/kudos/LikeButton.tsx`
-- [ ] T033 [P] [US4] Verify special day visual: "x2" badge shown on LikeButton when `isSpecialDay=true` | `components/kudos/LikeButton.tsx`
-- [ ] T034 [P] [US4] Verify unauthenticated like attempt redirects to `/login` | `app/api/kudos/[id]/route.ts`
-- [ ] T035 [US4] Like in Highlight carousel updates count in both Highlight and Feed via `LikeStateContext` | `components/shared/LikeStateContext.tsx`
+- [ ] T030 [US4] Verify `useLike` optimistic update: count +delta immediately, server confirms | `hooks/useLike.ts`
+- [x] T031 [US4] Fix `useLike` rollback — add error callback/toast on API failure (spec Scenario 6: "Failed to like — please try again"); currently silent | `hooks/useLike.ts`
+- [x] T031b [US4] Expose rollback error from `useLike` and show toast in `LikeButton` on like/unlike API failure | `components/kudos/LikeButton.tsx`
+- [x] T032 [P] [US4] Verify `LikeButton` own-kudos disabled: `opacity: 0.4`, `cursor: not-allowed`, `aria-disabled` | `components/kudos/LikeButton.tsx`
+- [x] T033 [P] [US4] Verify special day visual: "x2" badge renders when `isSpecialDay=true` and `likedByMe=true` | `components/kudos/LikeButton.tsx`
+- [ ] T034 [P] [US4] Verify unauthenticated like attempt: API returns 401, client redirects to `/login` | `app/api/kudos/[id]/like/route.ts`
+- [x] T035 [US4] Fix `likedByMeInitial` — include `likedByMe: boolean` per authenticated user in `GET /api/kudos` feed response; pass to `LikeButton` from `KudosCard` | `app/api/kudos/route.ts`
+- [x] T035b [US4] Pass `likedByMeInitial` from kudos feed data through `KudosFeed` → `KudosCard` → `LikeButton` | `components/kudos/KudosFeed.tsx`
+- [x] T036 [US4] Like in Highlight carousel updates count in both Highlight and Feed via `LikeStateContext` | `components/shared/LikeStateContext.tsx`
 
 **Checkpoint**: Like/unlike works end-to-end with optimistic UI ✓
 
@@ -111,17 +114,17 @@
 
 **Independent Test**: Scroll to Spotlight Board → word cloud renders → hover a name → tooltip shows name + time → click → navigate to kudos detail → click B7.2 → pan/zoom toggles → type in B7.3 search → matching nodes highlighted
 
-- [ ] T036 [US2] Create `hooks/useSpotlight.ts` — fetch `/api/kudos/spotlight`, loading/error state | `hooks/useSpotlight.ts`
-- [ ] T037 [US2] Implement `/api/kudos/spotlight` route using `findSpotlightData()` | `app/api/kudos/spotlight/route.ts`
-- [ ] T038 [US2] Create `components/kudos/SpotlightBoard.tsx` — D3 word cloud layout via `d3-cloud` | `components/kudos/SpotlightBoard.tsx`
-- [ ] T039 [US2] Add `d3-zoom` pan/zoom to SpotlightBoard canvas | `components/kudos/SpotlightBoard.tsx`
-- [ ] T040 [US2] Add hover tooltip overlay (name + latest kudos time) | `components/kudos/SpotlightBoard.tsx`
-- [ ] T041 [US2] Add click handler → navigate to kudos detail (pending Q5 — stub href for now) | `components/kudos/SpotlightBoard.tsx`
-- [ ] T042 [P] [US2] Add B7.2 pan/zoom toggle button with `aria-pressed` | `components/kudos/SpotlightBoard.tsx`
-- [ ] T043 [P] [US2] Add B7.3 search input — filter/highlight matching nodes; dim non-matching | `components/kudos/SpotlightBoard.tsx`
-- [ ] T044 [US2] Add empty ("Chưa có dữ liệu") and loading skeleton states | `components/kudos/SpotlightBoard.tsx`
-- [ ] T045 [US2] Replace stub `SpotlightBoards.tsx` with real `SpotlightBoard` component | `components/kudos/SpotlightBoards.tsx`
-- [ ] T046 [P] [US2] Cleanup: `useEffect` removes all D3 event listeners on unmount | `components/kudos/SpotlightBoard.tsx`
+- [ ] T039 [US2] Create `hooks/useSpotlight.ts` — fetch `/api/kudos/spotlight`, loading/error state | `hooks/useSpotlight.ts`
+- [ ] T040 [US2] Implement `/api/kudos/spotlight` route using `findSpotlightData()` | `app/api/kudos/spotlight/route.ts`
+- [ ] T041 [US2] Create `components/kudos/SpotlightBoard.tsx` — D3 word cloud layout via `d3-cloud` | `components/kudos/SpotlightBoard.tsx`
+- [ ] T042 [US2] Add `d3-zoom` pan/zoom to SpotlightBoard canvas | `components/kudos/SpotlightBoard.tsx`
+- [ ] T043 [US2] Add hover tooltip overlay (name + latest kudos time) | `components/kudos/SpotlightBoard.tsx`
+- [ ] T044 [US2] Add click handler → navigate to kudos detail (pending Q5 — stub href for now) | `components/kudos/SpotlightBoard.tsx`
+- [ ] T045 [P] [US2] Add B7.2 pan/zoom toggle button with `aria-pressed` | `components/kudos/SpotlightBoard.tsx`
+- [ ] T046 [P] [US2] Add B7.3 search input — filter/highlight matching nodes; dim non-matching | `components/kudos/SpotlightBoard.tsx`
+- [ ] T047 [US2] Add empty ("Chưa có dữ liệu") and loading skeleton states | `components/kudos/SpotlightBoard.tsx`
+- [ ] T048 [US2] Replace stub `SpotlightBoards.tsx` with real `SpotlightBoard` component | `components/kudos/SpotlightBoards.tsx`
+- [ ] T049 [P] [US2] Cleanup: `useEffect` removes all D3 event listeners on unmount | `components/kudos/SpotlightBoard.tsx`
 
 **Checkpoint**: Spotlight Board word cloud renders with D3, pan/zoom, tooltip, search ✓
 
@@ -133,13 +136,13 @@
 
 **Independent Test**: Click "Hashtag" filter → select "#teamwork" → feed shows only matching kudos → Highlight section also filters → pagination resets to 1 → clear filter → all kudos return
 
-- [ ] T047 [US5] Build `FilterDropdown` component reusable for Hashtag + Phòng ban | `components/kudos/FilterDropdown.tsx`
-- [ ] T048 [US5] Wire Hashtag filter dropdown to `/api/kudos/hashtags` for dynamic options | `components/kudos/KudosPage.tsx`
-- [ ] T049 [US5] Wire Phòng ban dropdown options (CEVC1–4, OPD, Infra) | `components/kudos/KudosPage.tsx`
-- [ ] T050 [US5] Lift filter state to `KudosPage` — pass `filterHashtag` + `filterDepartment` to both `HighlightKudos` and `KudosFeed` | `components/kudos/KudosPage.tsx`
-- [ ] T051 [US5] Reset pagination to page 1 on filter change in `useKudosFeed` | `hooks/useKudosFeed.ts`
-- [ ] T052 [P] [US5] Sync filter state to URL params (`?hashtag=X&department=Y`) on change | `components/kudos/KudosPage.tsx`
-- [ ] T053 [P] [US5] Read filter URL params on mount and set `filterSynced=true` | `hooks/useKudosFeed.ts`
+- [ ] T050 [US5] Build `FilterDropdown` component reusable for Hashtag + Phòng ban | `components/kudos/FilterDropdown.tsx`
+- [ ] T051 [US5] Wire Hashtag filter dropdown to `/api/kudos/hashtags` for dynamic options | `components/kudos/KudosPage.tsx`
+- [ ] T052 [US5] Wire Phòng ban dropdown options (CEVC1–4, OPD, Infra) | `components/kudos/KudosPage.tsx`
+- [ ] T053 [US5] Lift filter state to `KudosPage` — pass `filterHashtag` + `filterDepartment` to both `HighlightKudos` and `KudosFeed` | `components/kudos/KudosPage.tsx`
+- [ ] T054 [US5] Reset pagination to page 1 on filter change in `useKudosFeed` | `hooks/useKudosFeed.ts`
+- [ ] T055 [P] [US5] Sync filter state to URL params (`?hashtag=X&department=Y`) on change | `components/kudos/KudosPage.tsx`
+- [ ] T056 [P] [US5] Read filter URL params on mount and set `filterSynced=true` | `hooks/useKudosFeed.ts`
 
 **Checkpoint**: Hashtag and department filters update feed + highlights simultaneously ✓
 
@@ -151,8 +154,8 @@
 
 **Independent Test**: Navigate to `/kudos` → right sidebar shows accurate totalKudosSent, totalHeartsGiven, totalParticipants from DB
 
-- [ ] T054 [US6] Verify `/api/kudos/stats` returns real Supabase aggregates | `app/api/kudos/stats/route.ts`
-- [ ] T055 [P] [US6] Wire `KudosPage` to pass real `stats` to `StatsPanel` (already in page.tsx — verify after T015) | `app/kudos/page.tsx`
+- [ ] T057 [US6] Verify `/api/kudos/stats` returns real Supabase aggregates | `app/api/kudos/stats/route.ts`
+- [ ] T058 [P] [US6] Wire `KudosPage` to pass real `stats` to `StatsPanel` (already in page.tsx — verify after T015) | `app/kudos/page.tsx`
 
 **Checkpoint**: Sidebar stats show real DB totals ✓
 
@@ -164,11 +167,11 @@
 
 **Independent Test**: Have ≥1 unopened box → "Mở quà" button enabled → click → dialog opens → open box → count decreases → if 0 boxes → button disabled
 
-- [ ] T056 [US7b] Create `/api/secret-boxes/route.ts` — `POST /open` opens one secret box | `app/api/secret-boxes/route.ts`
-- [ ] T057 [US7b] Wire user stats panel: fetch `/api/kudos/user-stats` for authenticated user | `app/kudos/page.tsx`
-- [ ] T058 [US7b] Add `app/api/kudos/user-stats/route.ts` route handler | `app/api/kudos/user-stats/route.ts`
-- [ ] T059 [US7b] Create `components/kudos/SecretBoxDialog.tsx` (frame `1466:7676`) | `components/kudos/SecretBoxDialog.tsx`
-- [ ] T060 [US7b] Wire "Mở quà" button → open `SecretBoxDialog` → on success: decrement `secretBoxesUnopened` count | `components/kudos/StatsPanel.tsx`
+- [ ] T059 [US7b] Create `/api/secret-boxes/route.ts` — `POST /open` opens one secret box | `app/api/secret-boxes/route.ts`
+- [ ] T060 [US7b] Wire user stats panel: fetch `/api/kudos/user-stats` for authenticated user | `app/kudos/page.tsx`
+- [ ] T061 [US7b] Add `app/api/kudos/user-stats/route.ts` route handler | `app/api/kudos/user-stats/route.ts`
+- [ ] T062 [US7b] Create `components/kudos/SecretBoxDialog.tsx` (frame `1466:7676`) | `components/kudos/SecretBoxDialog.tsx`
+- [ ] T063 [US7b] Wire "Mở quà" button → open `SecretBoxDialog` → on success: decrement `secretBoxesUnopened` count | `components/kudos/StatsPanel.tsx`
 
 **Checkpoint**: Secret Box flow works end-to-end ✓
 
@@ -180,9 +183,9 @@
 
 **Independent Test**: View right sidebar → list shows up to 10 names each with gift description → empty state if no gifts yet
 
-- [ ] T061 [US7] Add `/api/kudos/recent-gifts/route.ts` route handler | `app/api/kudos/recent-gifts/route.ts`
-- [ ] T062 [P] [US7] Wire `KudosPage` to fetch recent gifts and pass to `StatsPanel` | `app/kudos/page.tsx`
-- [ ] T063 [P] [US7] Verify C3 list renders gift descriptions; "Chưa có dữ liệu" when empty | `components/kudos/StatsPanel.tsx`
+- [ ] T064 [US7] Add `/api/kudos/recent-gifts/route.ts` route handler | `app/api/kudos/recent-gifts/route.ts`
+- [ ] T065 [P] [US7] Wire `KudosPage` to fetch recent gifts and pass to `StatsPanel` | `app/kudos/page.tsx`
+- [ ] T066 [P] [US7] Verify C3 list renders gift descriptions; "Chưa có dữ liệu" when empty | `components/kudos/StatsPanel.tsx`
 
 **Checkpoint**: Recent gift recipients list shows real data ✓
 
@@ -194,9 +197,9 @@
 
 **Independent Test**: Login → click Write Kudos button → modal opens → fill form → submit → new kudos appears at top of feed without page reload
 
-- [ ] T064 [US3] Verify `WriteKudosModal` POST to `/api/kudos` with auth | `app/api/kudos/route.ts`
-- [ ] T065 [US3] Verify `handleKudosSuccess` prepends new kudos via `prependFnRef` | `components/kudos/KudosPage.tsx`
-- [ ] T066 [P] [US3] Verify CopyLink copies `{origin}/kudos#{kudosId}` to clipboard | `components/kudos/CopyLinkButton.tsx`
+- [ ] T067 [US3] Verify `WriteKudosModal` POST to `/api/kudos` with auth | `app/api/kudos/route.ts`
+- [ ] T068 [US3] Verify `handleKudosSuccess` prepends new kudos via `prependFnRef` | `components/kudos/KudosPage.tsx`
+- [ ] T069 [P] [US3] Verify CopyLink copies `{origin}/kudos#{kudosId}` to clipboard | `components/kudos/CopyLinkButton.tsx`
 
 **Checkpoint**: Write kudos flow works end-to-end ✓
 
@@ -206,16 +209,16 @@
 
 **Purpose**: Accessibility, security hardening, tests, performance
 
-- [ ] T067 [P] Accessibility audit: verify all ARIA labels from spec (heart `aria-pressed`, carousel `aria-label`, filter `aria-haspopup`) | `components/kudos/`
-- [ ] T068 [P] Security review: verify RLS policies on `kudos` + `likes` tables; own-kudos server check | `lib/kudos-repository.ts`
-- [ ] T069 Write unit tests for `useLike` hook — optimistic update + rollback scenarios | `hooks/useLike.ts`
-- [ ] T070 [P] Write unit tests for `useKudosFeed` — SSR skip, filter change, pagination | `hooks/useKudosFeed.ts`
-- [ ] T071 [P] Write unit tests for `KudosCard` — anonymous, long message, image gallery | `components/kudos/KudosCard.tsx`
-- [ ] T072 Write integration test: like/unlike with real Supabase (USER_A likes KUDOS_1) | `tests/integration/kudos-like.spec.ts`
-- [ ] T073 [P] Write E2E Playwright: like flow, write kudos flow, filter flow | `tests/e2e/kudos.spec.ts`
-- [ ] T074 Performance: cap SpotlightBoard max rendered nodes; add min font-size threshold | `components/kudos/SpotlightBoard.tsx`
-- [ ] T075 [P] Error states: feed fetch fail → retry button; like fail → toast; polling fail → silent | `components/kudos/KudosFeed.tsx`
-- [ ] T076 Code cleanup: remove `data/kudos-mock.ts` and all mock imports | `data/kudos-mock.ts`
+- [ ] T070 [P] Accessibility audit: verify all ARIA labels from spec (heart `aria-pressed`, carousel `aria-label`, filter `aria-haspopup`) | `components/kudos/`
+- [ ] T071 [P] Security review: verify RLS policies on `kudos` + `likes` tables; own-kudos server check | `lib/kudos-repository.ts`
+- [ ] T072 Write unit tests for `useLike` hook — optimistic update + rollback scenarios | `hooks/useLike.ts`
+- [ ] T073 [P] Write unit tests for `useKudosFeed` — SSR skip, filter change, pagination | `hooks/useKudosFeed.ts`
+- [ ] T074 [P] Write unit tests for `KudosCard` — anonymous, long message, image gallery | `components/kudos/KudosCard.tsx`
+- [ ] T075 Write integration test: like/unlike with real Supabase (USER_A likes KUDOS_1) | `tests/integration/kudos-like.spec.ts`
+- [ ] T076 [P] Write E2E Playwright: like flow, write kudos flow, filter flow | `tests/e2e/kudos.spec.ts`
+- [ ] T077 Performance: cap SpotlightBoard max rendered nodes; add min font-size threshold | `components/kudos/SpotlightBoard.tsx`
+- [ ] T078 [P] Error states: feed fetch fail → retry button; like fail → toast; polling fail → silent | `components/kudos/KudosFeed.tsx`
+- [ ] T079 Code cleanup: remove `data/kudos-mock.ts` and all mock imports | `data/kudos-mock.ts`
 
 ---
 
@@ -230,7 +233,7 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 - **Phase 1**: No dependencies — start immediately
 - **Phase 2**: Depends on Phase 1 — BLOCKS all API-wired stories
 - **Phases 3–5** (US1, US3, US4): Depend on Phase 2; can run in parallel after T015
-- **Phase 6** (US2 Spotlight): Depends on T036–T037; D3 work is independent of feed
+- **Phase 6** (US2 Spotlight): Depends on T039–T040; D3 work is independent of feed
 - **Phases 7–11** (P2 stories): Depend on Phase 2; can start after foundation
 - **Phase 12**: Depends on all desired stories being complete
 
@@ -242,8 +245,8 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 | Phase 3 | T017, T018 in parallel |
 | Phase 4 | T021, T022, T024, T025, T026 in parallel after T019–T020 |
 | Phase 5 | T030, T032, T033, T034 in parallel after T027–T029 |
-| Phase 6 | T038–T046 after T036–T037; T042, T043, T046 in parallel |
-| Phase 12 | T067–T071, T074, T075 all in parallel |
+| Phase 6 | T041–T049 after T039–T040; T045, T046, T049 in parallel |
+| Phase 12 | T070–T074, T077, T078 all in parallel |
 
 ---
 
@@ -269,22 +272,26 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 
 | Metric | Value |
 |--------|-------|
-| Total tasks | 76 |
+| Total tasks | 82 |
 | Phase 1 Setup | 4 |
 | Phase 2 Foundation | 11 |
 | US1 Highlight | 3 |
 | US3 Feed + Write | 11 |
-| US4 Like | 9 |
+| US4 Like | 12 (+3 new tasks for like gaps from spec review) |
 | US2 Spotlight | 11 |
 | US5 Filter | 7 |
 | US6 Stats | 2 |
 | US7b Secret Box | 5 |
 | US7 Recent Gifts | 3 |
 | Polish | 10 |
-| Parallel tasks | ~35 |
+| Parallel tasks | ~38 |
 
-**MVP (P1 only)**: T001–T046 (46 tasks)
-**Full delivery**: T001–T076 (76 tasks)
+**MVP (P1 only)**: T001–T049 (49 tasks, includes all P1 like feature fixes)
+**Full delivery**: T001–T079 + T031b + T035b (82 tasks)
+
+**New tasks added (like feature — from spec/plan review)**:
+- T031b: Show error toast in `LikeButton` when rollback triggered (spec US4 Scenario 6)
+- T035 + T035b: Server-side `likedByMeInitial` per authenticated user in feed response
 
 ---
 
@@ -292,6 +299,6 @@ Phase 1 (Setup) → Phase 2 (Foundation) → Phases 3–11 (User Stories) → Ph
 
 - Resolve open questions Q1–Q5 (in plan.md) before starting Phase 6 (Spotlight click) and Phase 9 (SecretBox)
 - Profile page route (Q2) needed for Spotlight Board click nav — stub href until confirmed
-- `data/kudos-mock.ts` removed in T076 (Polish phase) — do NOT remove earlier
+- `data/kudos-mock.ts` removed in T079 (Polish phase) — do NOT remove earlier
 - Run `npm run build` after T002 (D3 install) to verify no type errors
 - Mark tasks `[x]` as you complete them

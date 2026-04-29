@@ -11,6 +11,7 @@ import {
   deleteLike,
   findUserLike,
   insertKudos,
+  findKudosHeartCount,
 } from "./kudos-repository";
 import type { Kudos, KudosFeedMeta, KudosStats, TopSunner, SpotlightNode, UserStats, RecentGift } from "@/types/kudos";
 
@@ -81,9 +82,8 @@ export async function likeKudos(
   }
   const heartsGiven: 1 | 2 = isSpecialDay ? 2 : 1;
   await insertLike(kudosId, userId, heartsGiven);
-  const { data } = await findKudosFeed({ page: 1, limit: 1 });
-  const updated = data.find((k) => k.id === kudosId);
-  return { heartCount: updated?.heartCount ?? 0 };
+  const heartCount = await findKudosHeartCount(kudosId);
+  return { heartCount };
 }
 
 export async function getSpotlightData(): Promise<SpotlightNode[]> {
@@ -109,7 +109,6 @@ export async function unlikeKudos(
     throw error;
   }
   await deleteLike(kudosId, userId);
-  const { data } = await findKudosFeed({ page: 1, limit: 1 });
-  const updated = data.find((k) => k.id === kudosId);
-  return { heartCount: updated?.heartCount ?? 0 };
+  const heartCount = await findKudosHeartCount(kudosId);
+  return { heartCount };
 }

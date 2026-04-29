@@ -11,28 +11,27 @@ export async function GET(request: NextRequest) {
 
   const q = request.nextUrl.searchParams.get("q") ?? "";
 
-  if (q.length < 2) {
-    return NextResponse.json({ success: true, data: [] });
+  let query = supabase
+    .from("users")
+    .select("id, name, avatar_url")
+    .neq("id", user.id)
+    .order("name", { ascending: true })
+    .limit(100);
+
+  if (q.trim().length >= 1) {
+    query = query.ilike("name", `%${q.trim()}%`);
   }
 
-  // Search auth.users via their metadata — using a view or RPC if available
-  // Fallback: search on profiles table if it exists, otherwise return empty
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .ilike("full_name", `%${q}%`)
-    .neq("id", user.id)
-    .limit(10);
+  const { data, error } = await query;
 
   if (error) {
-    // profiles table may not exist yet — return empty rather than crash
     return NextResponse.json({ success: true, data: [] });
   }
 
-  const results = (data ?? []).map((u: { id: string; full_name: string; avatar_url: string }) => ({
+  const results = (data ?? []).map((u: { id: string; name: string; avatar_url: string | null }) => ({
     id: u.id,
-    name: u.full_name,
-    avatarUrl: u.avatar_url,
+    name: u.name,
+    avatarUrl: u.avatar_url ?? null,
   }));
 
   return NextResponse.json({ success: true, data: results });

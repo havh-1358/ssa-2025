@@ -144,53 +144,71 @@ The Sun* Kudos page is a live recognition board where SSA 2025 participants send
 **I want to** click the heart button on a Kudos to like it  
 **So that** I can show appreciation for a recognition
 
-**Why this priority**: Core interactive feature embedded throughout the Kudos page.
+**Why this priority**: Core interactive feature embedded throughout the Kudos page; drives gamification via heart counts.
 
-**Business rules**:
-- 1 like per user per Kudos
-- The Kudos sender CANNOT like their own Kudos
-- On "special days" (admin-configured dates), each like gives 2 hearts instead of 1
-- Unlike removes the heart(s) that were added (1 or 2 depending on special day at time of liking)
-- Heart count reflects total hearts (not unique users)
+**Design nodes**: `C.4.1_Hearts` (`I3127:21871;256:5175`), `B.4.4_Action` (`I2940:13465;335:9461`)
 
-**Independent Test**: Log in → find a Kudos you did not send → click heart → verify heart count increases by 1 (or 2 on special day) → verify button shows filled state → click again → verify heart count decreases by same amount → verify heart is hollow again.
+**Business rules** (from Figma C.4.1):
+- 1 like per user per Kudos (no double-like)
+- The Kudos **sender** CANNOT like their own Kudos — heart button is **disabled** (`opacity: 0.4`, `cursor: not-allowed`)
+- On "special days" (admin-configured dates): each like awards **2 hearts** to the Kudos recipient's account instead of 1
+- Unlike: removes the heart(s) that were added (1 or 2 depending on special day at time of liking); heart count on recipient's account is decremented accordingly
+- Heart count on a Kudos card reflects **total hearts given** (not unique users)
+- Hearts are counted on the **Kudos recipient's** profile stats ("Số tim bạn nhận được")
+
+**Visual states** (from C.4.1 + design-style.md):
+| State | Heart icon | Count color | Cursor |
+|-------|-----------|-------------|--------|
+| Not liked | Hollow `MM_MEDIA_Heart` (gray) | `#00101A` | pointer |
+| Liked by me | Filled `MM_MEDIA_Heart` (red `#D4271D`) | `#00101A` | pointer |
+| Special day + liked | Filled heart + "x2" badge | `#00101A` | pointer |
+| Own kudos | Grayed heart | `#999999` | not-allowed |
+
+**Optimistic update**: Heart count and icon update **immediately** in the UI before the API response. If API fails, revert to previous state and show error toast.
+
+**Independent Test**: Log in → find a Kudos you did not send → click heart → verify heart icon turns red and count increments by 1 (or 2 on special day) → click again → verify icon turns gray and count decrements → navigate to your own Kudos → verify heart is grayed out and unclickable.
 
 #### Acceptance Scenarios
 
 **Scenario 1: Like a Kudos (normal day)**
 - Given: user is authenticated; Kudos was not sent by this user; user has not yet liked this Kudos; today is not a special day
 - When: user clicks the heart button
-- Then: heart becomes filled; heart count increases by 1; server records the like
+- Then: heart icon fills red immediately (optimistic); heart count increases by 1; `POST /api/kudos/{id}/like` called; server increments `heart_count` on Kudos and adds +1 heart to recipient's account
 
 **Scenario 2: Like a Kudos (special day — 2 hearts)**
-- Given: today is an admin-configured special day
+- Given: today is an admin-configured special day (`isSpecialDay === true`)
 - When: user clicks the heart button on any Kudos they haven't liked
-- Then: heart becomes filled (with double-heart visual indicator); heart count increases by 2
+- Then: heart icon fills with double-heart "x2" visual; heart count increases by 2; recipient's account receives +2 hearts
 
 **Scenario 3: Unlike a Kudos**
 - Given: user has previously liked this Kudos
 - When: user clicks the filled heart button
-- Then: heart becomes hollow; heart count decreases by the same amount that was added (1 or 2); server removes the like record
+- Then: heart becomes hollow immediately (optimistic); heart count decreases by the same amount that was added (1 or 2); `DELETE /api/kudos/{id}/like` called; server decrements `heart_count` and removes like record
 
 **Scenario 4: Cannot like own Kudos**
-- Given: user is the sender of a Kudos
+- Given: user is the sender (`senderId === currentUserId`) of a Kudos
 - When: user views that Kudos card
-- Then: heart button is disabled or hidden; no like action is possible
+- Then: heart button has `opacity: 0.4` and `cursor: not-allowed`; clicking does nothing; no API call is made
 
 **Scenario 5: Cannot double-like**
-- Given: user has already liked a Kudos
+- Given: user has already liked a Kudos (heart is filled)
 - When: user attempts to click the heart again
-- Then: the UI prevents a second like; the existing like state is maintained
+- Then: second click is treated as **unlike** (toggle behavior), not a second like
 
-**Scenario 6: Like from Highlight section**
+**Scenario 6: Optimistic update reversal on API failure**
+- Given: user clicks the heart button (or unlike)
+- When: `POST /api/kudos/{id}/like` or `DELETE /api/kudos/{id}/like` returns an error
+- Then: heart icon and count revert to the previous state; error toast shown ("Failed to like — please try again")
+
+**Scenario 7: Like from Highlight section**
 - Given: a Kudos is shown in the Highlight carousel
 - When: user clicks the heart on that Kudos card
-- Then: same like behavior as in the main feed; count updates in both Highlight and feed views
+- Then: same like behavior as in the main feed; count updates in the Highlight card; if same Kudos also visible in feed, both counts stay in sync (via shared `LikeStateProvider` context)
 
-**Scenario 7: Unauthenticated user tries to like**
+**Scenario 8: Unauthenticated user tries to like**
 - Given: user is not logged in
 - When: user clicks the heart button
-- Then: user is redirected to `/login` or a login prompt appears
+- Then: user is redirected to `/login`; after login, redirect returns to `/kudos`
 
 ---
 

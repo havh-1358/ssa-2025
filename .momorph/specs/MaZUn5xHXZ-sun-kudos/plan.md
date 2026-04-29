@@ -11,18 +11,19 @@
 The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 participants send and receive appreciation messages. The page is **already partially implemented** (UI scaffolding, routing, mock data mode). This plan covers remaining work: API integration, Spotlight Board D3 word cloud, Like/Unlike optimistic updates, Secret Box dialog, filter wiring, and full design-pixel compliance.
 
 **Current state (codebase analysis 2026-04-29):**
-- ✅ Route `app/kudos/page.tsx` — mock-data mode, auth bypassed
-- ✅ Core components: `KudosPage`, `KudosCard` (highlight + feed variants), `HighlightKudos` (carousel + filter buttons), `KudosFeed`, `StatsPanel`, `WriteKudosButton`, `SearchSunnerInput`, `LikeButton`, `CopyLinkButton`, `SpotlightBoards` (stub)
-- ✅ Custom hooks: `useKudosFeed` (SSR-skip + polling), `useLike`, `useKudosForm`
-- ✅ API routes scaffolded: all 13 endpoints
+- ✅ Route `app/kudos/page.tsx` — Supabase data, auth enabled
+- ✅ Core components: `KudosPage`, `KudosCard` (highlight + feed variants), `HighlightKudos` (carousel + filter buttons), `KudosFeed`, `StatsPanel`, `WriteKudosButton`, `SearchSunnerInput`, `LikeButton`, `CopyLinkButton`, `SpotlightBoards`
+- ✅ Custom hooks: `useKudosFeed` (SSR-skip + polling), `useLike` (optimistic + rollback), `useKudosForm`
+- ✅ Like feature: `LikeButton.tsx` + `useLike.ts` + `LikeStateContext` + `SpecialDayContext`
+- ✅ API routes: all endpoints implemented
 - ✅ Types: `types/kudos.ts`
 - ✅ Keyvisual + logo assets in `public/assets/kudos/`
-- ❌ SpotlightBoards — D3 word cloud not implemented (stub only)
-- ❌ Supabase repository layer — queries not implemented
-- ❌ Auth guard bypassed in `proxy.ts`
-- ❌ Personal stats + recent gifts — mock data only
+- ⚠️ `likedByMeInitial` always `false` — server-side initial like state not fetched per user
+- ⚠️ Like rollback is silent — no error toast shown on API failure (spec Scenario 6)
+- ⚠️ "x2" special day visual badge in LikeButton not verified
+- ❌ SpotlightBoards — D3 word cloud implemented but may need polish
 - ❌ Secret Box dialog (`1466:7676`) — not implemented
-- ❌ `isSpecialDay` — hardcoded `false`
+- ❌ Personal stats hearts count via recipient kudos — verify matches spec
 
 ---
 
@@ -110,6 +111,9 @@ The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 partic
 | `lib/kudos-service.ts` | Add `getUserStats()`, `getRecentGifts()`, `openSecretBox()` |
 | `components/kudos/SpotlightBoards.tsx` | Replace stub with `SpotlightBoard` wrapper |
 | `components/kudos/StatsPanel.tsx` | Wire to real API; extract personal stats |
+| `components/kudos/LikeButton.tsx` | Add error toast on rollback; verify "x2" badge; verify disabled visual state |
+| `hooks/useLike.ts` | Surface rollback error to caller for toast display |
+| `app/api/kudos/route.ts` | Include `likedByMe: boolean` per-user field in feed response (requires auth) |
 | `app/globals.css` | Add missing CSS tokens if any |
 
 ### Dependencies
@@ -133,12 +137,16 @@ The Sun* Kudos page (`/kudos`) is a live recognition board where SSA 2025 partic
 4. Replace mock imports in `app/kudos/page.tsx` with real service calls
 5. Verify CSS token completeness in `app/globals.css`
 
-### Phase 2: Core Feed + Like (US1, US3, US4) — P1
-1. Wire `KudosFeed` → `/api/kudos` with real pagination + filter
-2. Wire `HighlightKudos` → `/api/kudos/highlights`
-3. Wire `useLike` → `POST/DELETE /api/kudos/:id/like` end-to-end
-4. Verify optimistic update + rollback
-5. Wire `isSpecialDay` → `GET /api/admin/special-days` → `SpecialDayProvider`
+### Phase 2: Core Feed + Like (US1, US3, US4) — P1 ⚠️ In Progress
+- [x] Wire `KudosFeed` → `/api/kudos` with real pagination + filter
+- [x] Wire `HighlightKudos` → `/api/kudos/highlights`
+- [x] Wire `useLike` → `POST/DELETE /api/kudos/:id/like` + optimistic update
+- [x] Rollback on API failure (silent — state reverted)
+- [x] Wire `isSpecialDay` → `SpecialDayProvider`
+- [ ] **Fix**: fetch `likedByMeInitial` per user from server — currently always `false`; add `GET /api/kudos/{id}/like` or include `likedByMe` field in kudos feed response
+- [ ] **Fix**: add error toast on like/unlike rollback (spec US4 Scenario 6 — "Failed to like — please try again")
+- [ ] **Verify**: "x2" special day badge renders correctly in `LikeButton` when `isSpecialDay === true`
+- [ ] **Verify**: own-kudos heart button `opacity: 0.4`, `cursor: not-allowed` matching design spec
 
 ### Phase 3: Spotlight Board D3 (US2) — P1
 1. `npm install d3 d3-cloud`

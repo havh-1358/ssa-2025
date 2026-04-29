@@ -125,6 +125,8 @@
   --color-toolbar-bg: #f5f5f5;
   --color-suggestion-hover: rgba(255, 234, 158, 0.1);
   --color-suggestion-selected: rgba(255, 234, 158, 0.2);
+  --color-required-star: #cf1322;
+  --color-community-link: #e46060;
   --border-modal: 24px;
   --border-input-radius: 8px;
   --modal-padding: 40px;
@@ -138,6 +140,7 @@
   --color-kudos-msg-bg: rgba(255, 234, 158, 0.4);
   --color-kudos-text: #00101a;
   --color-hashtag: #d4271d;
+  --color-heart-liked: #d4271d;
   --color-timestamp: #999999;
   --color-heart-count-gold: #ffea9e;
   --radius-kudos-card: 24px;

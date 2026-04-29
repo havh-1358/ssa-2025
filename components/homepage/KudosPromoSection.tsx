@@ -21,7 +21,7 @@ export function KudosPromoSection() {
         style={{ height: "500px" }}
       >
         <Image
-          src="/assets/kudos/sunkudos-bg.png"
+          src="/assets/kudos/keyvisual.jpg"
           alt={t("kudosSectionTitle")}
           fill
           className="object-cover"

@@ -122,9 +122,9 @@ Create a new kudos. Requires authentication. Server-side DOMPurify sanitization 
 
 | ID | Category | Scenario | Input | Expected Output | Status |
 |----|----------|----------|-------|-----------------|--------|
-| KUDOS_POST_01 | Positive | Valid non-anonymous kudos | Auth as USER_A; `{recipientId: USER_C, title: "Thanks!", message: "<p>Thanks!</p>", hashtags: ["#thank-you"], imageUrl: null, isAnonymous: false, idempotencyKey: "uuid-1"}` | `201`; kudos object with `id`, `senderId=USER_A`, `recipientId=USER_C` | 201 |
+| KUDOS_POST_01 | Positive | Valid non-anonymous kudos | Auth as USER_A; `{recipientId: USER_C, title: "Thanks!", message: "<p>Thanks!</p>", hashtags: ["#thank-you"], imageUrls: [], isAnonymous: false, idempotencyKey: "uuid-1"}` | `201`; kudos object with `id`, `senderId=USER_A`, `recipientId=USER_C` | 201 |
 | KUDOS_POST_02 | Positive | Valid anonymous kudos | Auth as USER_A; same body with `isAnonymous: true` | `201`; response has NO `senderId/senderName/senderAvatarUrl` keys; DB row still has `sender_id=USER_A` | 201 |
-| KUDOS_POST_03 | Positive | Kudos with image URL | Auth as USER_A; `imageUrl: "https://storage.supabase.co/kudos-images/test.jpg"` | `201`; `imageUrls` array contains the CDN URL | 201 |
+| KUDOS_POST_03 | Positive | Kudos with image URLs | Auth as USER_A; `imageUrls: ["https://storage.supabase.co/kudos-images/test.jpg"]` | `201`; `imageUrls` array contains the CDN URL | 201 |
 | KUDOS_POST_04 | Positive | Kudos with multiple hashtags | `hashtags: ["#thank-you", "#teamwork", "#innovation"]` | `201`; `hashtags` array matches input | 201 |
 | KUDOS_POST_05 | Positive | XSS in message is sanitized | `message: "<script>alert('xss')</script><p>Real content</p>"` | `201`; stored message has `<script>` stripped; only `<p>Real content</p>` | 201 |
 | KUDOS_POST_06 | Positive | Idempotent re-submission (same key, second call) | Same body with same `idempotencyKey` as KUDOS_POST_01 | `409 Conflict`; error code `DUPLICATE_SUBMISSION` | 409 |
@@ -138,7 +138,7 @@ Create a new kudos. Requires authentication. Server-side DOMPurify sanitization 
 | KUDOS_POST_14 | Boundary | Title at max length (100 chars) | `title: "A".repeat(100)` | `201` | 201 |
 | KUDOS_POST_15 | Boundary | Title exceeds max length (101 chars) | `title: "A".repeat(101)` | `422`; details.title has max-length error | 422 |
 | KUDOS_POST_16 | Boundary | Empty `hashtags` array | `hashtags: []` | `201`; `hashtags: []` in response | 201 |
-| KUDOS_POST_17 | Boundary | `imageUrl` is null | `imageUrl: null` | `201`; `imageUrls: []` in response | 201 |
+| KUDOS_POST_17 | Boundary | Empty `imageUrls` array | `imageUrls: []` | `201`; `imageUrls: []` in response | 201 |
 | KUDOS_POST_18 | Boundary | `recipientId` does not exist | `recipientId: "non-existent-uuid"` | `422` OR `404`; recipient not found | 422/404 |
 
 ---

@@ -2,7 +2,14 @@
 
 **Frame**: `ihQ26W78P2-viet-kudos`
 **Date**: 2026-04-22
+**Last Updated**: 2026-04-29
 **Spec**: `specs/ihQ26W78P2-viet-kudos/spec.md`
+
+---
+
+## Implementation Status
+
+> **⚠️ Partially implemented.** All component files, API routes, hooks, and library files have been created. This plan governs what STILL needs completion, testing, and validation. Treat "New Files" below as "Exists — complete/test/fix."
 
 ---
 
@@ -15,7 +22,7 @@ The Viet Kudos screen is a modal form (752×1012px, cream background) overlaid o
 ## Technical Context
 
 **Language/Framework**: TypeScript 5 / Next.js App Router
-**Primary Dependencies**: React 19, Tailwind CSS 4, next-intl, Supabase JS client, DOMPurify, Tiptap (rich text editor — `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-underline`), `focus-trap-react ^10.x`
+**Primary Dependencies**: React 19, Tailwind CSS 4, next-intl, Supabase JS client, DOMPurify, Tiptap v3 (`@tiptap/react ^3.x`, `@tiptap/starter-kit ^3.x`, `@tiptap/extension-underline ^3.x` — see ⚠️ Strikethrough note), `focus-trap-react ^10.x`, `focus-trap ^7.x` (used by `useFocusTrap.ts` hook)
 **Database**: Supabase (PostgreSQL + Storage)
 **Testing**: Vitest + React Testing Library; Playwright E2E
 **State Management**: React `useState` for all form fields; `useReducer` optional if state grows; debounced recipient search
@@ -68,7 +75,7 @@ The Viet Kudos screen is a modal form (752×1012px, cream background) overlaid o
   - `hashtags`, `availableHashtags` — hashtag selection
   - `isLoadingHashtags` — `true` while `GET /api/kudos/hashtags` is in flight (chips show skeleton)
   - `hashtagsError` — error message if hashtag list API fails; show retry option
-  - `image`, `imagePreviewUrl`, `uploadedImageUrl`, `isUploading`, `uploadProgress`
+  - `images: File[]`, `imagePreviewUrls: string[]`, `uploadedImageUrls: string[]`, `isUploading`, `uploadProgress` — max 5 images; each upload call returns one CDN URL; collect all before submitting
   - `isAnonymous`, `isSubmitting`
   - `isDirty` — `true` when `title` or `message` has any content; drives the cancel-confirmation dialog
   - `errors: Record<string, string>` — per-field validation errors; **reset to `{}` at the start of each new submit attempt** (error auto-clear)
@@ -98,12 +105,13 @@ The Viet Kudos screen is a modal form (752×1012px, cream background) overlaid o
       "title": "string (1–100 chars)",
       "message": "string (HTML, plain-text equivalent 1–1000 chars)",
       "hashtags": ["string"],
-      "imageUrl": "string | null",
+      "imageUrls": ["string"],
       "isAnonymous": false,
       "idempotencyKey": "uuid (client-generated on modal open)"
     }
     ```
-  - Note: `imageUrl` is a single CDN URL obtained AFTER the client uploads to Supabase Storage via `POST /api/upload`. It is never a raw File object.
+  - **⚠️ API migration required**: Current implementation uses `imageUrl: string | null` (singular) with internal conversion to `imageUrls`. This must be migrated to `imageUrls: string[]` (max 5) to match the design (5-image support). Update the Zod schema in `app/api/kudos/route.ts` from `imageUrl: z.string().url().nullable().optional()` to `imageUrls: z.array(z.string().url()).max(5).default([])`. The `BACKEND_API_TESTCASES.md` test cases (`KUDOS_POST_03`, `KUDOS_POST_17`) still use the old `imageUrl` field — update those test cases as part of this migration.
+  - Each image is uploaded individually to `POST /api/upload` (returns one CDN URL per call). Client calls it up to 5 times, collects all CDN URLs, then sends them in `imageUrls[]` inside `POST /api/kudos`. Never send raw File objects.
 - **`GET /api/users/search?q={query}`**: **Auth required** (Supabase session cookie; 401 if missing); search `users` table by name (iLIKE); return `[{ id, name, avatarUrl }]`; min 2 chars before search; excludes current user from results (server-side filter + client-side hide)
 - **`GET /api/kudos/hashtags`**: **Auth required** (Supabase session cookie; 401 if missing); return available hashtags from `hashtags` table or static list; RLS policy applies
 - **`POST /api/upload`**: **Auth required**; receive image file; validate MIME type (image/jpeg, image/png, image/gif, image/webp) and size (≤ 5MB) with Zod + `file.type`; upload to Supabase Storage `kudos-images` bucket; return `{ url }` (CDN URL)
@@ -129,54 +137,60 @@ The Viet Kudos screen is a modal form (752×1012px, cream background) overlaid o
 └── plan.md   ← this file
 ```
 
-### Source Code
+### Source Code (all files already exist — see Implementation Status above)
 
 ```text
 app/
 └── api/
+    ├── kudos/
+    │   └── route.ts             ✅ EXISTS — GET + POST handlers; needs imageUrl→imageUrls migration
     ├── users/
-    │   └── search/route.ts               # GET /api/users/search?q=
+    │   └── search/route.ts      ✅ EXISTS — GET /api/users/search?q= (2-char minimum)
     └── upload/
-        └── route.ts                      # POST /api/upload (image to Supabase Storage)
+        └── route.ts             ✅ EXISTS — POST /api/upload; MIME + 5MB validation
 
 components/
 └── viet-kudos/
-    ├── WriteKudosModal.tsx               # Root modal: role="dialog", focus trap, form state
-    ├── ModalOverlay.tsx                  # Overlay backdrop with accidental-close confirmation
-    ├── RecipientSearch.tsx               # Debounced search + autocomplete dropdown + error retry
-    ├── TitleInput.tsx                    # Controlled input + character counter
-    ├── MessageEditor.tsx                 # Tiptap rich text editor + character counter (dynamic import, ssr:false)
-    ├── HashtagChips.tsx                  # Pill chips: load available + track selected (max 5)
-    ├── ImageUpload.tsx                   # File input + preview + Supabase upload + progress + 30s timeout
-    ├── AnonymousToggle.tsx               # Checkbox + label (label darkens when checked)
-    └── ModalActions.tsx                  # Cancel + Submit buttons; loading states
+    ├── WriteKudosModal.tsx      ✅ EXISTS — root modal with FocusTrap, dynamic MessageEditor import
+    ├── ModalOverlay.tsx         ✅ EXISTS — backdrop with confirmation dialog
+    ├── RecipientSearch.tsx      ✅ EXISTS — 300ms debounce + suggestions dropdown
+    ├── TitleInput.tsx           ✅ EXISTS — "Danh hiệu" input + character counter
+    ├── MessageEditor.tsx        ✅ EXISTS — Tiptap v3; uses Underline (⚠️ design shows Strikethrough)
+    ├── HashtagChips.tsx         ✅ EXISTS — max 5; loading skeleton; disabled state
+    ├── ImageUpload.tsx          ✅ EXISTS — single file only (⚠️ needs multi-file up to 5)
+    ├── AnonymousToggle.tsx      ✅ EXISTS — checkbox + label colour change
+    └── ModalActions.tsx         ✅ EXISTS — Cancel + Submit with loading/disabled states
 
 hooks/
-└── useKudosForm.ts                       # Form state + validation + submit logic (optional — if form grows complex)
+├── useKudosForm.ts              ✅ EXISTS — form state + validation + submit (used by WriteKudosModal)
+└── useFocusTrap.ts              ✅ EXISTS — lower-level focus trap using `focus-trap` package
 
 lib/
-└── upload.ts                             # Supabase Storage upload helper; MIME + size validation; 30s AbortSignal timeout
+└── upload.ts                    ✅ EXISTS — uploadKudosImage() with 30s AbortController timeout
 ```
 
-### Modified Files
+### Still Needed / Outstanding Changes
 
-| File | Change |
-|------|--------|
-| `app/globals.css` | Add modal tokens: `--color-modal-bg`, `--color-overlay`, `--color-modal-text-dark`, `--color-input-border`, `--color-placeholder`, `--color-checkbox-border`, `--border-modal`, `--border-input-radius`, `--modal-padding`, `--modal-gap`, `--field-gap` |
-| `app/api/kudos/route.ts` | **Extend existing file** (created by Sun* Kudos plan for GET): add `export async function POST(...)` handler for `POST /api/kudos` |
-| `components/kudos/WriteKudosButton.tsx` | Add `onClick` to open `<WriteKudosModal />` |
-| `components/kudos/KudosPage.tsx` | Render `<WriteKudosModal isOpen onClose onSuccess />` |
+| File | Outstanding Change |
+|------|-------------------|
+| `app/api/kudos/route.ts` | Migrate `imageUrl: z.string().url().nullable().optional()` → `imageUrls: z.array(z.string().url()).max(5).default([])` in the Zod schema (⚠️ breaking change — update `BACKEND_API_TESTCASES.md` KUDOS_POST_03/17 too) |
+| `components/viet-kudos/MessageEditor.tsx` | Add `@tiptap/extension-link`; toolbar: replace Underline button with Strikethrough (use `StarterKit`'s built-in `Strike`); add Link button; add "Tiêu chuẩn cộng đồng" link button → `ROUTES.GENERAL_STANDARDS` |
+| `components/viet-kudos/ImageUpload.tsx` | Upgrade from single-file to multi-file (up to 5); add `+Image` button visibility logic; update state to `images: File[]` |
+| `hooks/useKudosForm.ts` | Update `imageUrl` → `imageUrls: string[]` in submit payload; update form state for multi-image |
+| `app/globals.css` | Verify all modal tokens exist: `--color-modal-bg`, `--color-overlay`, `--color-modal-text-dark`, `--color-input-border`, `--color-placeholder`, `--color-checkbox-border`, `--border-modal`, `--border-input-radius`, `--modal-padding`, `--modal-gap`, `--field-gap`, `--color-required-star: #CF1322`, `--color-community-link: #E46060` |
 
 ### Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `@tiptap/react` | `^2.x` | Rich text editor for Kudos message |
-| `@tiptap/starter-kit` | `^2.x` | Basic Tiptap extensions (bold, italic, paragraph) |
-| `@tiptap/extension-underline` | `^2.x` | Underline formatting (required by spec — Bold/Italic/Underline minimum toolbar) |
-| `focus-trap-react` | `^10.x` | WCAG-compliant focus trap for modal |
-| `dompurify` | `^3.x` | (Already in Kudos plan) XSS sanitization |
-| `@types/dompurify` | `^3.x` | (Already in Kudos plan) |
+| Package | Version | Status | Purpose |
+|---------|---------|--------|---------|
+| `@tiptap/react` | `^3.22.4` | ✅ Installed | Rich text editor for Kudos message |
+| `@tiptap/starter-kit` | `^3.22.4` | ✅ Installed | Bold, Italic, Strike, OrderedList, Blockquote (no Link) |
+| `@tiptap/extension-underline` | `^3.22.4` | ✅ Installed (⚠️ see note) | Underline — installed but design shows Strikethrough (S); Strikethrough is in StarterKit |
+| `@tiptap/extension-link` | `^3.x` | ❌ Missing | Link (⛓) toolbar button — NOT in StarterKit, must install |
+| `focus-trap-react` | `^10.x` | ✅ Installed | Modal uses `<FocusTrap />` component from this package |
+| `focus-trap` | `^7.x` | ✅ Installed | Used by `hooks/useFocusTrap.ts` (lower-level API) |
+| `dompurify` | `^3.x` | ✅ Installed | XSS sanitization |
+| `@types/dompurify` | `^3.x` | ✅ Installed | TypeScript types for DOMPurify |
 
 ---
 
@@ -185,8 +199,9 @@ lib/
 ### Phase 0: Asset Preparation
 
 - Verify Supabase Storage `kudos-images` bucket exists; set policy: authenticated users INSERT
-- Add modal CSS tokens to `app/globals.css`
-- Install `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-underline`, `focus-trap-react`
+- Verify and complete modal CSS tokens in `app/globals.css` (see Still Needed / Outstanding Changes)
+- Install `@tiptap/extension-link` (missing — needed for Link toolbar button)
+- `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-underline`, `focus-trap-react` — ✅ already installed
 
 ### Phase 1: Foundation (TDD) — API Routes
 
@@ -247,9 +262,9 @@ lib/
    - "Maximum 5 hashtags reached" hint appears below chip row when max reached
    - Retry on `hashtagsError` re-fetches hashtag list
 2. Implement `<HashtagChips />` with `isLoadingHashtags` skeleton, `hashtagsError` retry UI, and disabled chip state when max 5 reached
-3. Write tests for `<ImageUpload />` (file selection → preview; remove → reset; invalid MIME → error; > 5MB → error; upload exceeds 30s → timeout error + retry)
-4. Implement `<ImageUpload />` with Supabase Storage upload + progress indicator; use `AbortController` with 30s timeout — if upload exceeds 30s, abort and surface "Upload timed out — please try again" error; allow retry without re-selecting the file
-5. Wire hashtags and image into `<WriteKudosModal />` form state
+3. Write tests for `<ImageUpload />` (add 1 file → preview appears; add up to 5 files → `+Image` button hidden; click `×` → file removed + button reappears; 6th file → rejected silently (button hidden already); invalid MIME → error shown; > 5MB → error shown; upload exceeds 30s → timeout error + retry)
+4. Implement `<ImageUpload />` with multi-file support (up to 5): each file is uploaded independently via `POST /api/upload`; collect CDN URLs in `uploadedImageUrls[]`; hide `+Image` button when 5 images attached; per-upload `AbortController` with 30s timeout; "Upload timed out — please try again" on timeout; allow retry without re-selecting the file
+5. Wire hashtags and multi-image into `<WriteKudosModal />` form state; POST payload sends `imageUrls: uploadedImageUrls`
 
 ### Phase 4: Anonymous Toggle + Validation (US4)
 
@@ -352,6 +367,7 @@ lib/
    - [ ] Message at exactly 1000 chars → submit allowed → at 1001 → submit blocked
    - [ ] Character counter hidden until > 80 chars for title; turns red at ≥ 80 chars warning, red at limit
    - [ ] Character counter visible from start or after first keystroke for message; turns red at ≥ 800 chars, red at 1000 limit
+   - [ ] Zero hashtags selected → submit blocked → inline error "Please select at least 1 hashtag"
    - [ ] More than 5 hashtags selected → 6th click blocked → unselected chips go disabled → hint shown
    - [ ] `hashtagsError` set → retry button shown → retry clears error and re-fetches
    - [ ] Image > 5MB → file rejected → error message shown; form still valid
@@ -418,9 +434,14 @@ lib/
 - **Supabase Storage anonymous access**: The `kudos-images` bucket MUST require authentication for uploads. Public URLs for display are acceptable (read-only public policy). Never allow unauthenticated writes.
 - **`isDirty` drives confirmation dialog**: Compute `isDirty` as `title.trim().length > 0 || message.trim().length > 0` (or equivalent for Tiptap's plain-text output). Set it reactively on every `title`/`message` change. Reset to `false` on `resetForm()`. Never use `isDirty` to block submit — it only controls the cancel/escape confirmation.
 - **Error auto-clear on re-submit**: At the very start of the submit handler, before any validation, call `setErrors({})`. This ensures stale error messages from a prior failed attempt are wiped so the user sees only fresh errors from the new attempt.
+- **Hashtag min-1 is frontend-only**: `BACKEND_API_TESTCASES.md` test `KUDOS_POST_16` confirms the backend accepts `hashtags: []` (201 OK). The min-1 constraint is enforced exclusively by the frontend `<HashtagChips />` validation before submission. The backend Zod schema uses `.max(5).default([])` — no minimum. Do NOT add a server-side min-1 check; this is intentional (future API consumers may send 0 hashtags).
 - **`isSearching` and `isLoadingHashtags` states**: These are distinct booleans — do not share a single `isLoading` state between the two async operations. Recipient search and hashtag fetch can be in flight simultaneously. Manage each independently.
 - **`hashtagsError` retry**: When `GET /api/kudos/hashtags` fails, set `hashtagsError` and show a "Retry" button inside `<HashtagChips />`. Clicking retry calls the hashtag API again and clears `hashtagsError` on success.
-- **Tiptap Underline extension**: Import from `@tiptap/extension-underline` and include in the `extensions` array alongside `StarterKit`. Toolbar button must have `aria-label="Underline"` and `aria-pressed` reflecting active state.
+- **⚠️ Strikethrough vs Underline bug**: The current `MessageEditor.tsx` uses `@tiptap/extension-underline` (Underline "U") but the Figma design shows "S" (Strikethrough/gạch ngang — C.3 in design items). Fix: Remove the Underline toolbar button; Strikethrough is already in `StarterKit` (use `editor.chain().toggleStrike().run()`). If Underline is kept for other reasons, that is a deliberate deviation from design that must be documented.
+- **`@tiptap/extension-link` is missing**: Design toolbar has a Link (⛓) button. `@tiptap/extension-link` is NOT in `package.json`. Install it and add to `MessageEditor.tsx` extensions. Toolbar button: `aria-label="Link"`, click → opens link input dialog.
+- **"Tiêu chuẩn cộng đồng" link in toolbar**: This is a navigation link (not a formatting button) that opens the community standards page. Use `ROUTES.GENERAL_STANDARDS` from `lib/constants/routes.ts` (= `"/general-standards"`). Render as `<a href={ROUTES.GENERAL_STANDARDS} target="_blank">` inside the toolbar. Style: `#E46060`, `border-radius: 0 8px 0 0`, right-aligned in the toolbar row.
+- **Tiptap v3 vs v2**: All Tiptap packages are v3 (`^3.22.4`). Do NOT use v2 APIs. Key v3 changes: `editor.chain().focus()` pattern unchanged; `useEditor` hook unchanged; `EditorContent` unchanged. Check [Tiptap v3 changelog](https://tiptap.dev) for any API differences if needed.
 - **Character counter visibility (title)**: Counter is hidden when `title.length <= 80`; appears (and is `#999999`) when `title.length > 80`; turns `#EF4444` when `title.length >= 80` (warning) and remains red at limit. Note the warning and appearance thresholds are the same (80 chars) per design-style.md.
-- **Character counter visibility (message)**: Counter turns `#EF4444` at ≥ 800 chars (warning threshold) per design-style.md. Submit is blocked only at > 1000 chars. `TODO(confirm initial counter visibility from Figma — always visible vs appears on first keystroke)`.
-- **Single image upload**: Only one image may be attached per Kudos. `<ImageUpload />` accepts a single file. `imageUrl` in the POST payload is a single CDN URL string (or `null`), never an array.
+- **Character counter visibility (message)**: Counter becomes visible once user starts typing (after first keystroke). Turns `#EF4444` at ≥ 800 chars (warning threshold). Submit blocked at > 1000 chars.
+- **Multiple image upload (up to 5)**: `<ImageUpload />` accepts up to 5 files. Each file is uploaded separately via `POST /api/upload` (one URL returned per call). The `POST /api/kudos` payload uses `imageUrls: string[]` (max 5 CDN URLs). This requires migrating the existing API from `imageUrl: string | null` (singular) — see ⚠️ note in Backend Approach above.
+- **Cancel button border-radius is `4px`**, not `8px`. The `--border-btn-submit: 8px` token applies only to the submit button. The cancel button uses `border-radius: 4px` per Figma.
